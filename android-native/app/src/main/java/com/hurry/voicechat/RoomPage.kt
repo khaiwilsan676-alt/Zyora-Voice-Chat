@@ -464,6 +464,7 @@ fun RoomPage(
     var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
     var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
     var luckyComboGeneration by remember(roomId) { mutableIntStateOf(0) }
+    var luckyComboPending by remember(roomId) { mutableStateOf(false) }
     var lastLuckyComboPayload by remember(roomId) { mutableStateOf<JSONObject?>(null) }
     // A single room-scoped Compose timer owns the combo window. Re-keying it on
     // every new gift or combo tap cancels the previous countdown instead of
@@ -1363,6 +1364,20 @@ fun RoomPage(
                 }
             }
         }
+        val coinTransferFailedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val reason = payload.optString("reason")
+            mainHandler.post {
+                luckyComboPending = false
+                val balance = payload.optLong("balance", -1L)
+                if (balance >= 0L) roomWalletBalance = balance
+                roomToastText = when (reason) {
+                    "insufficient_coins" -> "Insufficient coins"
+                    else -> "Lucky Gift failed. Please try again."
+                }
+            }
+        }
         val luckyGiftReceivedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId || !payload.optBoolean("luckyGift", false)) return@Listener
@@ -1409,8 +1424,9 @@ fun RoomPage(
                     recipientMode = recipientMode
                 )
                 if (senderId == accountId) {
-                    // Both the original send and its combo replay renew the same
-                    // five-second window. Never hide the button on a combo tap.
+                    // Only a server-confirmed transfer may start/renew the combo window.
+                    lastLuckyComboPayload = JSONObject(payload.toString())
+                    luckyComboPending = false
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
                     luckyComboGeneration++
@@ -1711,6 +1727,7 @@ fun RoomPage(
         roomSocket.on("room_kick_announcement",kickAnnouncementListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("coin_transfer_received", luckyGiftReceivedListener)
+        roomSocket.on("coin_transfer_failed", coinTransferFailedListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         val roomPublicMessageBlockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
@@ -1771,6 +1788,7 @@ fun RoomPage(
             roomSocket.off("room_kick_announcement",kickAnnouncementListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("coin_transfer_received", luckyGiftReceivedListener)
+            roomSocket.off("coin_transfer_failed", coinTransferFailedListener)
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
             roomSocket.off("room_settings_updated",settingsListener)
@@ -2884,19 +2902,20 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
                         val previousGift = lastLuckyComboPayload
-                        // Keep the combo control mounted and restart its
-                        // five-second window while the replay is sent.
-                        showLuckyComboButton = true
-                        luckyComboTimeLeft = 5
-                        luckyComboGeneration++
-                        if (previousGift != null) {
-                            val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
-                            val comboTransfer = JSONObject(previousGift.toString())
-                                .put("transferId", nextTransferId)
-                                .put("eventId", nextTransferId)
-                                .put("comboReplay", true)
-                                .put("timestamp", System.currentTimeMillis())
-                            roomSocketRef.value?.emit("coin_transfer", comboTransfer)
+                        val socket = roomSocketRef.value
+                        if (!luckyComboPending && previousGift != null) {
+                            if (socket?.connected() != true) {
+                                roomToastText = "Connection unavailable. Please try again."
+                            } else {
+                                val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
+                                val comboTransfer = JSONObject(previousGift.toString())
+                                    .put("transferId", nextTransferId)
+                                    .put("eventId", nextTransferId)
+                                    .put("comboReplay", true)
+                                    .put("timestamp", System.currentTimeMillis())
+                                luckyComboPending = true
+                                socket.emit("coin_transfer", comboTransfer)
+                            }
                         }
                     },
                 )
@@ -2918,93 +2937,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 } else null
             },
             onSendCoinTransfer = { transfer ->
-                val outgoingTransfer = JSONObject(transfer)
-                if (outgoingTransfer.optBoolean("luckyGift", false)) {
-                    lastLuckyComboPayload = JSONObject(outgoingTransfer.toString())
-
-                    // Optimistically play the sender's own Lucky Gift immediately.
-                    // The transfer ID is recorded first, so the server echo is ignored
-                    // by luckyGiftReceivedListener instead of rendering the same gift twice.
-                    val localTransferId = outgoingTransfer.optString("transferId")
-                    if (localTransferId.isNotBlank() && seenLuckyGiftTransferIds.add(localTransferId)) {
-                        if (seenLuckyGiftTransferIds.size > 200) {
-                            synchronized(seenLuckyGiftTransferIds) {
-                                while (seenLuckyGiftTransferIds.size > 150) {
-                                    seenLuckyGiftTransferIds.remove(seenLuckyGiftTransferIds.first())
-                                }
-                            }
-                        }
-                        val localSenderId = outgoingTransfer.optString("senderId")
-                        val localSenderName = outgoingTransfer.optString("senderName", "User")
-                        val localSenderImage = outgoingTransfer.optString("senderImage")
-                        val localGiftImageRaw = outgoingTransfer.optString("giftImage")
-                            .ifBlank { outgoingTransfer.optString("luckyImage") }
-                        val localGiftImage = when {
-                            localGiftImageRaw.isBlank() -> ""
-                            localGiftImageRaw.startsWith("http", true) -> localGiftImageRaw
-                            else -> "https://zyora-voice-chat.vercel.app/" + localGiftImageRaw.trimStart('/')
-                        }
-                        val localRecipientsJson = outgoingTransfer.optJSONArray("recipientIds") ?: JSONArray()
-                        val localRecipientIds = (0 until localRecipientsJson.length())
-                            .map { localRecipientsJson.optString(it) }.toSet()
-                        val localRecipientMode = when (outgoingTransfer.optString("recipientMode").lowercase()) {
-                            "mic" -> RecipientMode.MIC
-                            "room" -> RecipientMode.ROOM
-                            else -> RecipientMode.SINGLE
-                        }
-                        val localIsCombo = outgoingTransfer.optBoolean("comboReplay", false)
-                        val localMultiplier = outgoingTransfer.optInt("multiplier", 1).coerceAtLeast(1)
-                        val localTimestamp = outgoingTransfer.optLong("timestamp", System.currentTimeMillis())
-                        luckyGiftNotice = LuckyNotice(
-                            id = localTransferId,
-                            senderId = localSenderId,
-                            senderName = localSenderName,
-                            recipientName = outgoingTransfer.optString("recipientName", "User"),
-                            senderImage = localSenderImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                            giftImage = localGiftImage,
-                            multiplier = if (localIsCombo && luckyGiftNotice?.senderId == localSenderId) {
-                                (luckyGiftNotice?.multiplier ?: localMultiplier) + 1
-                            } else localMultiplier,
-                            totalWinAmount = outgoingTransfer.optLong("luckyReturnAmount", 0L),
-                            maxWinTimes = outgoingTransfer.optInt("luckyReturnPercent", 0),
-                            recipientMode = localRecipientMode
-                        )
-                        showLuckyComboButton = true
-                        luckyComboTimeLeft = 5
-                        luckyComboGeneration++
-
-                        if (localGiftImage.isNotBlank()) {
-                            for (index in seats.indices) {
-                                val seat = seats[index]
-                                if (seat.occupied && seat.accountId in localRecipientIds) {
-                                    seats[index] = seat.copy(
-                                        gifSrc = localGiftImage,
-                                        gifTimestamp = localTimestamp,
-                                        gifDurationMs = 1800L
-                                    )
-                                    val seatNumber = seat.number
-                                    Handler(Looper.getMainLooper()).postDelayed({
-                                        val currentIndex = seats.indexOfFirst { it.number == seatNumber }
-                                        if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == localTimestamp) {
-                                            seats[currentIndex] = seats[currentIndex].copy(
-                                                gifSrc = "", gifTimestamp = 0L, gifDurationMs = 5000L
-                                            )
-                                        }
-                                    }, 1800L)
-                                }
-                            }
-                        }
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            if (luckyGiftNotice?.id == localTransferId) {
-                                luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    if (luckyGiftNotice?.id == localTransferId) luckyGiftNotice = null
-                                }, 450L)
-                            }
-                        }, 5000L)
-                    }
-                }
-                roomSocketRef.value?.emit("coin_transfer", outgoingTransfer)
+                // Render only after server wallet confirmation; never show a false success.
+                roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
             },
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
         )
