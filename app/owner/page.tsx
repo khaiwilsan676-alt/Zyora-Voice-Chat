@@ -1700,87 +1700,83 @@ export default function StaffPanel() {
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
+                  <table className="w-full text-left border-collapse min-w-[650px]">
                     <thead>
-                      <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-4 pl-4 pr-2 w-12">S.No</th>
-                        <th className="py-4 px-2 w-1/3">User Profile & Avatar</th>
-                        <th className="py-4 px-2">User ID</th>
-                        <th className="py-4 px-2">Email</th>
-                        <th className="py-4 px-2">Role</th>
-                        <th className="py-4 px-2">Last Login</th>
-                        <th className="py-4 pr-4 text-right">Actions</th>
+                      <tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                        <th className="py-3 pl-4 pr-2 w-14">S.No</th>
+                        <th className="py-3 px-2">User</th>
+                        <th className="py-3 px-2">State</th>
+                        <th className="py-3 px-2">Coins</th>
+                        <th className="py-3 px-2">Diamond</th>
+                        <th className="py-3 px-2">Online Room</th>
+                        <th className="py-3 pr-4 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {filteredUsers.map((u, idx) => (
-                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="py-3 pl-4 pr-2 text-xs font-bold text-slate-500">{idx + 1}</td>
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-3.5">
-                              {u.image ? (
-                                <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                                  <img
-                                    src={u.image}
-                                    alt={u.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                      const parent = (e.target as HTMLImageElement).parentElement;
-                                      if (parent && !parent.querySelector('.avatar-fallback')) {
-                                        const div = document.createElement('div');
-                                        div.className = 'avatar-fallback w-full h-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center text-base';
-                                        div.textContent = u.name.charAt(0).toUpperCase();
-                                        parent.appendChild(div);
-                                      }
-                                    }}
-                                  />
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredUsers.map((u, idx) => {
+                        const userData = u as any;
+                        const isOnline = Boolean(userData.isOnline || userData.online || userData.onlineStatus || userData.roomId || userData.currentRoomId);
+                        const userState = String(userData.accountStatus || userData.state || (userData.isBlocked ? 'Blocked' : 'Active'));
+                        const coins = userData.coins ?? userData.coin ?? userData.walletCoins ?? userData.balance ?? 0;
+                        const diamonds = userData.diamonds ?? userData.diamond ?? userData.walletDiamonds ?? 0;
+                        const onlineRoom = userData.onlineRoom ?? userData.roomId ?? userData.currentRoomId ?? userData.currentRoom ?? '0';
+                        return (
+                          <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{idx + 1}</td>
+                            <td className="py-3 px-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {u.image ? (
+                                  <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-50">
+                                    <img
+                                      src={u.image}
+                                      alt={u.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                        const parent = (e.target as HTMLImageElement).parentElement;
+                                        if (parent && !parent.querySelector('.avatar-fallback')) {
+                                          const div = document.createElement('div');
+                                          div.className = 'avatar-fallback w-full h-full bg-slate-100 text-slate-600 font-semibold flex items-center justify-center text-sm';
+                                          div.textContent = u.name.charAt(0).toUpperCase();
+                                          parent.appendChild(div);
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-sm shrink-0">
+                                    {u.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-medium text-slate-800 truncate max-w-[150px]">{u.name}</span>
+                                  <span className="text-[10px] text-slate-400 truncate">{u.hurryId || u.id}</span>
                                 </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-base drop-shadow-sm shrink-0">
-                                  {u.name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-800">{u.name}</span>
-
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className="text-sm font-bold text-black tracking-wide">{u.hurryId}</span>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
-                              {u.email}
-                            </span>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className={`px-2 py-1 rounded-md text-[10px] font-bold shadow-sm ${
-                              u.role === 'HOST' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
-                              u.role === 'AGENCY' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
-                              u.role === 'ADMIN' ? 'bg-red-50 text-red-600 border border-red-100' :
-                              'bg-blue-50 text-blue-600 border border-blue-100'
-                            }`}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                              {u.lastLoginAt && !Number.isNaN(new Date(typeof u.lastLoginAt === 'number' && u.lastLoginAt < 100000000000 ? u.lastLoginAt * 1000 : u.lastLoginAt).getTime()) ? new Date(typeof u.lastLoginAt === 'number' && u.lastLoginAt < 100000000000 ? u.lastLoginAt * 1000 : u.lastLoginAt).toLocaleString() : 'Never logged in'}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            <button onClick={() => { setSelectedTagUserData(u); setIsTagModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" aria-label="View user details">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-
+                            </td>
+                            <td className="py-3 px-2">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${/active/i.test(userState) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {userState}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{Number(coins || 0).toLocaleString()}</td>
+                            <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{Number(diamonds || 0).toLocaleString()}</td>
+                            <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{isOnline ? String(onlineRoom || 'Online') : '0'}</td>
+                            <td className="py-3 pr-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => { setSelectedTagUserData(u); setIsTagModalOpen(true); }}
+                                className="px-3 py-1.5 rounded-md bg-[#197477] hover:bg-[#17696c] text-white text-[10px] font-semibold transition-colors"
+                              >
+                                Open
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {filteredUsers.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="py-8 text-center text-slate-400 font-medium text-sm">
+                          <td colSpan={7} className="py-8 text-center text-slate-400 font-medium text-sm">
                             No users found matching query
                           </td>
                         </tr>
