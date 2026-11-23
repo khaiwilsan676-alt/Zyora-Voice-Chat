@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.Color
@@ -48,6 +50,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +74,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
@@ -460,6 +466,10 @@ fun RoomPage(
         }
     }
     
+    var luckyGiftOrigin by remember(roomId) { mutableStateOf<Offset?>(null) }
+    val luckySeatCenters = remember(roomId) { mutableStateMapOf<String, Offset>() }
+    var roomRootSize by remember(roomId) { mutableStateOf(IntSize.Zero) }
+    var luckyGiftFlight by remember(roomId) { mutableStateOf<LuckyGiftFlight?>(null) }
     var luckyGiftNotice by remember(roomId) { mutableStateOf<LuckyNotice?>(null) }
     var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
     var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
@@ -1409,8 +1419,11 @@ fun RoomPage(
                 }
             }
             mainHandler.post {
+                val activeNoticeId = if (isComboReplay && luckyGiftNotice?.senderId == senderId) {
+                    luckyGiftNotice?.id ?: noticeId
+                } else noticeId
                 luckyGiftNotice = LuckyNotice(
-                    id = noticeId,
+                    id = activeNoticeId,
                     senderId = senderId,
                     senderName = senderName,
                     recipientName = recipientName,
@@ -1432,24 +1445,37 @@ fun RoomPage(
                     luckyComboGeneration++
                 }
                 if (giftImage.isNotBlank()) {
-                    seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
-                        val seat = seats[index]
-                        seats[index] = seat.copy(gifSrc = giftImage, gifTimestamp = timestamp, gifDurationMs = 1800L)
-                        val seatNumber = seat.number
-                        mainHandler.postDelayed({
-                            val currentIndex = seats.indexOfFirst { it.number == seatNumber }
-                            if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == timestamp) {
-                                seats[currentIndex] = seats[currentIndex].copy(gifSrc = "", gifTimestamp = 0L, gifDurationMs = 5000L)
-                            }
-                        }, 1800L)
+                    val firstTargetCenter = recipientIds.firstNotNullOfOrNull { luckySeatCenters[it] }
+                    if (firstTargetCenter != null && roomRootSize != IntSize.Zero) {
+                        luckyGiftFlight = LuckyGiftFlight(
+                            id = noticeId,
+                            image = giftImage,
+                            start = luckyGiftOrigin ?: Offset(roomRootSize.width / 2f, roomRootSize.height * 0.88f),
+                            target = firstTargetCenter,
+                            rootCenter = Offset(roomRootSize.width / 2f, roomRootSize.height / 2f)
+                        )
                     }
+                    // Start the target-seat effect on landing, not at send time.
+                    mainHandler.postDelayed({
+                        seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
+                            val seat = seats[index]
+                            seats[index] = seat.copy(gifSrc = giftImage, gifTimestamp = timestamp, gifDurationMs = 1800L)
+                            val seatNumber = seat.number
+                            mainHandler.postDelayed({
+                                val currentIndex = seats.indexOfFirst { it.number == seatNumber }
+                                if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == timestamp) {
+                                    seats[currentIndex] = seats[currentIndex].copy(gifSrc = "", gifTimestamp = 0L, gifDurationMs = 5000L)
+                                }
+                            }, 1800L)
+                        }
+                    }, 820L)
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
                 mainHandler.postDelayed({
-                    if (luckyGiftNotice?.id == noticeId) {
+                    if (luckyGiftNotice?.id == activeNoticeId) {
                         luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
-                        mainHandler.postDelayed({ if (luckyGiftNotice?.id == noticeId) luckyGiftNotice = null }, 450)
+                        mainHandler.postDelayed({ if (luckyGiftNotice?.id == activeNoticeId) luckyGiftNotice = null }, 450)
                     }
                 }, 5000L)
             }
@@ -1807,7 +1833,7 @@ fun RoomPage(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)){
+    Box(Modifier.fillMaxSize().background(Color.Black).onGloballyPositioned { roomRootSize = it.size }){
         if (roomToastText.isNotBlank()) {
             Text(
                 text = roomToastText,
@@ -2032,10 +2058,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize, onBoundsChanged = { id, center -> luckySeatCenters[id] = center }) { handleSeatTap(seat) } }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize, onBoundsChanged = { id, center -> luckySeatCenters[id] = center }) { handleSeatTap(seat) } }
                             }
                         } else {
                             val rowSizes = when (roomMicMode) {
@@ -2051,10 +2077,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
                                     if (roomMicMode == 10 && rowSize == 2) {
                                         Spacer(modifier = Modifier.width(micSize)) 
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize, onBoundsChanged = { id, center -> luckySeatCenters[id] = center }) { handleSeatTap(seat) } }
                                         Spacer(modifier = Modifier.width(micSize))
                                     } else {
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize, onBoundsChanged = { id, center -> luckySeatCenters[id] = center }) { handleSeatTap(seat) } }
                                     }
                                 }
                             }
@@ -2191,7 +2217,9 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         AsyncImage(
                             model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
                             contentDescription="Gift",
-                            modifier=Modifier.size(56.dp).clickable{showGift=true}.scale(1.1f),
+                            modifier=Modifier.size(56.dp).onGloballyPositioned { coordinates ->
+                                luckyGiftOrigin = coordinates.positionInRoot() + Offset(coordinates.size.width / 2f, coordinates.size.height / 2f)
+                            }.clickable{showGift=true}.scale(1.1f),
                             contentScale=ContentScale.Fit
                         )
                         Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
@@ -2890,6 +2918,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
+        luckyGiftFlight?.let { flight ->
+            LuckyGiftFlightOverlay(
+                flight = flight,
+                onFinished = { if (luckyGiftFlight?.id == flight.id) luckyGiftFlight = null }
+            )
+        }
         luckyGiftNotice?.let { notice ->
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().offset(y = 12.dp).zIndex(250f)) {
                 LuckyGiftNotificationSlider(notice = notice)
@@ -3693,7 +3727,57 @@ private fun RoomSeatInviteDialog(
     }
 }
 
-@Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,roomAdminIds:List<String> = emptyList(),isSpeaking:Boolean=seat.speaking,seatSize:Dp=62.dp,onClick:()->Unit){
+private data class LuckyGiftFlight(
+    val id: String,
+    val image: String,
+    val start: Offset,
+    val target: Offset,
+    val rootCenter: Offset
+)
+
+@Composable
+private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
+    val progress = remember(flight.id) { Animatable(0f) }
+    val density = LocalDensity.current
+    val imageSizePx = with(density) { 58.dp.toPx() }
+    val arcHeightPx = with(density) { 22.dp.toPx() }
+
+    LaunchedEffect(flight.id) {
+        progress.animateTo(1f, animationSpec = tween(820, easing = FastOutSlowInEasing))
+        onFinished()
+    }
+
+    val p = progress.value.coerceIn(0f, 1f)
+    val firstLeg = p < 0.44f
+    val t = if (firstLeg) p / 0.44f else (p - 0.44f) / 0.56f
+    val from = if (firstLeg) flight.start else flight.rootCenter
+    val to = if (firstLeg) flight.rootCenter else flight.target
+    val x = from.x + (to.x - from.x) * t
+    val y = from.y + (to.y - from.y) * t - sin(t * Math.PI).toFloat() * arcHeightPx
+    val scale = when {
+        p < 0.44f -> 0.18f + 0.16f * (p / 0.44f)
+        p < 0.68f -> 0.34f + 0.66f * ((p - 0.44f) / 0.24f)
+        else -> 1f - 0.12f * ((p - 0.68f) / 0.32f)
+    }
+
+    Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
+        AsyncImage(
+            model = flight.image,
+            contentDescription = "Lucky gift animation",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .offset { IntOffset((x - imageSizePx / 2f).roundToInt(), (y - imageSizePx / 2f).roundToInt()) }
+                .size(58.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = if (p < 0.03f) p / 0.03f else 1f
+                }
+        )
+    }
+}
+
+@Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,roomAdminIds:List<String> = emptyList(),isSpeaking:Boolean=seat.speaking,seatSize:Dp=62.dp,onBoundsChanged:(String,Offset)->Unit={_,_->},onClick:()->Unit){
     val waveProgress = if (isSpeaking) {
         val voicePulse = rememberInfiniteTransition(label = "voice-wave")
         voicePulse.animateFloat(
@@ -3719,7 +3803,12 @@ private fun RoomSeatInviteDialog(
         }
     }
 
-    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(interactionSource = androidx.compose.foundation.interaction.MutableInteractionSource(), indication = null, onClick = onClick)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).onGloballyPositioned { coordinates ->
+        if (seat.accountId.isNotBlank()) {
+            val origin = coordinates.positionInRoot()
+            onBoundsChanged(seat.accountId, origin + Offset(coordinates.size.width / 2f, coordinates.size.height / 2f))
+        }
+    }.clickable(interactionSource = androidx.compose.foundation.interaction.MutableInteractionSource(), indication = null, onClick = onClick)){
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val blue = !seat.locked
