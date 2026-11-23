@@ -120,7 +120,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-private const val DRAGON_ROUND_DURATION_MS = 47_000L
+private const val DRAGON_ROUND_DURATION_MS = 43_000L
 private fun dragonRoundReset(now: Long = System.currentTimeMillis()): Long {
     val calendar = Calendar.getInstance().apply { timeInMillis = now }
     if (calendar.get(Calendar.HOUR_OF_DAY) < 5) calendar.add(Calendar.DAY_OF_YEAR, -1)
@@ -355,6 +355,16 @@ private fun pickDragonWinner(
         scoreA >= scoreB && scoreA >= scoreC -> "A"
         scoreB >= scoreA && scoreB >= scoreC -> "B"
         else -> "C"
+    }
+}
+
+private fun buildDeterministicDragonHistory(beforeRoundId: Long): List<String> {
+    val latestCompleted = (beforeRoundId - 1L).coerceAtLeast(1L)
+    val count = minOf(20L, latestCompleted).toInt()
+    return List(count) { offset ->
+        val rid = latestCompleted - offset
+        val dealt = dealDragonRoundCards(rid)
+        pickDragonWinner(dealt.first, dealt.second, dealt.third)
     }
 }
 
@@ -863,8 +873,6 @@ private fun DragonWinnerWhiteRays(modifier: Modifier = Modifier) {
             center = center
         )
 
-        // Build all 12 wedges into one path and share one gradient per frame.
-        // The previous loop allocated 12 Path + 12 Brush instances on every draw.
         val rayCount = 12
         val halfSpreadDeg = 8.5f
         val raysPath = Path()
@@ -1788,7 +1796,7 @@ private fun DragonBattleMainOverlay(
     }
     var rulesOpen by remember { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
-    var historyList by remember { mutableStateOf(listOf("C", "B", "A", "B", "A")) }
+    var historyList by remember { mutableStateOf(buildDeterministicDragonHistory(dragonRoundId())) }
 
     var winnerOpen by remember { mutableStateOf(false) }
     var winnerDragon by remember { mutableStateOf("A") }
@@ -1809,7 +1817,7 @@ private fun DragonBattleMainOverlay(
     // Scattered coins state & animation coordinates
     var scatteredCoins by remember { mutableStateOf<List<ScatteredPotCoin>>(emptyList()) }
     var coinSeq by remember { mutableLongStateOf(0L) }
-    var coinAnimPhase by remember { mutableIntStateOf(0) } // 0 = scattered, 1 = gather to winner pot, 2 = fly to bottom-left, 3 = hidden
+    var coinAnimPhase by remember { mutableIntStateOf(0) } // 0 = scattered, 1 = gather scattered to winner pot, 2 = fly to bottom-left, 3 = hidden
     val gatherProgress = remember { Animatable(0f) }
     val flyCornerProgress = remember { Animatable(0f) }
 
@@ -1878,9 +1886,6 @@ private fun DragonBattleMainOverlay(
                     showBanner("Wallet rejected bet - coins restored")
                     android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
                 }
-                // One queue item per worker: its rejection callback stays paired
-                // with the transaction that created it; later items are handled
-                // by their own queued worker or the periodic retry.
                 break
             }
         }
@@ -1899,8 +1904,6 @@ private fun DragonBattleMainOverlay(
             check(dragonPendingPrefs.edit().putString(queueKey, queue.toString()).commit())
             walletPendingDelta = (0 until queue.length()).sumOf { queue.optJSONObject(it)?.optLong("delta") ?: 0L }
         }
-        // Update the visible game balance immediately while the durable request
-        // is sent; the server response/socket event remains authoritative.
         balance = (balance + delta).coerceAtLeast(0L)
         dragonRejectedCallbacks[transactionId] = onRejected
         scope.launch { syncDragonWalletChanges() }
@@ -1952,26 +1955,28 @@ private fun DragonBattleMainOverlay(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) { soundManager.preload() }
         while (true) {
-            // Match Wild Party's shared 5:00 AM reset and 47-second global round.
+            // Instant live sync with the shared global round (5:00 AM daily reset, 43s cycle) — ZERO wait delay
             val now = System.currentTimeMillis()
             val resetMs = dragonRoundReset(now)
             val elapsed = (now - resetMs).coerceAtLeast(0L)
-            val currentRoundStart = resetMs + (elapsed / DRAGON_ROUND_DURATION_MS) * DRAGON_ROUND_DURATION_MS
-            val roundStartMs = currentRoundStart + DRAGON_ROUND_DURATION_MS
+            val roundStartMs = resetMs + (elapsed / DRAGON_ROUND_DURATION_MS) * DRAGON_ROUND_DURATION_MS
             val sharedRoundId = ((roundStartMs - resetMs) / DRAGON_ROUND_DURATION_MS) + 1L
-            activeDragonRoundId = sharedRoundId
-            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
-            delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
+            val initialCycleMs = (now - roundStartMs).coerceIn(0L, DRAGON_ROUND_DURATION_MS - 1L)
+
             activeDragonRoundId = sharedRoundId
             globalRoundWinners = emptyList()
+            historyList = buildDeterministicDragonHistory(sharedRoundId)
+            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
 
-            isRevealing = false
-            revealedCount = 0
-            showRankA = false
-            showRankB = false
-            showRankC = false
-            highlightedWinnerDragon = null
-            winnerTagVisible = false
+            val dealt = dealDragonRoundCards(sharedRoundId)
+            val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
+            val winnerImage = when (winner) { "A" -> DRAGON_A_IMAGE; "B" -> DRAGON_B_IMAGE; else -> DRAGON_C_IMAGE }
+            roundCards = dealt
+            dragonWinnerSocket?.emit("game_round_result_update", JSONObject()
+                .put("game", "dragonbattle").put("round", sharedRoundId)
+                .put("winnerKey", winner).put("winnerImage", winnerImage))
+
+            // Reset per-round visuals
             winnerOpen = false
             potA = 0L; youA = 0L
             potB = 0L; youB = 0L
@@ -1982,52 +1987,87 @@ private fun DragonBattleMainOverlay(
             flyCornerProgress.snapTo(0f)
             cornerPopupText = null
             cornerPopupProgress.snapTo(0f)
-            val dealt = dealDragonRoundCards(sharedRoundId)
-            val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
-            val winnerImage = when (winner) { "A" -> DRAGON_A_IMAGE; "B" -> DRAGON_B_IMAGE; else -> DRAGON_C_IMAGE }
-            dragonWinnerSocket?.emit("game_round_result_update", JSONObject()
-                .put("game", "dragonbattle").put("round", sharedRoundId)
-                .put("winnerKey", winner).put("winnerImage", winnerImage))
-            showBanner("Start Betting !")
 
-            // Dragon Battle betting window: exactly 20 seconds.
-            val bettingDeadlineMs = roundStartMs + 20_000L
-            while (true) {
-                val remainingMs = bettingDeadlineMs - System.currentTimeMillis()
-                timeLeft = ((remainingMs + 999L) / 1000L).coerceIn(0L, 20L).toInt()
-                if (remainingMs <= 0L) break
-                delay(minOf(150L, remainingMs))
-            }
-
-            timeLeft = 0
-            isRevealing = true
-            showBanner("Stop Betting !")
-            delay(700L)
-
-            roundCards = dealt
-            showBanner("Show !")
-            for (cardStep in 1..9) {
-                revealedCount = cardStep
-                launch(Dispatchers.IO) { soundManager.playCardFlip() }
-                delay(1_500L)
-                if (cardStep == 3 || cardStep == 6 || cardStep == 9) {
-                    when (cardStep) {
-                        3 -> showRankA = true
-                        6 -> showRankB = true
-                        9 -> showRankC = true
-                    }
-                    launch(Dispatchers.IO) { soundManager.playDham() }
+            // Phase 1: Instant 20s Betting Countdown (0ms -> 20,000ms)
+            val bettingEndMs = roundStartMs + 20_000L
+            if (System.currentTimeMillis() < bettingEndMs) {
+                isRevealing = false
+                revealedCount = 0
+                showRankA = false
+                showRankB = false
+                showRankC = false
+                highlightedWinnerDragon = null
+                winnerTagVisible = false
+                if (initialCycleMs < 18_500L) {
+                    showBanner("Start Betting !")
+                }
+                while (true) {
+                    val remainingMs = bettingEndMs - System.currentTimeMillis()
+                    timeLeft = ((remainingMs + 999L) / 1000L).coerceIn(0L, 20L).toInt()
+                    if (remainingMs <= 0L) break
+                    delay(minOf(100L, remainingMs))
                 }
             }
 
+            // Phase 2: Stop Betting (20,000ms -> 20,700ms)
+            val revealStartMs = roundStartMs + 20_700L
+            timeLeft = 0
+            isRevealing = true
+            if (System.currentTimeMillis() < revealStartMs) {
+                showBanner("Stop Betting !")
+                val waitStop = revealStartMs - System.currentTimeMillis()
+                if (waitStop > 0L) delay(waitStop)
+            }
+
+            // Phase 3: Show ! — 1.5s per card turn with same DHAM voice (20,700ms -> 34,200ms)
+            val winnerPhaseStartMs = roundStartMs + 34_200L
+            val nowReveal = System.currentTimeMillis()
+            if (nowReveal < winnerPhaseStartMs) {
+                val alreadyFlipped = ((nowReveal - revealStartMs).coerceAtLeast(0L) / 1_500L).toInt().coerceIn(0, 9)
+                if (alreadyFlipped == 0) {
+                    showBanner("Show !")
+                }
+                revealedCount = alreadyFlipped
+                showRankA = alreadyFlipped >= 3
+                showRankB = alreadyFlipped >= 6
+                showRankC = alreadyFlipped >= 9
+
+                for (cardStep in (alreadyFlipped + 1)..9) {
+                    val cardTurnAt = revealStartMs + (cardStep - 1) * 1_500L
+                    val waitTurn = cardTurnAt - System.currentTimeMillis()
+                    if (waitTurn > 0L) delay(waitTurn)
+
+                    revealedCount = cardStep
+                    launch(Dispatchers.IO) { soundManager.playDham() }
+
+                    if (cardStep == 3 || cardStep == 6 || cardStep == 9) {
+                        val rankSlamAt = cardTurnAt + 420L
+                        val waitSlam = rankSlamAt - System.currentTimeMillis()
+                        if (waitSlam > 0L) delay(waitSlam)
+                        when (cardStep) {
+                            3 -> showRankA = true
+                            6 -> showRankB = true
+                            9 -> showRankC = true
+                        }
+                        launch(Dispatchers.IO) { soundManager.playDham() }
+                    }
+                }
+                val waitCardsEnd = winnerPhaseStartMs - System.currentTimeMillis()
+                if (waitCardsEnd > 0L) delay(waitCardsEnd)
+            } else {
+                revealedCount = 9
+                showRankA = true
+                showRankB = true
+                showRankC = true
+            }
+
+            // Phase 4: Winner Tag + White Rays + Bikharri Hui Chips on Winner Pot (2.5s) + Fly + '+' Popup (34,200ms -> 38,000ms)
+            val winnerPageStartMs = roundStartMs + 38_000L
             dragonWinnerRoundId = sharedRoundId
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             winnerDragon = winner
             highlightedWinnerDragon = winner
-            winnerTagVisible = true
-            launch { delay(2_000L); winnerTagVisible = false }
-            launch(Dispatchers.IO) { soundManager.playDham() }
-            historyList = (listOf(winner) + historyList).take(20)
+            historyList = buildDeterministicDragonHistory(sharedRoundId + 1L)
 
             val totalBet = youA + youB + youC
             val winningBet = when (winner) { "A" -> youA; "B" -> youB; else -> youC }
@@ -2042,34 +2082,53 @@ private fun DragonBattleMainOverlay(
                 dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             }
 
-            delay(450L)
-            if (scatteredCoins.isNotEmpty()) {
-                coinAnimPhase = 1
-                gatherProgress.snapTo(0f)
-                gatherProgress.animateTo(1f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
-                coinAnimPhase = 2
-                flyCornerProgress.snapTo(0f)
-                flyCornerProgress.animateTo(1f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
-                coinAnimPhase = 3
-                scatteredCoins = emptyList()
-            }
-            val randomPopupAmount = listOf(5_000L, 12_500L, 25_000L, 48_000L, 75_000L, 120_000L, 250_000L, 500_000L, 850_000L)[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
-            cornerPopupText = "+${formatShortAmount(randomPopupAmount)}"
-            cornerPopupProgress.snapTo(0f)
-            cornerPopupProgress.animateTo(1f, tween(durationMillis = 500, easing = FastOutSlowInEasing))
-            cornerPopupText = null
+            if (System.currentTimeMillis() < winnerPageStartMs) {
+                // Winner tag stays visible for the full 2.5s scattered pot phase until '+' completes at bottom-left
+                winnerTagVisible = true
+                launch(Dispatchers.IO) { soundManager.playDham() }
 
-            winnerTimer = 3
-            winnerOpen = true
-            repeat(3) { step ->
-                delay(1000L)
-                winnerTimer = 2 - step
+                val scatterHoldEndMs = winnerPhaseStartMs + 2_850L // 350ms gather + 2,500ms scattered stay
+                if (scatteredCoins.isNotEmpty()) {
+                    coinAnimPhase = 1
+                    gatherProgress.snapTo(0f)
+                    gatherProgress.animateTo(1f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
+                }
+                val waitScattered = scatterHoldEndMs - System.currentTimeMillis()
+                if (waitScattered > 0L) delay(waitScattered)
+
+                if (scatteredCoins.isNotEmpty()) {
+                    coinAnimPhase = 2
+                    flyCornerProgress.snapTo(0f)
+                    flyCornerProgress.animateTo(1f, tween(durationMillis = 380, easing = FastOutSlowInEasing))
+                    coinAnimPhase = 3
+                    scatteredCoins = emptyList()
+                }
+
+                val randomPopupAmount = listOf(5_000L, 12_500L, 25_000L, 48_000L, 75_000L, 120_000L, 250_000L, 500_000L, 850_000L)[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
+                cornerPopupText = "+${formatShortAmount(randomPopupAmount)}"
+                cornerPopupProgress.snapTo(0f)
+                cornerPopupProgress.animateTo(1f, tween(durationMillis = 520, easing = FastOutSlowInEasing))
+                cornerPopupText = null
+                winnerTagVisible = false
+
+                val waitToPage = winnerPageStartMs - System.currentTimeMillis()
+                if (waitToPage > 0L) delay(waitToPage)
+            } else {
+                winnerTagVisible = false
             }
-            winnerOpen = false
-            // Never let animation/network delays shift the global round clock.
+
+            // Phase 5: Winner Page (38,000ms -> 43,000ms) -> Instant next round at 43,000ms
             val nextRoundAt = roundStartMs + DRAGON_ROUND_DURATION_MS
-            val wait = nextRoundAt - System.currentTimeMillis()
-            if (wait > 0L) delay(wait)
+            if (System.currentTimeMillis() < nextRoundAt) {
+                winnerOpen = true
+                while (true) {
+                    val remainingWinMs = nextRoundAt - System.currentTimeMillis()
+                    winnerTimer = ((remainingWinMs + 999L) / 1000L).coerceIn(0L, 5L).toInt()
+                    if (remainingWinMs <= 0L) break
+                    delay(minOf(150L, remainingWinMs))
+                }
+                winnerOpen = false
+            }
         }
     }
 
@@ -2403,7 +2462,7 @@ private fun DragonBattleMainOverlay(
                     )
                 }
 
-                // 4. Bottom balance bar + repeat + chips row (Wild Party identical)
+                // 4. Bottom balance bar + repeat + all 5 chips (5K, 50K, 500K, 5M, 10M)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2416,11 +2475,14 @@ private fun DragonBattleMainOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    DragonBalanceBar(balance = balance)
+                    DragonBalanceBar(
+                        balance = balance,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         DragonRepeatButton(
                             onClick = { lastBetTable?.let { placeBet(it) } }
@@ -2434,7 +2496,7 @@ private fun DragonBattleMainOverlay(
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
+                                    .size(34.dp)
                                     .graphicsLayer {
                                         val scale = if (isSelected) 1.08f else 1f
                                         scaleX = scale
@@ -2460,7 +2522,7 @@ private fun DragonBattleMainOverlay(
                 }
             }
 
-            // Scattered Pot Coins + Gather to Winner Pot + Fly to Bottom-Left Corner Overlay
+            // Scattered Pot Coins + Bikharri Hui Gather on Winner Pot (2.5s) + Fly to Bottom-Left Corner Overlay
             if (scatteredCoins.isNotEmpty() && coinAnimPhase < 3) {
                 val coinSizeDp = 15.dp
                 val coinHalfPx = with(density) { (coinSizeDp / 2).toPx() }
@@ -2469,10 +2531,6 @@ private fun DragonBattleMainOverlay(
                     "B" -> potRectB
                     else -> potRectC
                 }
-                val winPotCenter = Offset(
-                    x = (winRect.first.x - rootPos.x) + winRect.second.width / 2f,
-                    y = (winRect.first.y - rootPos.y) + winRect.second.height * 0.34f
-                )
 
                 scatteredCoins.forEach { coin ->
                     val rect = when (coin.table) {
@@ -2480,24 +2538,29 @@ private fun DragonBattleMainOverlay(
                         "B" -> potRectB
                         else -> potRectC
                     }
-                    if (rect.second.width > 0f && rect.second.height > 0f) {
+                    if (rect.second.width > 0f && rect.second.height > 0f && winRect.second.width > 0f && winRect.second.height > 0f) {
                         val baseCenter = Offset(
                             x = (rect.first.x - rootPos.x) + rect.second.width / 2f + coin.offsetXFraction * rect.second.width,
                             y = (rect.first.y - rootPos.y) + rect.second.height / 2f + coin.offsetYFraction * rect.second.height
+                        )
+                        // Keep coins scattered (bikharri hui) across the winning pot rather than collapsing into 1 dot
+                        val winScatteredPos = Offset(
+                            x = (winRect.first.x - rootPos.x) + winRect.second.width / 2f + coin.offsetXFraction * winRect.second.width,
+                            y = (winRect.first.y - rootPos.y) + winRect.second.height / 2f + coin.offsetYFraction * winRect.second.height
                         )
                         val curPos = when (coinAnimPhase) {
                             1 -> {
                                 val t = gatherProgress.value
                                 Offset(
-                                    x = baseCenter.x + (winPotCenter.x - baseCenter.x) * t,
-                                    y = baseCenter.y + (winPotCenter.y - baseCenter.y) * t
+                                    x = baseCenter.x + (winScatteredPos.x - baseCenter.x) * t,
+                                    y = baseCenter.y + (winScatteredPos.y - baseCenter.y) * t
                                 )
                             }
                             2 -> {
                                 val t = flyCornerProgress.value
                                 Offset(
-                                    x = winPotCenter.x + (bottomLeftCenter.x - winPotCenter.x) * t,
-                                    y = winPotCenter.y + (bottomLeftCenter.y - winPotCenter.y) * t
+                                    x = winScatteredPos.x + (bottomLeftCenter.x - winScatteredPos.x) * t,
+                                    y = winScatteredPos.y + (bottomLeftCenter.y - winScatteredPos.y) * t
                                 )
                             }
                             else -> baseCenter
@@ -2769,9 +2832,6 @@ private fun DragonWinnerOverlay(
 
             Spacer(Modifier.height(14.dp))
 
-            // Always render three fixed podium slots (2nd | 1st | 3rd).
-            // Missing winners stay as placeholders; never remove a slot or let
-            // the remaining frames reflow when the leaderboard has only 1–2 users.
             val frameItems = listOf(
                 Triple("2nd", DRAGON_WINNER_FRAME_2ND, 1),
                 Triple("1st", DRAGON_WINNER_FRAME_1ST, 0),
@@ -2793,63 +2853,63 @@ private fun DragonWinnerOverlay(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.BottomCenter
                     ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = if (isFirst) 12.dp else 0.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier.size(frameSize),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = if (isFirst) 12.dp else 0.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            if (!globalWinner?.avatar.isNullOrBlank()) {
+                            Box(
+                                modifier = Modifier.size(frameSize),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!globalWinner?.avatar.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = globalWinner?.avatar,
+                                        contentDescription = "Global winner avatar",
+                                        modifier = Modifier.size(avatarSize).offset(y = 2.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    DragonWinnerAvatarPlaceholder(
+                                        modifier = Modifier.size(avatarSize).offset(y = 2.dp)
+                                    )
+                                }
                                 AsyncImage(
-                                    model = globalWinner?.avatar,
-                                    contentDescription = "Global winner avatar",
-                                    modifier = Modifier.size(avatarSize).offset(y = 2.dp).clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                DragonWinnerAvatarPlaceholder(
-                                    modifier = Modifier.size(avatarSize).offset(y = 2.dp)
+                                    model = item.second,
+                                    contentDescription = item.first,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
                                 )
                             }
-                            AsyncImage(
-                                model = item.second,
-                                contentDescription = item.first,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = globalWinner?.name ?: "-",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            AsyncImage(
-                                model = DRAGON_COIN_IMAGE,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                contentScale = ContentScale.Fit
-                            )
+                            Spacer(Modifier.height(6.dp))
                             Text(
-                                text = globalWinner?.let { formatShortAmount(it.win) } ?: "-",
+                                text = globalWinner?.name ?: "-",
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1
                             )
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                AsyncImage(
+                                    model = DRAGON_COIN_IMAGE,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(
+                                    text = globalWinner?.let { formatShortAmount(it.win) } ?: "-",
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            }
                         }
-                    }
                     }
                 }
             }
