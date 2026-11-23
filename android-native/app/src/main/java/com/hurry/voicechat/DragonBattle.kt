@@ -2615,17 +2615,14 @@ private fun DragonWinnerOverlay(
     betAmount: Long,
     topWinners: List<DragonRoundWinner>
 ) {
-    val winnerSheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     val winnerImg = when (winnerDragon) {
         "A" -> DRAGON_A_IMAGE
         "B" -> DRAGON_B_IMAGE
         else -> DRAGON_C_IMAGE
     }
-
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(
-            Modifier
-                .fillMaxSize()
+            Modifier.fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.45f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -2634,221 +2631,26 @@ private fun DragonWinnerOverlay(
                 )
         )
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .heightIn(max = sheetHeight * 0.94f)
-                .clip(winnerSheetShape)
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                 .background(Color(0xFF060608))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {}
                 )
-                .verticalScroll(rememberScrollState())
-                .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Box(Modifier.fillMaxWidth()) {
-                Text(
-                    text = "${winnerTimer}s",
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 2.dp, end = 2.dp),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, start = 4.dp, end = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(Modifier.size(82.dp), contentAlignment = Alignment.Center) {
-                        AsyncImage(
-                            model = winnerImg,
-                            contentDescription = "Winner Dragon $winnerDragon",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-
-                    Spacer(Modifier.width(24.dp))
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Prizes",
-                                modifier = Modifier.weight(0.70f),
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                modifier = Modifier.weight(1.15f),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                AsyncImage(
-                                    model = DRAGON_COIN_IMAGE,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                                Text(
-                                    text = formatShortAmount(winAmount),
-                                    color = Color.White,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Your Bet",
-                                modifier = Modifier.weight(0.70f),
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                modifier = Modifier.weight(1.15f),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                AsyncImage(
-                                    model = DRAGON_COIN_IMAGE,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                                Text(
-                                    text = formatShortAmount(betAmount),
-                                    color = Color.White,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = DRAGON_WINNER_HEADING,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = 6.dp)
-                        .requiredHeight(72.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            // Always render three fixed podium slots (2nd | 1st | 3rd).
-            // Missing winners stay as placeholders; never remove a slot or let
-            // the remaining frames reflow when the leaderboard has only 1–2 users.
-            val frameItems = listOf(
-                Triple("2nd", DRAGON_WINNER_FRAME_2ND, 1),
-                Triple("1st", DRAGON_WINNER_FRAME_1ST, 0),
-                Triple("3rd", DRAGON_WINNER_FRAME_3RD, 2)
+            Text("Winner", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            AsyncImage(
+                model = winnerImg,
+                contentDescription = "Winning Dragon $winnerDragon",
+                modifier = Modifier.size(150.dp),
+                contentScale = ContentScale.Fit
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                frameItems.forEach { item ->
-                    val isFirst = item.first == "1st"
-                    val frameSize = if (isFirst) 84.dp else 76.dp
-                    val avatarSize = if (isFirst) 58.dp else 52.dp
-                    val globalWinner = topWinners.getOrNull(item.third)
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = if (isFirst) 12.dp else 0.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier.size(frameSize),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!globalWinner?.avatar.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = globalWinner?.avatar,
-                                    contentDescription = "Global winner avatar",
-                                    modifier = Modifier.size(avatarSize).offset(y = 2.dp).clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                DragonWinnerAvatarPlaceholder(
-                                    modifier = Modifier.size(avatarSize).offset(y = 2.dp)
-                                )
-                            }
-                            AsyncImage(
-                                model = item.second,
-                                contentDescription = item.first,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = globalWinner?.name ?: "-",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            AsyncImage(
-                                model = DRAGON_COIN_IMAGE,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Text(
-                                text = globalWinner?.let { formatShortAmount(it.win) } ?: "-",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                    }
-                }
-            }
         }
     }
 }
