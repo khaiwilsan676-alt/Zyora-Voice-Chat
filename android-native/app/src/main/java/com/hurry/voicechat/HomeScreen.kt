@@ -135,6 +135,13 @@ private object NativeRoomMemoryCache {
     val manualRefresh = Channel<Unit>(Channel.CONFLATED)
 }
 
+// Process-wide avatar cache keeps daily leaderboard cards warm across tab navigation.
+private object NativeLeaderboardAvatarCache {
+    val avatars = mutableStateMapOf<String, List<String>>()
+    var lastRefreshAt: Long = 0L
+    var refreshInFlight: Boolean = false
+}
+
 // ═══════════════════════════════════════════════════════
 // COUNTRY PILL DATA
 // ═══════════════════════════════════════════════════════
@@ -391,33 +398,49 @@ fun HomeScreen(
             pager.animateScrollToPage((pager.currentPage + 1) % banners.size)
         }
     }
-    val dailyTopThreeAvatars = remember { mutableStateMapOf<String, List<String>>() }
+    val dailyTopThreeAvatars = NativeLeaderboardAvatarCache.avatars
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.coroutineScope {
-            listOf("honour", "charm", "room").forEach { category ->
-                launch(Dispatchers.IO) {
-                    val avatars = runCatching {
-                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/leaderboard?tab=$category&period=daily").openConnection() as java.net.HttpURLConnection).apply {
-                            connectTimeout = 8_000
-                            readTimeout = 10_000
-                            setRequestProperty("Accept", "application/json")
-                        }
-                        try {
-                            if (connection.responseCode !in 200..299) error("Leaderboard unavailable")
-                            val rows = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("leaderboard") ?: org.json.JSONArray()
-                            val rankedAvatars = (0 until 3).map { index ->
-                                val row = rows.optJSONObject(index)
-                                val image = row?.optString("image", "").orEmpty().trim()
-                                if (image.isBlank() || image == "null" || image == "undefined") ""
-                                else if (image.startsWith("http", true)) image else RAW + image.removePrefix("/")
+        val cache = NativeLeaderboardAvatarCache
+        val cacheIsFresh = cache.avatars.size == 3 &&
+            System.currentTimeMillis() - cache.lastRefreshAt < 300_000L
+        if (cacheIsFresh || cache.refreshInFlight) return@LaunchedEffect
+        cache.refreshInFlight = true
+        var successfulCategories = 0
+        try {
+            kotlinx.coroutines.coroutineScope {
+                listOf("honour", "charm", "room").forEach { category ->
+                    launch(Dispatchers.IO) {
+                        val avatars = runCatching {
+                            val connection = (java.net.URL("https://zyora-server.onrender.com/api/leaderboard?tab=$category&period=daily").openConnection() as java.net.HttpURLConnection).apply {
+                                connectTimeout = 8_000
+                                readTimeout = 10_000
+                                setRequestProperty("Accept", "application/json")
                             }
-                            // Rank 1 stays centred; rank 2 left; rank 3 right.
-                            listOf(rankedAvatars[1], rankedAvatars[0], rankedAvatars[2])
-                        } finally { connection.disconnect() }
-                    }.getOrDefault(emptyList())
-                    withContext(Dispatchers.Main) { dailyTopThreeAvatars[category] = avatars }
+                            try {
+                                if (connection.responseCode !in 200..299) error("Leaderboard unavailable")
+                                val rows = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("leaderboard") ?: org.json.JSONArray()
+                                val rankedAvatars = (0 until 3).map { index ->
+                                    val row = rows.optJSONObject(index)
+                                    val image = row?.optString("image", "").orEmpty().trim()
+                                    if (image.isBlank() || image == "null" || image == "undefined") ""
+                                    else if (image.startsWith("http", true)) image else RAW + image.removePrefix("/")
+                                }
+                                // Rank 1 stays centred; rank 2 left; rank 3 right.
+                                listOf(rankedAvatars[1], rankedAvatars[0], rankedAvatars[2])
+                            } finally { connection.disconnect() }
+                        }.getOrNull()
+                        if (avatars != null) {
+                            withContext(Dispatchers.Main) {
+                                cache.avatars[category] = avatars
+                                successfulCategories++
+                            }
+                        }
+                    }
                 }
             }
+            if (successfulCategories > 0) cache.lastRefreshAt = System.currentTimeMillis()
+        } finally {
+            cache.refreshInFlight = false
         }
     }
     val listState = rememberLazyListState()
