@@ -1715,8 +1715,22 @@ private fun DragonBattleMainOverlay(
                 )
             }
         }
+        // Re-publish the current actual dealt-card result after reconnect.
+        // A result emitted before Socket.IO connects is otherwise silently lost.
+        val publishCurrentDragonWinner = {
+            val now = System.currentTimeMillis()
+            val reset = dragonRoundReset(now)
+            val roundId = ((now - reset).coerceAtLeast(0L) / DRAGON_ROUND_DURATION_MS) + 1L
+            val dealt = dealDragonRoundCards(roundId)
+            val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
+            val image = when (winner) { "A" -> DRAGON_A_IMAGE; "B" -> DRAGON_B_IMAGE; else -> DRAGON_C_IMAGE }
+            dragonWinnerSocket?.emit("game_round_result_update", JSONObject()
+                .put("game", "dragonbattle").put("round", roundId)
+                .put("winnerKey", winner).put("winnerImage", image))
+        }
         val onConnect = io.socket.emitter.Emitter.Listener {
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", activeDragonRoundId))
+            publishCurrentDragonWinner()
         }
         dragonWinnerSocket?.on("dragonbattle_top_winners_v2", onWinners)
         dragonWinnerSocket?.on(Socket.EVENT_CONNECT, onConnect)
