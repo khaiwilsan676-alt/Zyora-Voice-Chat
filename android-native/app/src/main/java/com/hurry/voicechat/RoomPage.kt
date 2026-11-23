@@ -1475,7 +1475,7 @@ fun RoomPage(
                                 }
                             }, 1800L)
                         }
-                    }, 800L)
+                    }, 560L)
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
@@ -3752,24 +3752,24 @@ private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Un
     val progress = remember(flight.id) { Animatable(0f) }
     val density = LocalDensity.current
     val imageSizePx = with(density) { 58.dp.toPx() }
-    val arcHeightPx = with(density) { 22.dp.toPx() }
+    val arcHeightPx = with(density) { 14.dp.toPx() }
 
     LaunchedEffect(flight.id) {
-        progress.animateTo(1f, animationSpec = tween(760, easing = FastOutSlowInEasing))
+        progress.animateTo(1f, animationSpec = tween(540, easing = CubicBezierEasing(0.22f, 0.72f, 0.24f, 1f)))
         onFinished()
     }
 
     val p = progress.value.coerceIn(0f, 1f)
-    val firstLeg = p < 0.44f
-    val t = if (firstLeg) p / 0.44f else (p - 0.44f) / 0.56f
+    val firstLeg = p < 0.38f
+    val t = if (firstLeg) p / 0.38f else (p - 0.38f) / 0.62f
     val from = if (firstLeg) flight.start else flight.rootCenter
     val to = if (firstLeg) flight.rootCenter else flight.target
     val x = from.x + (to.x - from.x) * t
     val y = from.y + (to.y - from.y) * t - sin(t * Math.PI).toFloat() * arcHeightPx
     val scale = when {
-        p < 0.44f -> 0.18f + 0.16f * (p / 0.44f)
-        p < 0.68f -> 0.34f + 0.66f * ((p - 0.44f) / 0.24f)
-        else -> 1f - 0.12f * ((p - 0.68f) / 0.32f)
+        p < 0.38f -> 0.18f + 0.22f * (p / 0.38f)
+        p < 0.62f -> 0.40f + 0.60f * ((p - 0.38f) / 0.24f)
+        else -> 1f - 0.12f * ((p - 0.62f) / 0.38f)
     }
 
     Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
