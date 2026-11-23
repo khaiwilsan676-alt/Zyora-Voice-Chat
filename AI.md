@@ -2087,3 +2087,10 @@ Current documentation does not certify that all historical features are build-, 
 
 
 - Follow-up hardening: Lucky reward percentage is deterministically derived from the unique transfer ID, so a retry cannot show a different return than the already-applied wallet credit. Backend rejects the transfer if any selected recipient is no longer present, preventing a partial recipient payout while charging the original aggregate amount.
+
+
+## 2026-11-24 — Lucky Gift flight animation and combo banner
+- `RoomPage.kt` measures the existing room gift button and each target seat in root coordinates. On each server-confirmed Lucky Gift, the gift image launches small from the gift button, travels to screen center, scales up to its normal size, then follows a fast eased arc to the selected recipient seat. The seat's existing gift effect starts on landing, avoiding the previous immediate-at-seat duplicate.
+- Flight duration is 760 ms with Compose `FastOutSlowInEasing`; target-seat effect timing remains 1.8 seconds. Existing room seat layout, gift button, banner dimensions and colors are unchanged.
+- Combo replay starts the same flight animation again. For the same sender, the notification keeps its existing identity and position and only updates the `× multiplier` text; its five-second dismissal timer is safely renewed without an older timer hiding a newer combo.
+- Verification pending: native APK compilation and real-device visual testing (especially target seat coordinates across 5/10/15 mic layouts). No build/device pass is claimed yet.
