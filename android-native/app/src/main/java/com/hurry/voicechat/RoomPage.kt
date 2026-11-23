@@ -1475,7 +1475,7 @@ fun RoomPage(
                                 }
                             }, 1800L)
                         }
-                    }, 760L)
+                    }, 800L)
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
