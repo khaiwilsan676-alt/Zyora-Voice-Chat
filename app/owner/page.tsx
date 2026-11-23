@@ -458,6 +458,8 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState<'English' | 'Hindi'>('English');
+  const hi = language === 'Hindi';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -473,42 +475,54 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.token) {
-        throw new Error(result?.error || 'Invalid email or password.');
+        throw new Error(result?.error || (hi ? 'ईमेल या पासवर्ड गलत है।' : 'Invalid email or password.'));
       }
       onLoginSuccess(String(result.token));
     } catch (err: any) {
-      setError(err?.message || 'Login failed. Please try again.');
+      setError(err?.message || (hi ? 'लॉगिन विफल। दोबारा कोशिश करें।' : 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#f4f6fb] p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#f4f6fb] p-4 relative">
+      <div className="absolute top-3 right-3 flex flex-col items-start gap-1">
+        <label htmlFor="owner-login-language" className="text-[9px] text-slate-500">Language</label>
+        <select
+          id="owner-login-language"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as 'English' | 'Hindi')}
+          className="h-7 min-w-[96px] px-2 bg-white border border-[#9bbfc0] rounded text-[10px] text-slate-600 outline-none"
+        >
+          <option value="English">English</option>
+          <option value="Hindi">हिन्दी</option>
+        </select>
+      </div>
       <div className="w-full max-w-[290px] bg-white rounded-md border border-slate-200 shadow-sm p-4">
-        <h1 className="text-[16px] font-semibold text-slate-800 mb-3">Zyora Owner</h1>
+        <h1 className="text-[16px] font-semibold text-slate-800 mb-3">Zyora App</h1>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-[10px] font-medium text-slate-600 mb-1">Email</label>
+            <label className="block text-[10px] font-medium text-slate-600 mb-1">{hi ? 'ईमेल' : 'Email'}</label>
             <input
               type="email"
               autoComplete="username"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
+              placeholder={hi ? 'ईमेल' : 'Email'}
               className="w-full h-7 px-2 bg-white border border-slate-200 rounded text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-medium text-slate-600 mb-1">Password</label>
+            <label className="block text-[10px] font-medium text-slate-600 mb-1">{hi ? 'पासवर्ड' : 'Password'}</label>
             <input
               type="password"
               autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder={hi ? 'पासवर्ड' : 'Password'}
               className="w-full h-7 px-2 bg-white border border-slate-200 rounded text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
             />
           </div>
@@ -518,7 +532,7 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
             disabled={loading}
             className="w-full h-7 bg-[#197477] hover:bg-[#17696c] disabled:opacity-70 text-white text-[11px] font-semibold rounded"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? (hi ? 'लॉगिन हो रहा है...' : 'Logging in...') : (hi ? 'लॉगिन' : 'Login')}
           </button>
         </form>
       </div>
