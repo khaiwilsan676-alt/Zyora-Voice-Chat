@@ -2061,3 +2061,10 @@ Current documentation does not certify that all historical features are build-, 
 - Family reward Tag fields are now copied from the remote profile response and re-applied after remote merge, so the expiring reward image can replace the existing Public Profile Family card background on other devices, not only when present in local profile cache.
 - The Store Family Tag tab remains removed. Medal rewards continue to use the existing Medal page.
 - Verification: source commits completed; Android APK build, Render deployment, and live reward/room/profile tests are still required before runtime behavior can be called verified.
+
+
+## 2026-11-24 — Instant native Room Settings response
+- `android-native/app/src/main/java/com/hurry/voicechat/RoomSettingPage.kt`: scalar Room Settings changes (name, announcement, theme selection, mic mode, lock/password, and admin list) now update the local Compose state, SharedPreferences, and the existing RoomPage callback/socket broadcast immediately, while the authoritative HTTP persistence continues asynchronously.
+- Room DP/custom-theme data URLs deliberately keep the upload-first path; base64 image payloads are not broadcast before permanent image URLs exist.
+- Save requests are guarded before launching the coroutine to prevent rapid duplicate taps. Server persistence errors remain visible in the settings screen.
+- Verification pending: GitHub Actions native APK build and real-device multi-user settings propagation / offline-save tests. No measured latency claim until device testing.
