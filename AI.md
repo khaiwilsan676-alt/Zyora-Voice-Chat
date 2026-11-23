@@ -1999,3 +1999,8 @@ Current documentation does not certify that all historical features are build-, 
 - Replaced the per-row overflow icon with a teal Open button using the Owner login button color. It opens the existing selected-user panel/modal.
 - Existing search, role filter, pagination/data loading, and other Owner Panel sections were not changed.
 - Source committed; production deployment and browser verification remain pending.
+
+## 2026-11-23 Owner Panel live data access
+- Feedback, Daisy AI support chat, and user reports submitted from any user's native `index.db` are relayed in real time through Socket.IO to authenticated Owner Panel sessions only.
+- Owner Panel history replay requests for these streams require successful `owner_panel_authenticate`; ordinary app sockets cannot read the Owner Panel handoff buffers. No user message, feedback, or report content is written to MongoDB/Redis/GitHub storage.
+- This intentionally does not broadcast one user's private local `index.db` to other app users.
