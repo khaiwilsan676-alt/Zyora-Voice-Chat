@@ -184,14 +184,23 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
             put("transaction_id", transactionId); put("user_id", userId); put("title", title)
             put("amount", amount); put("date", date); put("timestamp", timestamp); put("type", type)
         }
-        writableDatabase.insertWithOnConflict("wallet_transactions", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        val db = writableDatabase
+        db.insertWithOnConflict("wallet_transactions", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        // Keep only the newest 25 records per account and wallet type on this device.
+        db.delete(
+            "wallet_transactions",
+            "transaction_id IN (SELECT transaction_id FROM wallet_transactions WHERE user_id=? AND type=? ORDER BY timestamp DESC LIMIT -1 OFFSET 25)",
+            arrayOf(userId, type)
+        )
     }
-    fun loadWalletTransactions(userId: String, type: String, limit: Int = 20): List<JSONObject> {
-        if (userId.isBlank()) return emptyList()
+    fun loadWalletTransactions(userIds: List<String>, type: String, limit: Int = 25): List<JSONObject> {
+        val ids = userIds.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        if (ids.isEmpty()) return emptyList()
         val result = mutableListOf<JSONObject>()
+        val placeholders = ids.joinToString(",") { "?" }
         readableDatabase.query("wallet_transactions", arrayOf("transaction_id", "title", "amount", "date", "timestamp", "type"),
-            "user_id=? AND type=?", arrayOf(userId, type), null, null, "timestamp DESC",
-            limit.coerceIn(1, 500).toString()).use { cursor ->
+            "user_id IN ($placeholders) AND type=?", (ids + type).toTypedArray(), null, null, "timestamp DESC",
+            limit.coerceIn(1, 25).toString()).use { cursor ->
             while (cursor.moveToNext()) result += JSONObject().put("id", cursor.getString(0))
                 .put("title", cursor.getString(1)).put("amount", cursor.getLong(2))
                 .put("date", cursor.getString(3)).put("timestamp", cursor.getLong(4)).put("type", cursor.getString(5))
