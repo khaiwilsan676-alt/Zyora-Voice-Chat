@@ -782,7 +782,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         }
     }
     val isBag = currentView == "bag"
-    val catalogIds = nativeStoreItems.mapTo(HashSet()) { it.id }
+    val catalogIds = nativeStoreItems.map { it.id }.toSet()
     val grantedInventoryItems = if (isBag) {
         (0 until serverInventory.length()).mapNotNull { index ->
             serverInventory.optJSONObject(index)?.takeIf { item ->
