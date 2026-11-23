@@ -21,31 +21,24 @@ const valueOf = (...values: unknown[]) => {
 export default function SellerCenterUsers() {
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState<SellerUser[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    let active = true;
-    const search = async () => {
-      const term = query.trim();
-      if (!term) {
-        setUsers([]);
-        setLoading(false);
-        return;
-      }
+    let mounted = true;
+    const loadActiveSellers = async () => {
       setLoading(true);
       setMessage('');
       try {
-        // Uses the same canonical MongoDB user search endpoint and ID normalization as Manage Users.
-        const response = await fetch(apiUrl('/api/users?q=' + encodeURIComponent(term)), {
+        const response = await fetch(apiUrl('/api/owner/seller-center'), {
           cache: 'no-store',
           headers: { Accept: 'application/json' }
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data?.error || 'User search failed');
-        const rows = Array.isArray(data?.users) ? data.users : data?.user ? [data.user] : [];
-        if (!active) return;
+        if (!response.ok) throw new Error(data?.error || 'Could not load Seller Center users');
+        const rows = Array.isArray(data?.users) ? data.users : [];
+        if (!mounted) return;
         setUsers(rows.map((user: any) => ({
           id: valueOf(user._id, user.id, user.uid, user.accountId),
           uid: valueOf(user.uid, user.id, user.appLongId, user._id),
@@ -53,19 +46,19 @@ export default function SellerCenterUsers() {
           name: valueOf(user.name, user.displayName, user.userName) || 'User',
           image: valueOf(user.image, user.dp, user.avatar, user.photoURL, user.photoUrl, user.profileImage, user.picture),
           active: user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true
-        })));
+        })).filter((user: SellerUser) => user.active));
       } catch (error) {
-        if (active) {
+        if (mounted) {
           setUsers([]);
-          setMessage(error instanceof Error ? error.message : 'User search failed');
+          setMessage(error instanceof Error ? error.message : 'Could not load Seller Center users');
         }
       } finally {
-        if (active) setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
-    void search();
-    return () => { active = false; };
-  }, [query]);
+    void loadActiveSellers();
+    return () => { mounted = false; };
+  }, []);
 
   const toggleSeller = async (user: SellerUser) => {
     const next = !user.active;
@@ -79,7 +72,7 @@ export default function SellerCenterUsers() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'Could not update Seller Center');
-      setUsers((current) => current.map((item) => item.id === user.id ? { ...item, active: next } : item));
+      setUsers((current) => next ? current.map((item) => item.id === user.id ? { ...item, active: true } : item) : current.filter((item) => item.id !== user.id));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not update Seller Center');
     } finally {
@@ -87,14 +80,17 @@ export default function SellerCenterUsers() {
     }
   };
 
-  const filteredUsers = useMemo(() => users, [users]);
+  const filteredUsers = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return term ? users.filter((user) => [user.name, user.uid, user.accountId].some((value) => value.toLowerCase().includes(term))) : users;
+  }, [users, query]);
 
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="px-8 py-6 pb-4 border-b border-gray-100 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Seller Center</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Search a user and activate Seller Center on their profile</p>
+          <p className="text-xs text-slate-400 mt-0.5">Users with Seller Center active</p>
         </div>
       </div>
       <div className="p-8 flex-1 overflow-y-auto">
@@ -104,7 +100,7 @@ export default function SellerCenterUsers() {
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by user ID..."
+            placeholder="Search active seller users..."
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
           />
         </div>
@@ -147,7 +143,7 @@ export default function SellerCenterUsers() {
                     </td>
                   </tr>
                 ))}
-                {!query.trim() && <tr><td colSpan={4} className="py-12 text-center text-sm font-medium text-slate-400">Search a user ID to display users</td></tr>}
+                {!query.trim() && <tr><td colSpan={4} className="py-12 text-center text-sm font-medium text-slate-400">No active Seller Center users</td></tr>}
                 {!!query.trim() && !filteredUsers.length && !loading && <tr><td colSpan={4} className="py-12 text-center text-sm font-medium text-slate-400">No users found</td></tr>}
               </tbody>
             </table>
