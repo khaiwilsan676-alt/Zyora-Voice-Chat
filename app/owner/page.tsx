@@ -598,8 +598,12 @@ export default function StaffPanel() {
           setOwnerSessionToken(saved);
           setIsLoggedIn(true);
         }
-      } catch {
-        localStorage.removeItem('zyora_owner_panel_session_v2');
+      } catch (error) {
+        // Keep the saved token on transient network/server failures. Only clear
+        // it when the server explicitly confirms that the token is invalid.
+        if (error instanceof Error && error.message === 'Owner session expired') {
+          localStorage.removeItem('zyora_owner_panel_session_v2');
+        }
       } finally {
         if (active) setAuthChecked(true);
       }
@@ -1491,7 +1495,7 @@ export default function StaffPanel() {
       u.role.toUpperCase() === selectedRoleFilter.toUpperCase();
 
     return matchesSearch && matchesRole;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   const filteredGifts = ALL_GIFTS.filter(g => {
     const typeOk = giftTabFilter === 'All' || g.type === giftTabFilter;
