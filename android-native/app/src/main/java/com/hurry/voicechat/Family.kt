@@ -84,7 +84,7 @@ private val familyCardBg = Color(0xFF3B0C06)
 
 // ZAHO TO ZYORA CHANGED HERE
 private val familyRules = listOf(
-    "1. The top 10 families in the weekly family rankings will receive various rewards. Rewards are distributed every Sunday at 5:30 AM (GMT+5:30).",
+    "1. The top 10 families in the weekly family rankings will receive various rewards. Rewards are distributed every Monday at 12:00 AM (India time).",
     "2. There is no need to wait for official approval.",
     "3. A family can have a maximum of 50 members.",
     "4. Individuals can apply to join a family. Once the family leader approves the request, the applicant can join the family immediately.",
@@ -194,9 +194,12 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
 
     LaunchedEffect(Unit) {
         while (true) {
-            val now = Calendar.getInstance()
-            val days = (Calendar.SUNDAY - now.get(Calendar.DAY_OF_WEEK) + 7) % 7
-            val end = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, if (days == 0) 7 else days); set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59) }
+            val now = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Kolkata"))
+            val days = (Calendar.MONDAY - now.get(Calendar.DAY_OF_WEEK) + 7) % 7
+            val end = (now.clone() as Calendar).apply {
+                add(Calendar.DAY_OF_YEAR, if (days == 0) 7 else days)
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
             seconds = ((end.timeInMillis - now.timeInMillis).coerceAtLeast(0L) / 1000L).toInt()
             delay(1000)
         }
@@ -594,7 +597,6 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 1 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 7 Days", "IMG_20261117_222458.png", "green", videoUrl = "VID_20261119_100449_690_bsl.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 7 Days", "IMG_20261117_210225.png", "medal"),
                     RewardItemData("Top1 Tag 7 Days", "IMG_20261117_193617.png", "tag")
                 ),
                 row2 = listOf(
@@ -614,7 +616,6 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 2 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 7 Days", "IMG_20261117_222526.png", "green", videoUrl = "VID_20261119_100523_352_bsl.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 7 Days", "IMG_20261117_210250.png", "medal"),
                     RewardItemData("Top2 Tag 7 Days", "IMG_20261117_193700.png", "tag")
                 ),
                 row2 = listOf(
@@ -630,7 +631,6 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 3 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 7 Days", "IMG_20261117_222701.png", "green", videoUrl = "VID_20261119_100548_604_bsl.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 7 Days", "IMG_20261117_210313.png", "medal"),
                     RewardItemData("Top3 Tag 7 Days", "IMG_20261117_193640.png", "tag")
                 ),
                 row2 = listOf(
@@ -646,7 +646,6 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 4-10 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 3 Days", "IMG_20261117_222718.png", "green", videoUrl = "VID_20261119_100632_615_bsl.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 3 Days", "IMG_20261117_210200.png", "medal")
                 ),
                 onClick = onOpenModal,
                 label = "TOP4-10 Family"
