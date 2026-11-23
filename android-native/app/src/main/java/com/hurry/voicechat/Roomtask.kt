@@ -43,7 +43,7 @@ import org.json.JSONArray
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
 
 @Composable
-fun Roomtask(onBack: () -> Unit = {}) {
+fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember { mutableStateOf(false) }
     var hour by remember { mutableIntStateOf(0) }
@@ -338,7 +338,7 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                         ) {
                                             Box(
                                                 Modifier.fillMaxSize().background(
-                                                    if (isClaimed) Color(0xFF777777) else Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
+                                                    Brush.verticalGradient(if (isClaimed) listOf(Color(0xFF777777), Color(0xFF555555)) else listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
                                                     RoundedCornerShape(18.dp)
                                                 ),
                                                 contentAlignment = Alignment.Center
