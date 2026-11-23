@@ -5,9 +5,11 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,8 +19,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,8 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -52,9 +57,16 @@ data class MedalItem(
 )
 
 val TIER_TAB_IMAGES = listOf(
-    "/IMG_20260924_132022.png",
-    "/IMG_20260924_132038.png",
-    "/IMG_20260924_132051.png"
+    "/IMG_20260924_132022.png", // Tier 1
+    "/IMG_20260924_132038.png", // Tier 2
+    "/IMG_20260924_132051.png", // Tier 3
+    "/IMG_20261123_233655.png", // Tier 4
+    "/IMG_20261123_233712.png", // Tier 5
+    "/IMG_20261123_233736.png", // Tier 6
+    "/IMG_20261123_233752.png", // Tier 7
+    "/IMG_20261123_233809.png", // Tier 8
+    "/IMG_20261123_235301.png", // Tier 9
+    "/IMG_20261123_235319.png"  // Tier 10
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,15 +83,46 @@ fun MedalScreen(onBack: () -> Unit) {
 
     var showObtained by remember { mutableStateOf(false) }
     var showUnequipped by remember { mutableStateOf(false) }
+    var activeSlotIndex by remember { mutableIntStateOf(-1) }
     var showRules by remember { mutableStateOf(false) }
 
-    val medals = remember { getMedalsData() }
-    val filteredMedals = remember(activeTab, medals) {
-        if (activeTab == "honor") {
-            medals.filter { it.category == "achievement" }
-        } else {
-            medals.filter { it.category == "activity" || it.category == "gift" }
+    // 10 Badge Slots state (persisted per user)
+    val equippedSlots = remember(medalUserId) {
+        val prefs = context.getSharedPreferences("hurry_equipped_badges", android.content.Context.MODE_PRIVATE)
+        mutableStateListOf<String?>().apply {
+            for (i in 0 until 10) {
+                add(prefs.getString("slot_${medalUserId}_$i", null))
+            }
         }
+    }
+
+    val medals = remember { getMedalsData() }
+    val richTierMedals = remember(medals) {
+        medals.filter { it.tierGroup == "rich" }
+    }
+    val richCardMedal = remember(richTierMedals) {
+        richTierMedals.first()
+    }
+    val familyTierMedals = remember(medals) {
+        medals.filter { it.tierGroup == "family" }
+    }
+    val familyCardMedal = remember(familyTierMedals) {
+        familyTierMedals.first()
+    }
+
+    // Jo badges Wear Badge sheet me available hain unhi ke hisab se Honor & Event count dikhega
+    val wearableMedals = remember(medals) {
+        medals
+    }
+    val honorWearCount = remember(wearableMedals) {
+        wearableMedals.count { it.category == "achievement" }
+    }
+    val eventWearCount = remember(wearableMedals) {
+        wearableMedals.count { it.category == "activity" || it.category == "gift" }
+    }
+
+    val colorlessFilter = remember {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
     }
 
     fun getTierMedals(medal: MedalItem?): List<MedalItem> {
@@ -165,8 +208,14 @@ fun MedalScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    repeat(5) {
-                        MedalSlot { showUnequipped = true }
+                    repeat(5) { idx ->
+                        MedalSlot(
+                            equippedImage = equippedSlots[idx],
+                            onClick = {
+                                activeSlotIndex = idx
+                                showUnequipped = true
+                            }
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -174,15 +223,22 @@ fun MedalScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    repeat(5) {
-                        MedalSlot { showUnequipped = true }
+                    repeat(5) { idx ->
+                        val slotIndex = idx + 5
+                        MedalSlot(
+                            equippedImage = equippedSlots[slotIndex],
+                            onClick = {
+                                activeSlotIndex = slotIndex
+                                showUnequipped = true
+                            }
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 2 Tabs
+            // 2 Tabs (Wear Sheet ke hisab se dynamic count)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -190,8 +246,8 @@ fun MedalScreen(onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 listOf(
-                    "honor" to "Honor Badge·0",
-                    "event" to "Event Badge·0"
+                    "honor" to "Honor Badge·$honorWearCount",
+                    "event" to "Event Badge·$eventWearCount"
                 ).forEach { (key, label) ->
                     val isSelected = activeTab == key
                     val tabShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
@@ -271,54 +327,93 @@ fun MedalScreen(onBack: () -> Unit) {
                         .background(Color(0xFF030E21).copy(alpha = 0.5f))
                 )
 
-                Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .clipToBounds()
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    if (activeTab == "event") {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            NativeOwnedMedalShowcase(userId = medalUserId)
-                        }
-                    } else {
-                        items(medalsList, key = { it.levelText }) { medal ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedMedal = MedalItem("level_${medal.levelText}", "${medal.levelText} Medal", medal.imageFile, medal.videoFile, 1, "achievement", cardVideoSize = 120, cardVideoTop = 0.5f, sheetVideoSize = 200, sheetVideoTop = 0.5f, giftText = "Level reward") },
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                AsyncImage(
-                                    model = RAW_URL + medal.imageFile,
-                                    contentDescription = "${medal.levelText} Medal",
-                                    contentScale = ContentScale.Fit,
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .clipToBounds()
+                    ) {
+                        if (activeTab == "event") {
+                            // Family badge (Colorless, bina transparent hue)
+                            item(key = familyCardMedal.id) {
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(108.dp)
-                                )
-                                Text(
-                                    text = "${medal.levelText} Medal",
-                                    color = Color(0xFFE5EEFA),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                                        .clickable {
+                                            activeTier = 0
+                                            selectedMedal = familyCardMedal
+                                        },
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    AsyncImage(
+                                        model = familyCardMedal.video.fullUrl,
+                                        contentDescription = "Family",
+                                        contentScale = ContentScale.Fit,
+                                        colorFilter = colorlessFilter,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(108.dp)
+                                    )
+                                    Text(
+                                        text = "Family",
+                                        color = Color(0xFFE5EEFA),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
+                            }
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                NativeOwnedMedalShowcase(userId = medalUserId)
+                            }
+                        } else {
+                            // Sirf ek Rich medal image (Colorless, bina transparent hue)
+                            item(key = richCardMedal.id) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            activeTier = 0
+                                            selectedMedal = richCardMedal
+                                        },
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    AsyncImage(
+                                        model = richCardMedal.video.fullUrl,
+                                        contentDescription = "Rich",
+                                        contentScale = ContentScale.Fit,
+                                        colorFilter = colorlessFilter,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(108.dp)
+                                    )
+                                    Text(
+                                        text = "Rich",
+                                        color = Color(0xFFE5EEFA),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
                             }
                         }
                     }
-                    }
+                }
             }
         }
-        }
 
-        // FULL SCREEN MEDAL DETAIL DIALOG (IMAGE ONLY - SAME AS SCREENSHOT)
+        // FULL SCREEN MEDAL DETAIL DIALOG (POPUP + GOLDEN SPARKLE + SHINING BUBBLES + TIERS)
         if (selectedMedal != null && displayMedal != null) {
             MedalDetailDialog(
                 displayMedal = displayMedal,
@@ -340,7 +435,26 @@ fun MedalScreen(onBack: () -> Unit) {
     }
 
     if (showUnequipped) {
-        WearBadgeBottomSheet(userId = medalUserId, onDismiss = { showUnequipped = false })
+        val currentSlotImage = equippedSlots.getOrNull(activeSlotIndex)
+        WearBadgeBottomSheet(
+            selectableMedals = wearableMedals,
+            initialSelectedImage = currentSlotImage,
+            onSave = { chosenImage ->
+                if (activeSlotIndex in 0 until 10) {
+                    equippedSlots[activeSlotIndex] = chosenImage
+                    val prefs = context.getSharedPreferences("hurry_equipped_badges", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().apply {
+                        if (chosenImage == null) {
+                            remove("slot_${medalUserId}_$activeSlotIndex")
+                        } else {
+                            putString("slot_${medalUserId}_$activeSlotIndex", chosenImage)
+                        }
+                    }.apply()
+                }
+                showUnequipped = false
+            },
+            onDismiss = { showUnequipped = false }
+        )
     }
 
     if (showRules) {
@@ -350,9 +464,15 @@ fun MedalScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WearBadgeBottomSheet(userId: String, onDismiss: () -> Unit) {
+fun WearBadgeBottomSheet(
+    selectableMedals: List<MedalItem>,
+    initialSelectedImage: String?,
+    onSave: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val buttonShape = RoundedCornerShape(12.dp)
+    var selectedImage by remember(initialSelectedImage) { mutableStateOf(initialSelectedImage) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -380,8 +500,66 @@ fun WearBadgeBottomSheet(userId: String, onDismiss: () -> Unit) {
                 textAlign = TextAlign.Center
             )
 
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                NativeOwnedMedalShowcase(userId = userId, showEmpty = true)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Top se 1st row, 2nd row, 3rd row...
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                items(selectableMedals, key = { it.id }) { medal ->
+                    val isSelected = selectedImage == medal.video
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF081F42).copy(alpha = 0.65f))
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) Color(0xFF1A8CFF) else Color(0xFF1B3B6B).copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                selectedImage = if (isSelected) null else medal.video
+                            }
+                            .padding(8.dp)
+                    ) {
+                        AsyncImage(
+                            model = medal.video.fullUrl,
+                            contentDescription = medal.name,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .align(Alignment.Center)
+                        )
+
+                        // Top-right corner Circle Blue Tick
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .align(Alignment.TopEnd)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF1A8CFF))
+                                    .border(1.5.dp, Color.White, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Box(
@@ -399,7 +577,7 @@ fun WearBadgeBottomSheet(userId: String, onDismiss: () -> Unit) {
                         )
                     )
                     .border(1.5.dp, Color(0xFFE5C158), buttonShape)
-                    .clickable(onClick = onDismiss),
+                    .clickable { onSave(selectedImage) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -421,6 +599,42 @@ fun MedalDetailDialog(
     onSelectTier: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Popup animation har baar open hone ya tier switch karne par trigger hogi
+    val popupScale = remember { Animatable(0.45f) }
+    val popupAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(displayMedal.id) {
+        popupScale.snapTo(0.45f)
+        popupAlpha.snapTo(0f)
+        launch {
+            popupScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.55f,
+                    stiffness = 260f
+                )
+            )
+        }
+        launch {
+            popupAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 220)
+            )
+        }
+    }
+
+    // Subtle floating breathing effect after popup
+    val floatTransition = rememberInfiniteTransition(label = "medalFloat")
+    val floatOffsetY by floatTransition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "medalFloatY"
+    )
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -447,20 +661,45 @@ fun MedalDetailDialog(
             ) {
                 Spacer(modifier = Modifier.height(64.dp))
 
-                // Medal Image with Rotating Golden Sunburst Rays & Confetti
+                // Medal Image with Golden Sunburst behind + Popup Animation + Golden Sparkle & Shining Bubbles over Image
                 Box(
-                    modifier = Modifier
-                        .size(310.dp),
+                    modifier = Modifier.size(310.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     GoldenSunburstEffect(modifier = Modifier.fillMaxSize())
 
-                    StoreVideoPreview(
-                        url = displayMedal.previewVideo.fullUrl,
-                        modifier = Modifier.size(215.dp).clip(RoundedCornerShape(4.dp)),
-                        mute = true,
-                        loop = true
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(215.dp)
+                            .graphicsLayer {
+                                scaleX = popupScale.value
+                                scaleY = popupScale.value
+                                alpha = popupAlpha.value
+                                translationY = floatOffsetY
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
+                            StoreVideoPreview(
+                                url = displayMedal.previewVideo.fullUrl,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(4.dp)),
+                                mute = true,
+                                loop = true
+                            )
+                        } else {
+                            AsyncImage(
+                                model = displayMedal.video.fullUrl,
+                                contentDescription = displayMedal.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+
+                    // Golden Sparkle + Shining Bubble Animation right over the medal image
+                    GoldenSparkleAndBubbleOverlay(modifier = Modifier.size(270.dp))
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -485,54 +724,60 @@ fun MedalDetailDialog(
                     textAlign = TextAlign.Center
                 )
 
-                // 1 > 2 > 3 Tier Images Row (Same TIER_TAB_IMAGES)
+                // Tier Images Row (Original Color, Centered for 4 tiers & Horizontal Scroll for 10 tiers)
                 if (tierMedals.size > 1) {
                     Spacer(modifier = Modifier.height(22.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        tierMedals.indices.forEach { i ->
-                            if (i > 0) {
-                                Text(
-                                    text = ">",
-                                    color = Color(0xFF9CA3AF),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 14.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .horizontalScroll(rememberScrollState())
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {}
                                 )
-                            }
-                            val isSelected = activeTier == i
-                            val boxShape = RoundedCornerShape(10.dp)
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(boxShape)
-                                    .background(
-                                        if (isSelected) Color(0xFF1A1610) else Color.Transparent
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            tierMedals.indices.forEach { i ->
+                                if (i > 0) {
+                                    Text(
+                                        text = ">",
+                                        color = Color(0xFF9CA3AF),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = 10.dp)
                                     )
-                                    .border(
-                                        width = if (isSelected) 1.3.dp else 0.dp,
-                                        color = if (isSelected) Color(0xFFE5C158) else Color.Transparent,
-                                        shape = boxShape
-                                    )
-                                    .clickable { onSelectTier(i) }
-                                    .padding(4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = TIER_TAB_IMAGES.getOrNull(i)?.fullUrl ?: TIER_TAB_IMAGES.last().fullUrl,
-                                    contentDescription = "Tier ${i + 1}",
-                                    contentScale = ContentScale.Fit,
+                                }
+                                val isSelected = activeTier == i
+                                val boxShape = RoundedCornerShape(10.dp)
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer { alpha = if (isSelected) 1f else 0.85f }
-                                )
+                                        .size(48.dp)
+                                        .clip(boxShape)
+                                        .background(
+                                            if (isSelected) Color(0xFF1A1610) else Color.Transparent
+                                        )
+                                        .border(
+                                            width = if (isSelected) 1.3.dp else 0.dp,
+                                            color = if (isSelected) Color(0xFFE5C158) else Color.Transparent,
+                                            shape = boxShape
+                                        )
+                                        .clickable { onSelectTier(i) }
+                                        .padding(4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = TIER_TAB_IMAGES.getOrNull(i)?.fullUrl ?: TIER_TAB_IMAGES.last().fullUrl,
+                                        contentDescription = "Tier ${i + 1}",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                         }
                     }
@@ -565,6 +810,221 @@ fun MedalDetailDialog(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
                     modifier = Modifier.padding(bottom = 26.dp)
+                )
+            }
+        }
+    }
+}
+
+private data class SparkleSpec(
+    val xFrac: Float,
+    val yFrac: Float,
+    val maxRadius: Float,
+    val phaseOffset: Float
+)
+
+private data class ShiningBubbleSpec(
+    val xFrac: Float,
+    val radiusPx: Float,
+    val phaseOffset: Float,
+    val driftAmp: Float
+)
+
+@Composable
+fun GoldenSparkleAndBubbleOverlay(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "sparkleAndBubbles")
+
+    val sparklePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sparklePhase"
+    )
+
+    val bubblePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bubblePhase"
+    )
+
+    val shinePulse by infiniteTransition.animateFloat(
+        initialValue = 0.14f,
+        targetValue = 0.34f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shinePulse"
+    )
+
+    val sparkles = remember {
+        listOf(
+            SparkleSpec(0.24f, 0.25f, 15f, 0.00f),
+            SparkleSpec(0.76f, 0.22f, 17f, 0.18f),
+            SparkleSpec(0.50f, 0.16f, 13f, 0.35f),
+            SparkleSpec(0.18f, 0.56f, 14f, 0.52f),
+            SparkleSpec(0.83f, 0.52f, 16f, 0.68f),
+            SparkleSpec(0.34f, 0.74f, 15f, 0.82f),
+            SparkleSpec(0.68f, 0.76f, 14f, 0.26f),
+            SparkleSpec(0.42f, 0.42f, 12f, 0.61f),
+            SparkleSpec(0.61f, 0.38f, 13f, 0.91f),
+            SparkleSpec(0.49f, 0.64f, 12f, 0.44f),
+            SparkleSpec(0.29f, 0.40f, 11f, 0.74f),
+            SparkleSpec(0.72f, 0.63f, 12f, 0.11f)
+        )
+    }
+
+    val bubbles = remember {
+        listOf(
+            ShiningBubbleSpec(0.22f, 9f, 0.05f, 10f),
+            ShiningBubbleSpec(0.35f, 13f, 0.22f, -12f),
+            ShiningBubbleSpec(0.48f, 8f, 0.40f, 9f),
+            ShiningBubbleSpec(0.62f, 14f, 0.58f, -11f),
+            ShiningBubbleSpec(0.77f, 10f, 0.75f, 10f),
+            ShiningBubbleSpec(0.29f, 7f, 0.88f, -8f),
+            ShiningBubbleSpec(0.54f, 11f, 0.15f, 12f),
+            ShiningBubbleSpec(0.70f, 8f, 0.33f, -9f),
+            ShiningBubbleSpec(0.40f, 6f, 0.50f, 8f),
+            ShiningBubbleSpec(0.82f, 9f, 0.67f, -10f),
+            ShiningBubbleSpec(0.17f, 10f, 0.81f, 9f),
+            ShiningBubbleSpec(0.58f, 7f, 0.94f, -8f)
+        )
+    }
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val center = Offset(w / 2f, h / 2f)
+
+        // 1. Soft Pulsing Golden Shine Aura over the Image
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFF4C2).copy(alpha = shinePulse),
+                    Color(0xFFFFD452).copy(alpha = shinePulse * 0.45f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = size.minDimension * 0.48f
+            ),
+            radius = size.minDimension * 0.48f,
+            center = center
+        )
+
+        // 2. Rising Shining Golden Bubbles
+        bubbles.forEach { b ->
+            val progress = (bubblePhase + b.phaseOffset) % 1f
+            val y = h * (0.90f - progress * 0.78f)
+            val x = (w * b.xFrac) + (sin(progress * 2.0 * PI) * b.driftAmp).toFloat()
+            val alpha = when {
+                progress < 0.18f -> (progress / 0.18f)
+                progress > 0.78f -> ((1f - progress) / 0.22f)
+                else -> 1f
+            }.coerceIn(0f, 1f)
+
+            val bubbleCenter = Offset(x, y)
+            val r = b.radiusPx * (0.85f + 0.25f * sin(progress * PI).toFloat())
+
+            // Outer golden glow
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFE98A).copy(alpha = 0.50f * alpha),
+                        Color(0xFFE5B230).copy(alpha = 0.22f * alpha),
+                        Color.Transparent
+                    ),
+                    center = bubbleCenter,
+                    radius = r * 2.0f
+                ),
+                radius = r * 2.0f,
+                center = bubbleCenter
+            )
+
+            // Translucent golden bubble body
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFFBE0).copy(alpha = 0.35f * alpha),
+                        Color(0xFFFFD863).copy(alpha = 0.22f * alpha),
+                        Color(0xFFE5A924).copy(alpha = 0.42f * alpha)
+                    ),
+                    center = bubbleCenter,
+                    radius = r
+                ),
+                radius = r,
+                center = bubbleCenter
+            )
+
+            // Crisp shining bubble rim
+            drawCircle(
+                color = Color(0xFFFFF0A8).copy(alpha = 0.78f * alpha),
+                radius = r,
+                center = bubbleCenter,
+                style = Stroke(width = 1.2f)
+            )
+
+            // Specular white-gold shine dot inside bubble
+            drawCircle(
+                color = Color.White.copy(alpha = 0.90f * alpha),
+                radius = r * 0.28f,
+                center = Offset(x - r * 0.32f, y - r * 0.32f)
+            )
+        }
+
+        // 3. Golden 4-Point Twinkling Sparkles right over the Image
+        sparkles.forEach { s ->
+            val wave = ((sin((sparklePhase + s.phaseOffset) * 2.0 * PI) + 1.0) / 2.0).toFloat()
+            val intensity = wave * wave // Sharp twinkle peak
+            if (intensity > 0.06f) {
+                val cx = w * s.xFrac
+                val cy = h * s.yFrac
+                val outerR = s.maxRadius * (0.35f + 0.65f * intensity)
+                val innerR = outerR * 0.22f
+
+                // Golden sparkle halo
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFF8D2).copy(alpha = 0.85f * intensity),
+                            Color(0xFFFFCC3D).copy(alpha = 0.40f * intensity),
+                            Color.Transparent
+                        ),
+                        center = Offset(cx, cy),
+                        radius = outerR * 1.45f
+                    ),
+                    radius = outerR * 1.45f,
+                    center = Offset(cx, cy)
+                )
+
+                // 4-point star sparkle
+                val starPath = Path().apply {
+                    moveTo(cx, cy - outerR)
+                    lineTo(cx + innerR, cy - innerR)
+                    lineTo(cx + outerR, cy)
+                    lineTo(cx + innerR, cy + innerR)
+                    lineTo(cx, cy + outerR)
+                    lineTo(cx - innerR, cy + innerR)
+                    lineTo(cx - outerR, cy)
+                    lineTo(cx - innerR, cy - innerR)
+                    close()
+                }
+                drawPath(
+                    path = starPath,
+                    color = Color(0xFFFFF7CC).copy(alpha = 0.95f * intensity)
+                )
+
+                // Bright white center core
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.95f * intensity),
+                    radius = innerR * 0.95f,
+                    center = Offset(cx, cy)
                 )
             }
         }
@@ -644,7 +1104,10 @@ fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
 
 // HELPER UI COMPONENTS
 @Composable
-fun MedalSlot(onClick: () -> Unit) {
+fun MedalSlot(
+    equippedImage: String? = null,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .size(48.dp)
@@ -652,8 +1115,8 @@ fun MedalSlot(onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
-            model = "IMG_20261120_123855.png".fullUrl,
-            contentDescription = "Badge Slot",
+            model = (equippedImage ?: "IMG_20261120_123855.png").fullUrl,
+            contentDescription = if (equippedImage != null) "Equipped Badge" else "Badge Slot",
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
@@ -840,33 +1303,21 @@ fun RuleItemRow(number: String, text: String) {
 }
 
 fun getMedalsData(): List<MedalItem> = listOf(
-    // Rich
-    MedalItem("rich_1", "Rich I", "/IMG_20261023_110513.png", "/VID_20260924_124439.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
-    MedalItem("rich_2", "Rich II", "/IMG_20261023_110533.png", "/1000200509-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
-    MedalItem("rich_3", "Rich III", "/IMG_20261023_110559.png", "/1000200510-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    // Honor: Rich (All 10 Tier Medal Images)
+    MedalItem("rich_1", "Rich", "/IMG_20261123_235528.png", "/IMG_20261123_235528.png", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_2", "Rich", "/IMG_20261123_235607.png", "/IMG_20261123_235607.png", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_3", "Rich", "/IMG_20261123_235628.png", "/IMG_20261123_235628.png", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_4", "Rich", "/IMG_20261123_235643.png", "/IMG_20261123_235643.png", 4, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_5", "Rich", "/IMG_20261123_235703.png", "/IMG_20261123_235703.png", 5, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_6", "Rich", "/IMG_20261123_235722.png", "/IMG_20261123_235722.png", 6, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_7", "Rich", "/IMG_20261123_235749.png", "/IMG_20261123_235749.png", 7, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_8", "Rich", "/IMG_20261123_235806.png", "/IMG_20261123_235806.png", 8, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_9", "Rich", "/IMG_20261123_235821.png", "/IMG_20261123_235821.png", 9, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_10", "Rich", "/IMG_20261123_235841.png", "/IMG_20261123_235841.png", 10, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
 
-    // Room
-    MedalItem("room_1", "Room Top I", "/IMG_20261023_110628.png", "/1000200514-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
-    MedalItem("room_2", "Room Top II", "/IMG_20261023_110644.png", "/1000200515-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
-    MedalItem("room_3", "Room Top III", "/IMG_20261023_110705.png", "/1000200516-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
-
-    // Millionaire
-    MedalItem("mill_1", "Millionaire I", "/IMG_20261023_110734.png", "/1000200518-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "millionaire", "Recharge to earn"),
-    MedalItem("mill_2", "Millionaire II", "/IMG_20261023_110756.png", "/1000200521-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "millionaire", "Recharge to earn"),
-    MedalItem("mill_3", "Millionaire III", "/IMG_20261023_110825.png", "/1000200522-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "millionaire", "Recharge to earn"),
-
-    // Super Gamer
-    MedalItem("gamer_1", "Super Gamer 1", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
-    MedalItem("gamer_2", "Super Gamer 2", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
-    MedalItem("gamer_3", "Super Gamer 3", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
-
-    // VIP & Pure Love (Activity/Gifts)
-    MedalItem("vip_1", "VIP 1", "/IMG_20261023_110912.png", "/1000200506-background.mp4", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "vip", "VIP Event"),
-    MedalItem("vip_2", "VIP 2", "/IMG_20261023_110930.png", "/1000200505-background.mp4", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "vip", "VIP Event"),
-    MedalItem("love_1", "Pure Love", "/IMG_20261023_111000.png", "/1000200507-background.mp4", 1, "gift", "black", 120, 0.5f, 200, 0.5f, "love", "Gift rewards"),
-
-    // Medals 11, 12, 13
-    MedalItem("medal_11", "Medal 11", "/IMG_20261023_111027.png", "/1000200513-background.mp4", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards"),
-    MedalItem("medal_12", "Medal 12", "/IMG_20261023_111053.png", "/1000200512-background.mp4", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards"),
-    MedalItem("medal_13", "Medal 13", "/IMG_20261023_111115.png", "/1000200511-background.mp4", 3, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards")
+    // Event: Family (4 Tier Medal Images)
+    MedalItem("family_1", "Family", "/IMG_20261117_210225.png", "/IMG_20261117_210225.png", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "family", "Family event reward"),
+    MedalItem("family_2", "Family", "/IMG_20261117_210250.png", "/IMG_20261117_210250.png", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "family", "Family event reward"),
+    MedalItem("family_3", "Family", "/IMG_20261117_210313.png", "/IMG_20261117_210313.png", 3, "activity", "black", 120, 0.5f, 200, 0.5f, "family", "Family event reward"),
+    MedalItem("family_4", "Family", "/IMG_20261117_210200.png", "/IMG_20261117_210200.png", 4, "activity", "black", 120, 0.5f, 200, 0.5f, "family", "Family event reward")
 )
