@@ -1982,3 +1982,12 @@ Current documentation does not certify that all historical features are build-, 
 - `Zyora-Server/server.js`: Wild Party and Dragon Battle now settle each bet/win with one atomic MongoDB user-document update instead of a multi-command majority transaction. The balance mutation and idempotency key remain in the same atomic write, preventing duplicate application and overspending.
 - Canonical Socket.IO balance broadcasts happen immediately after the atomic write; local game display remains optimistic while the server confirms. Wallet history persistence runs independently so it does not hold up the balance response.
 - Server deployment and multi-device latency still require runtime verification.
+
+## 2026-11-23 — Owner Panel login and private-message monitor security
+- Replaced the old three-field client-side Owner Panel login with the compact Email + Password login layout.
+- Owner login is verified by the backend using `OWNER_PANEL_EMAIL` and `OWNER_PANEL_PASSWORD`; the backend issues a signed 12-hour session token using `OWNER_PANEL_SESSION_SECRET` (minimum 32 characters).
+- The panel now uses a versioned sessionStorage token and verifies it on reload. Previous `hurry_staff_panel_auth` localStorage sessions are no longer accepted, forcing existing panel sessions to log in again.
+- Owner private-message monitoring now authenticates the Socket.IO connection with the signed owner token. Live `private_message_monitor` events and history responses are delivered only to authenticated Owner Panel sockets, not globally broadcast to every connected client.
+- Private-message monitor history remains in the Owner Panel browser IndexedDB; the server keeps only its bounded in-memory reconnect buffer. Native clients' `index.db` remains device-local; messages are relayed to the Owner Panel in real time through Socket.IO when clients send them.
+- Deployment configuration required on the Zyora backend service: set `OWNER_PANEL_EMAIL`, `OWNER_PANEL_PASSWORD`, and a unique random `OWNER_PANEL_SESSION_SECRET` (32+ characters). Do not put these secrets in source code or `NEXT_PUBLIC_*` variables.
+- Source changes committed; Render environment configuration and production deployment/browser verification remain pending.
