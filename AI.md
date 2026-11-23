@@ -2018,3 +2018,12 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-23 — Family reward system message wording
 - Family reward asset grants (`fr*`) now send a durable Zyora System private message in the exact format `You receive\n<actual granted reward name>\nRegards Zyora Official Team`; the reward line uses the actual granted asset name, so unreceived rewards are never listed. Non-family owner asset notification wording is unchanged.
 - Backend commit: `a271a95d15d060a36f87522ce030dabb5862d219`. Render deployment and recipient-device delivery remain to be verified.
+
+
+## 2026-11-23 — Weekly Family rankings and automatic Top 10 rewards
+- Family leaderboard now has This Week and Last Week periods. This Week sorts by weekly family gift contributions; the previous week's ranking and amounts are snapshotted at the Monday reset.
+- Zyora Server runs a retryable Monday 00:00 Asia/Kolkata settlement. It resets weekly family/member contribution counters after preserving the previous-week snapshot and distributes the configured Top 1–10 rewards to each member of the ranked family.
+- Top 1 receives the existing 7-day frame, medal, family tag, vehicle and room theme assets plus 500,000 coins credited to the existing Wallet. Top 2 and Top 3 receive their configured 7-day frame/medal/tag/theme assets. Top 4–10 receive the configured 3-day frame and medal. Medal assets are stored in the existing storeInventory collection with tab Medal, so the existing Medal page reads them; they are no longer previewed on the Family rewards page.
+- Frame, vehicle, theme and family-tag rewards are written to the same storeInventory used by Bag, with their configured asset/video and expiry. Family Tag is additionally published as an expiring profile field and replaces the existing Family tag/card background in Public Profile while active.
+- Each recipient gets one durable Zyora System private message in the exact format `You receive\nFamily Top <rank> Rewards\nRegards Zyora Official Team`. Wallet credits and reward claims use idempotency keys; notification failures keep settlement retryable.
+- Native changes: Family.kt, familyprofile.kt, StorePage.kt, and PublicProfile.kt. Server changes: server.js. GitHub Actions APK build and server verification are running; Render deployment and real-device reward/Bag/Wallet/DM checks remain required.
