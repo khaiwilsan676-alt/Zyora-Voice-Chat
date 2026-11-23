@@ -292,9 +292,10 @@ fun PublicProfileScreen(
     val activeSpecialId = liveProfileTags?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && liveProfileTags?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } == true }
     val displayAccNum = activeSpecialId ?: originalAccNum
     val hasSpecialIdBadge = activeSpecialId != null && liveProfileTags?.optBoolean("vipIdBadge", false) == true
-    val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
-    val isRedOfficial = displayAccNum == "500001"
-    val is500002Official = displayAccNum in setOf("500002", "500003", "500004", "500005", "500005")
+    val profileIdentityIds = setOf(displayAccNum, originalAccNum, targetUser?.id.orEmpty(), targetUser?.uid.orEmpty(), targetUser?.accountId.orEmpty()).map { it.trim() }.filter { it.isNotBlank() }.toSet()
+    val isCoreOfficial = profileIdentityIds.any { it == "100002" || it == "100003" }
+    val isRedOfficial = profileIdentityIds.contains("500001")
+    val is500002Official = profileIdentityIds.any { it in setOf("500002", "500003", "500004", "500005") }
     val isProfileTagActive: (String, Boolean?) -> Boolean = { key, targetValue ->
         val hasExpiry = liveProfileTags?.has(key + "ExpiresAt") == true
         val expiry = liveProfileTags?.optLong(key + "ExpiresAt", 0L) ?: 0L
@@ -306,8 +307,7 @@ fun PublicProfileScreen(
     val showAdmin = !is500002Official && (isCoreOfficial || isProfileTagActive("adminTag", targetUser?.adminTag))
     val showService = !is500002Official && (isCoreOfficial || isProfileTagActive("serviceTag", targetUser?.serviceTag) || liveProfileTags?.optBoolean("csTag", false) == true)
     val showHost = !is500002Official && (isCoreOfficial || isProfileTagActive("hostTag", null) || liveProfileTags?.optBoolean("isHost", false) == true)
-    val sellerTagIdentityIds = setOf(displayAccNum, originalAccNum, targetUser?.id.orEmpty(), targetUser?.uid.orEmpty(), targetUser?.accountId.orEmpty()).map { it.trim() }.filter { it.isNotBlank() }.toSet()
-    val showCoinSeller = sellerTagIdentityIds.any { it == "100002" || it == "100003" } || isProfileTagActive("coinSellerTag", targetUser?.coinSellerTag) || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
+    val showCoinSeller = isCoreOfficial || isProfileTagActive("coinSellerTag", targetUser?.coinSellerTag) || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
     val defaultAvatar = ZYORA_DEFAULT_AVATAR_URL
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
