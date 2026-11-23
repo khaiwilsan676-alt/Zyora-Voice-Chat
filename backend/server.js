@@ -231,9 +231,6 @@ const gameWinnerWrites = new Map();
  */
 const roomUsers = new Map();
 
-// Deduplicate client replay of money-transfer events for a short window.
-const recentTransferIds = new Map();
-
 /*
  * roomId -> Map(seatNumber -> seat state)
  * Seat state is kept in memory because it only represents the
@@ -1616,6 +1613,29 @@ async function debitWallet(userId, amount) {
     _id: user._id, coins: { $gte: value }
   }, { $inc: { coins: -value }, $set: { walletUpdatedAt: Date.now() } });
   return Boolean(result.modifiedCount);
+}
+
+// Lucky/room coin transfers use MongoDB-side idempotency markers so a socket
+// retry or server restart cannot debit/credit the same transfer twice.
+async function applyCoinTransferDelta(userId, amount, transferId, markerField, balanceField, direction) {
+  const value = Number(amount);
+  const key = String(transferId || "").trim();
+  if (!Number.isSafeInteger(value) || value <= 0 || !key) return false;
+  const user = await ensureWalletUser(userId);
+  const query = { _id: user._id, [markerField]: { $ne: key } };
+  if (direction < 0) query[balanceField] = { $gte: value };
+  const result = await db.collection("users").updateOne(query, {
+    $inc: { [balanceField]: direction * value },
+    $push: { [markerField]: { $each: [key], $slice: -5000 } },
+    $set: { walletUpdatedAt: Date.now() }
+  });
+  if (result.modifiedCount) return true;
+  const latest = await db.collection("users").findOne(
+    { _id: user._id },
+    { projection: { [markerField]: 1, [balanceField]: 1 } }
+  );
+  // An existing marker means this exact transfer delta already succeeded.
+  return Array.isArray(latest?.[markerField]) && latest[markerField].includes(key);
 }
 // Active Lucky Bags are short-lived realtime state only. Durable owner transaction
 // history is written by the Owner Panel to its browser IndexedDB.
@@ -3179,27 +3199,18 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, comboReplay, senderName, senderImage, recipientName, recipientImage, multiplier } = {}) => {
+  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, comboReplay, senderName, senderImage, recipientName, recipientImage, recipientMode, multiplier } = {}) => {
     const room = String(roomId || "");
     const sender = String(senderId || "");
     const value = Number(amount);
     const eventId = String(transferId || "").trim();
-    if (eventId) {
-      const seenAt = recentTransferIds.get(eventId);
-      if (seenAt && Date.now() - seenAt < 30000) return;
-      recentTransferIds.set(eventId, Date.now());
-      if (recentTransferIds.size > 5000) {
-        for (const [id, at] of recentTransferIds) {
-          if (Date.now() - at >= 30000) recentTransferIds.delete(id);
-        }
-      }
-    }
 
     const recipients = Array.isArray(recipientIds)
       ? [...new Set(recipientIds.map((id) => String(id)).filter(Boolean))]
       : [];
 
-    if (!room || !sender || !Number.isFinite(value) || value <= 0 || value > 1000000000) {
+    if (!room || !sender || !eventId || eventId.length > 120 ||
+        !Number.isSafeInteger(value) || value <= 0 || value > 1000000000) {
       return;
     }
 
@@ -3303,34 +3314,44 @@ io.on("connection", (socket) => {
       luckyReturnPercent,
       luckyReturnAmount,
       transferId: eventId || undefined,
+      recipientMode: String(recipientMode || "single"),
       timestamp: Date.now(),
     };
 
-    // Persist the gift against the same GitHub storage wallet used by Mine > Wallet.
-    // Never broadcast a successful gift if the sender could not pay.
+    // The server alone decides Lucky return amounts. Apply every wallet delta with
+    // a durable per-user transfer marker before publishing the success event.
     try {
       if (!db) throw new Error("GitHub storage wallet unavailable");
-      const paid = await debitWallet(sender, Math.floor(value));
+      const paid = await applyCoinTransferDelta(sender, Math.floor(value), eventId,
+        "coinTransferDebits", "coins", -1);
       if (!paid) {
-        socket.emit("coin_transfer_failed", { transferId: eventId || undefined, reason: "insufficient_coins" });
+        let balance = -1;
+        try { balance = await walletBalance(sender); } catch (_) {}
+        socket.emit("coin_transfer_failed", {
+          roomId: room, transferId: eventId, reason: "insufficient_coins", balance
+        });
         return;
       }
       const diamondCredit = Math.max(0, Math.floor(diamondAmount));
       for (const recipientId of validRecipients) {
-        await ensureWalletUser(recipientId);
-        await db.collection("users").updateOne(walletUserQuery(recipientId), {
-          $inc: { diamonds: diamondCredit },
-          $set: { walletUpdatedAt: Date.now() }
-        });
+        await applyCoinTransferDelta(recipientId, diamondCredit, eventId,
+          "coinTransferDiamondCredits", "diamonds", 1);
       }
-      if (luckyReturnAmount > 0) await creditWallet(sender, luckyReturnAmount);
+      if (luckyReturnAmount > 0) {
+        await applyCoinTransferDelta(sender, luckyReturnAmount, eventId,
+          "coinTransferReturnCredits", "coins", 1);
+      }
       io.to("room:" + room).emit("coin_transfer_received", transferPayload);
       socket.emit("wallet_balance_updated", {
-        userId: sender, balance: await walletBalance(sender), transferId: eventId || undefined
+        userId: sender, balance: await walletBalance(sender), transferId: eventId
       });
     } catch (error) {
       console.error("coin_transfer wallet persistence failed:", error.message);
-      socket.emit("coin_transfer_failed", { transferId: eventId || undefined, reason: "wallet_unavailable" });
+      let balance = -1;
+      try { balance = await walletBalance(sender); } catch (_) {}
+      socket.emit("coin_transfer_failed", {
+        roomId: room, transferId: eventId, reason: "wallet_unavailable", balance
+      });
     }
   });
 
