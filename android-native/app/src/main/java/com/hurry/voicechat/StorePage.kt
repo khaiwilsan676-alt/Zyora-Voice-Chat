@@ -224,7 +224,6 @@ private val nativeStoreTabs = listOf(
     NativeStoreTab("Avatar Frame", "Frame", "IMG_20260913_090057.png"),
     NativeStoreTab("Theme", "Theme", "IMG_20260913_090137.png"),
     NativeStoreTab("Chat Bubble", "Bubble", "IMG_20260913_090116.png"),
-    NativeStoreTab("Family Tag", "Family Tag", "IMG_20261117_193617.png"),
     NativeStoreTab("ID", "ID", "IMG_20260913_090150.png")
 )
 
