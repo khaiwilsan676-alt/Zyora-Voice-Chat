@@ -289,14 +289,21 @@ fun RoomInfo(
                     Text(roomData.roomName.ifBlank { "Room" }, fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (roomData.roomId in setOf("100002","100003","500002","500003","500004","500005","500005")) {
+                        val topVipId = ownerVipId.takeIf { ownerVipBadge && it.matches(Regex("\\d{1,20}")) }
+                        val topDisplayId = topVipId ?: roomData.roomId
+                        if (topVipId != null) {
+                            AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
+                                contentDescription="VIP ID Badge",
+                                modifier=Modifier.height(16.dp).widthIn(min=22.dp,max=30.dp), contentScale=ContentScale.Fit)
+                            Text(topVipId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
+                        } else if (roomData.roomId in setOf("100002","100003","500002","500003","500004","500005")) {
                             AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                 contentDescription="Purple ID Badge",
                                 modifier=Modifier.height(16.dp).widthIn(min=22.dp,max=30.dp), contentScale=ContentScale.Fit)
                             Text(roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
                         } else Text("ID: "+roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
-                        IconButton(onClick={onCopyId(roomData.roomId)},modifier=Modifier.size(24.dp)) {
-                            Icon(Icons.Default.ContentCopy,contentDescription="Copy room ID",
+                        IconButton(onClick={onCopyId(topDisplayId)},modifier=Modifier.size(24.dp)) {
+                            Icon(Icons.Default.ContentCopy,contentDescription="Copy ID",
                                 tint=Color.White.copy(alpha=.70f),modifier=Modifier.size(14.dp))
                         }
                     }
@@ -350,21 +357,6 @@ fun RoomInfo(
                                 Text(ownerDisplayName.ifBlank{"Unknown"}, fontSize=13.sp,
                                     fontWeight=FontWeight.SemiBold, color=Color.White, maxLines=1)
                                 Text("Room owner", fontSize=10.sp, color=Color.White.copy(alpha=.55f))
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    val displayOwnerId = ownerVipId.takeIf { ownerVipBadge && it.matches(Regex("\\d{1,20}")) }
-                                        ?: roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
-                                    if (ownerVipBadge && ownerVipId.isNotBlank()) {
-                                        AsyncImage(
-                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                            contentDescription = "VIP ID",
-                                            modifier = Modifier.height(11.dp).widthIn(min = 12.dp, max = 16.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                        Text(displayOwnerId, fontSize=10.sp, color=Color.White.copy(alpha=.70f))
-                                    } else {
-                                        Text("ID: $displayOwnerId", fontSize=10.sp, color=Color.White.copy(alpha=.70f))
-                                    }
-                                }
                             }
                         }
                         AsyncImage(
@@ -569,17 +561,6 @@ private fun MemberRow(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                if (showVipIdBadge && vipId.isNotBlank()) {
-                    AsyncImage(
-                        model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
-                        contentDescription = "VIP ID",
-                        modifier = Modifier.height(13.dp).widthIn(min = 14.dp, max = 19.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(vipId, color = Color.White.copy(alpha = .72f), fontSize = 10.sp)
-                } else {
-                    Text("ID: $id", color = Color.White.copy(alpha = .58f), fontSize = 10.sp)
-                }
                 if (gender.isNotBlank()) {
                     val isFemale = gender.equals("female", true) || gender.equals("f", true) || gender == "♀"
                     Box(
