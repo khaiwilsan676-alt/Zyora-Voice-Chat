@@ -1700,11 +1700,12 @@ export default function StaffPanel() {
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[650px]">
+                  <table className="w-full text-left border-collapse min-w-[820px]">
                     <thead>
                       <tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
                         <th className="py-3 pl-4 pr-2 w-14">S.No</th>
                         <th className="py-3 px-2">User</th>
+                        <th className="py-3 px-2">Gmail</th>
                         <th className="py-3 px-2">State</th>
                         <th className="py-3 px-2">Coins</th>
                         <th className="py-3 px-2">Diamond</th>
@@ -1754,6 +1755,9 @@ export default function StaffPanel() {
                                 </div>
                               </div>
                             </td>
+                            <td className="py-3 px-2 text-xs text-slate-600">
+                              <span className="block max-w-[220px] truncate" title={u.email || ''}>{u.email && u.email !== '—' ? u.email : '—'}</span>
+                            </td>
                             <td className="py-3 px-2">
                               <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${/active/i.test(userState) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                                 {userState}
@@ -1776,7 +1780,7 @@ export default function StaffPanel() {
                       })}
                       {filteredUsers.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="py-8 text-center text-slate-400 font-medium text-sm">
+                          <td colSpan={8} className="py-8 text-center text-slate-400 font-medium text-sm">
                             No users found matching query
                           </td>
                         </tr>
