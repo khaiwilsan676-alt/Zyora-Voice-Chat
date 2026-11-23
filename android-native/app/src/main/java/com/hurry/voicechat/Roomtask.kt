@@ -28,7 +28,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.TimeUnit
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
+import org.json.JSONObject
+import org.json.JSONArray
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
 
@@ -40,6 +50,32 @@ fun Roomtask(onBack: () -> Unit = {}) {
     var minute by remember { mutableIntStateOf(0) }
     var second by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val claimedTaskIds = remember { mutableStateListOf<Int>() }
+    val completedTaskIds = remember { mutableStateListOf<Int>() }
+    val claimingTaskIds = remember { mutableStateListOf<Int>() }
+    var taskError by remember { mutableStateOf("") }
+
+    LaunchedEffect(roomId) {
+        if (roomId.isBlank()) return@LaunchedEffect
+        while (true) {
+            runCatching { requestNativeRoomTasks(roomId) }.onSuccess { response ->
+                val rows = response.optJSONArray("tasks") ?: JSONArray()
+                val completed = mutableListOf<Int>()
+                val claimed = mutableListOf<Int>()
+                for (index in 0 until rows.length()) {
+                    val row = rows.optJSONObject(index) ?: continue
+                    val id = row.optInt("taskId")
+                    if (row.optBoolean("complete")) completed.add(id)
+                    if (row.optBoolean("claimed")) claimed.add(id)
+                }
+                completedTaskIds.clear(); completedTaskIds.addAll(completed)
+                claimedTaskIds.clear(); claimedTaskIds.addAll(claimed)
+                taskError = ""
+            }.onFailure { taskError = it.message.orEmpty() }
+            delay(15000)
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -199,7 +235,11 @@ fun Roomtask(onBack: () -> Unit = {}) {
                     modifier = Modifier.fillMaxWidth().offset(y = (-25).dp).zIndex(1f),
                     verticalArrangement = Arrangement.spacedBy((-60).dp)
                 ) {
-                    tasks.forEach { task ->
+                    tasks.forEachIndexed { taskIndex, task ->
+                        val taskId = taskIndex + 1
+                        val isClaimed = taskId in claimedTaskIds
+                        val isComplete = taskId in completedTaskIds
+                        val isClaiming = taskId in claimingTaskIds
                         Box(Modifier.fillMaxWidth().height(175.dp)) {
 
                             AsyncImage(
@@ -278,7 +318,18 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                             )
                                         }
                                         Button(
-                                            onClick = {},
+                                            onClick = {
+                                                if (isComplete && !isClaimed && !isClaiming) {
+                                                    claimingTaskIds.add(taskId)
+                                                    scope.launch {
+                                                        runCatching { requestNativeRoomTasks(roomId, taskId) }
+                                                            .onSuccess { claimedTaskIds.add(taskId); taskError = "" }
+                                                            .onFailure { taskError = it.message.orEmpty() }
+                                                        claimingTaskIds.remove(taskId)
+                                                    }
+                                                }
+                                            },
+                                            enabled = isComplete && !isClaimed && !isClaiming,
                                             modifier = Modifier.padding(top = 6.dp).width(85.dp).height(28.dp),
                                             contentPadding = PaddingValues(0.dp),
                                             shape = RoundedCornerShape(18.dp),
@@ -287,14 +338,14 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                         ) {
                                             Box(
                                                 Modifier.fillMaxSize().background(
-                                                    Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
+                                                    if (isClaimed) Color(0xFF777777) else Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
                                                     RoundedCornerShape(18.dp)
                                                 ),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    "CLAIM",
-                                                    color = Color(0xFF4A1F00),
+                                                    when { isClaimed -> "CLAIMED"; isClaiming -> "..."; else -> "CLAIM" },
+                                                    color = if (isClaimed) Color.White else Color(0xFF4A1F00),
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
                                                     letterSpacing = 1.sp
