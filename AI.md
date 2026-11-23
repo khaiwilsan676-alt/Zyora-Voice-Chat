@@ -2039,3 +2039,10 @@ Current documentation does not certify that all historical features are build-, 
 - History query and retention are capped at the latest 25 rows per account and wallet type in the device's existing `index.db`; no wallet history is uploaded to MongoDB or Redis.
 - Recharge and Diamond Exchange continue writing to the same local history store. Family creation now also writes its successful 30,000,000-coin debit to the same local coin history; failed family creation is not logged.
 - No Wallet UI redesign or balance/accounting behavior change. Native APK compilation and on-device history verification are still required.
+
+## 2026-11-24 — Diamond Exchange backend reliability fix
+- Root cause addressed: the exchange endpoint previously required a multi-document MongoDB transaction for the core wallet debit/credit. A transaction capability/availability failure could reject the entire exchange even though the balance change itself is a single-user-document operation.
+- `/api/wallet/exchange` now performs the diamond debit and coin credit together in one atomic `users` document update, guarded by sufficient diamonds and a permanent idempotency key.
+- Duplicate retries return the current balances without applying a second exchange. Insufficient diamonds return HTTP 409. Wallet balance socket broadcast happens after the atomic commit.
+- Wallet history persistence is best-effort after the balance commit, so a history-write failure cannot make a successful exchange appear rolled back.
+- Native UI and exchange rate (100 diamonds = 33 coins) unchanged. Render deployment and live-device verification remain pending.
