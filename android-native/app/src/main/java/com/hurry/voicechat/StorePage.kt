@@ -224,6 +224,7 @@ private val nativeStoreTabs = listOf(
     NativeStoreTab("Avatar Frame", "Frame", "IMG_20260913_090057.png"),
     NativeStoreTab("Theme", "Theme", "IMG_20260913_090137.png"),
     NativeStoreTab("Chat Bubble", "Bubble", "IMG_20260913_090116.png"),
+    NativeStoreTab("Family Tag", "Family Tag", "IMG_20261117_193617.png"),
     NativeStoreTab("ID", "ID", "IMG_20260913_090150.png")
 )
 
@@ -632,6 +633,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var giftBusy by remember { mutableStateOf(false) }
     var balance by remember(storeUserId) { mutableIntStateOf(walletCachePrefs.getLong("balance_$storeUserId", 0L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) }
     val cachedInventory = remember(storeInventoryUserId) { readNativeStoreInventoryCache(appContext, storeInventoryUserId) }
+    var serverInventory by remember(storeInventoryUserId) { mutableStateOf(cachedInventory) }
     val ownedIds = remember(storeInventoryUserId) {
         mutableStateListOf<String>().apply {
             for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
@@ -742,6 +744,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 val serverCoins = walletJson.optLong("balance", 0L).coerceAtLeast(0L)
                 Triple(serverCoins.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), owned, Pair(equipped,expiries))
             }.onSuccess { result ->
+                serverInventory = readNativeStoreInventoryCache(appContext, storeInventoryUserId)
                 balance = result.first
                 walletCachePrefs.edit().putLong("balance_$storeUserId", result.first.toLong()).apply()
                 // Inventory GET may have started before a Buy request and finish after it.
@@ -779,7 +782,29 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         }
     }
     val isBag = currentView == "bag"
-    val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) }
+    val catalogIds = nativeStoreItems.mapTo(HashSet()) { it.id }
+    val grantedInventoryItems = if (isBag) {
+        (0 until serverInventory.length()).mapNotNull { index ->
+            serverInventory.optJSONObject(index)?.takeIf { item ->
+                item.optString("tab") == activeTab &&
+                    item.optLong("expiresAt") > clockNow &&
+                    item.optString("itemId").isNotBlank() &&
+                    !catalogIds.contains(item.optString("itemId"))
+            }?.let { item ->
+                NativeStoreItem(
+                    item.optString("itemId"),
+                    item.optString("name", "Family Reward"),
+                    item.optString("image"),
+                    item.optString("tab"),
+                    0,
+                    0,
+                    item.optString("duration", "7D"),
+                    item.optString("video").takeIf { it.isNotBlank() }
+                )
+            }
+        }
+    } else emptyList()
+    val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) } + grantedInventoryItems
 
     // Dark theme glossy blue background
     val darkGlossyBg = Brush.verticalGradient(
