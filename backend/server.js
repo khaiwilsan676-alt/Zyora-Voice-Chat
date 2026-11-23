@@ -3306,8 +3306,11 @@ io.on("connection", (socket) => {
     // Lucky return is a transparent random 0–50% return of the sent coin value.
     // The exact percentage is included in the room event so every client sees
     // the same result; it is not hidden from the user.
+    // Seed the outcome from the transfer ID so a retry/reconnect reproduces
+    // the exact same reward instead of displaying a different result.
+    const luckyRoll = crypto.createHash("sha256").update(eventId).digest().readUInt32BE(0) / 0xFFFFFFFF;
     const luckyReturnPercent = isLucky
-      ? Math.floor(Math.random() * 51)
+      ? Math.floor(luckyRoll * 51)
       : 0;
     const luckyReturnAmount = isLucky
       ? Math.floor(value * (luckyReturnPercent / 100))
