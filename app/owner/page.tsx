@@ -415,7 +415,7 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
     <div className="mb-2">
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-3 px-6 py-2 text-[14px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
+        className="flex items-center gap-3 px-6 py-2 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors"
       >
         <span className="text-[16px] drop-shadow-md">{icon}</span>
         <span>{title}</span>
@@ -432,8 +432,8 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
               }}
               className={`flex items-center gap-3 px-6 py-2.5 pl-[52px] text-[13px] font-bold transition-colors w-full text-left
                 ${activeItem === item.id
-                  ? 'text-[#197477] bg-[#197477]/10 border-l-[3px] border-[#197477]'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-l-[3px] border-transparent'}
+                  ? 'text-white bg-[#8a92ff]/20 border-l-[3px] border-[#8a92ff]'
+                  : 'text-gray-300 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'}
               `}
             >
               <span className="text-[14px] drop-shadow-sm">{item.icon}</span>
@@ -1614,7 +1614,7 @@ export default function StaffPanel() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]">
+      <div className="min-h-screen flex items-center justify-center bg-[#1a1c29]">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
       </div>
     );
@@ -1627,17 +1627,17 @@ export default function StaffPanel() {
   return (
     <div className="flex h-screen bg-white font-sans overflow-hidden">
 
-      <aside className="fixed inset-y-0 left-0 z-50 w-[260px] bg-white flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-slate-200 translate-x-0 shadow-sm">
+      <aside className="fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] translate-x-0">
 
         <div className="p-6 pb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-slate-900 text-[19px] font-extrabold tracking-wide">Zyora</h1>
-            <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-0.5">STAFF CONTROL PANEL</p>
+            <h1 className="text-white text-[19px] font-extrabold tracking-wide drop-shadow-md">Zyora</h1>
+            <p className="text-[10px] text-gray-300 font-bold tracking-widest mt-0.5">STAFF CONTROL PANEL</p>
           </div>
         </div>
 
         <nav className="flex-1 mt-2 space-y-1 pb-6">
-          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors" onClick={() => setActiveTab('dashboard')}>
+          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors" onClick={() => setActiveTab('dashboard')}>
             <span className="text-[16px] drop-shadow-md">🏠</span>
             <span>Dashboard</span>
           </div>
@@ -1685,7 +1685,7 @@ export default function StaffPanel() {
             ]}
           />
 
-          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors mt-2" onClick={() => setActiveTab('system')}>
+          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors mt-2" onClick={() => setActiveTab('system')}>
             <span className="text-[16px] drop-shadow-md">🛠️</span>
             <span>System</span>
           </div>
