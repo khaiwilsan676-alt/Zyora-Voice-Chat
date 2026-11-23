@@ -3280,25 +3280,32 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 onMute = {
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0) {
-                        val isSelfSeat = seats[idx].accountId.trim() == accountId.trim()
-                        val nextMuted = if (isSelfSeat) !seats[idx].selfMuted else !seats[idx].muted
-                        seats[idx] = if (isSelfSeat) seats[idx].copy(selfMuted = nextMuted) else seats[idx].copy(muted = nextMuted)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
+                        // This is moderation of the selected seat occupant, never local self-mute.
+                        val targetSeat = seats[idx]
+                        val nextMuted = !targetSeat.muted
+                        seats[idx] = targetSeat.copy(muted = nextMuted)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject()
+                            .put("roomId", roomId)
                             .put("userId", accountId)
-                            .put("action", if (isSelfSeat) "self_mute" else "owner_mute")
-                            .put("seatNumber", selectedSeat).put("isMuted", nextMuted))
+                            .put("targetUserId", targetSeat.accountId)
+                            .put("action", "owner_mute")
+                            .put("seatNumber", selectedSeat)
+                            .put("isMuted", nextMuted))
                     }
                 },
                 onLock = {
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
                         val nextLocked = !seats[idx].locked
-                        val lockedSeat = seats[idx]
-                        seats[idx] = if (nextLocked) NativeRoomSeat(number = selectedSeat, locked = true, muted = lockedSeat.muted)
-                            else lockedSeat.copy(locked = false)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
-                            .put("userId", accountId).put("action", "lock").put("seatNumber", selectedSeat).put("isLocked", nextLocked))
-                        if (nextLocked) selectedSeat = 0
+                        // Lock/unlock the seat in place; do not remove its current occupant.
+                        seats[idx] = seats[idx].copy(locked = nextLocked)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject()
+                            .put("roomId", roomId)
+                            .put("userId", accountId)
+                            .put("targetUserId", seats[idx].accountId)
+                            .put("action", "lock")
+                            .put("seatNumber", selectedSeat)
+                            .put("isLocked", nextLocked))
                     }
                 },
                 onKickOut = { selectedTime ->
@@ -3778,7 +3785,7 @@ private fun RoomSeatInviteDialog(
         }
     }
 
-    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(onClick=onClick)){
+    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(interactionSource = androidx.compose.foundation.interaction.MutableInteractionSource(), indication = null, onClick = onClick)){
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val blue = !seat.locked
