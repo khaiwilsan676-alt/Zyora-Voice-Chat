@@ -71,16 +71,17 @@ internal object FamilyProfileApi {
     suspend fun create(id:String,name:String,image:String,announcement:String)=request("/api/families","POST",JSONObject().put("familyId",id).put("name",name).put("image",image).put("announcement",announcement))
     suspend fun load(id:String)=parse(request("/api/families/${URLEncoder.encode(id,"UTF-8")}"))
     suspend fun memberCount(id:String):Int=parse(request("/api/families/${URLEncoder.encode(id,"UTF-8")}")).members.size
-    fun cachedLeaderboard(context: Context):List<FamilyRecord> = runCatching {
+    fun cachedLeaderboard(context: Context, period: String = "this_week"):List<FamilyRecord> = runCatching {
+        val cacheKey = if (period == "last_week") "leaderboard_last_week" else "leaderboard"
         val raw = context.getSharedPreferences("zyora_family_cache", Context.MODE_PRIVATE)
-            .getString("leaderboard", "[]") ?: "[]"
+            .getString(cacheKey, "[]") ?: "[]"
         val rows = JSONArray(raw)
         (0 until rows.length()).mapNotNull { i ->
             rows.optJSONObject(i)?.let { parse(JSONObject().put("family", it)) }
         }
     }.getOrDefault(emptyList())
 
-    fun saveLeaderboardCache(context: Context, families: List<FamilyRecord>) {
+    fun saveLeaderboardCache(context: Context, families: List<FamilyRecord>, period: String = "this_week") {
         runCatching {
             val rows = JSONArray()
             families.forEach { family ->
@@ -99,11 +100,11 @@ internal object FamilyProfileApi {
                     .put("totalCoinsSent", family.totalCoinsSent).put("members", members))
             }
             context.getSharedPreferences("zyora_family_cache", Context.MODE_PRIVATE)
-                .edit().putString("leaderboard", rows.toString()).apply()
+                .edit().putString(if (period == "last_week") "leaderboard_last_week" else "leaderboard", rows.toString()).apply()
         }
     }
 
-    suspend fun leaderboard():List<FamilyRecord> { val root=request("/api/families/leaderboard"); val rows=root.optJSONArray("families")?:JSONArray(); return (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { parse(JSONObject().put("family",it)) } } }
+    suspend fun leaderboard(period: String = "this_week"):List<FamilyRecord> { val root=request("/api/families/leaderboard?period=" + URLEncoder.encode(period, "UTF-8")); val rows=root.optJSONArray("families")?:JSONArray(); return (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { parse(JSONObject().put("family",it)) } } }
     suspend fun update(id:String,n:String,i:String,a:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}","PUT",JSONObject().put("name",n).put("image",i).put("announcement",a))
     suspend fun accept(id:String,context:Context):JSONObject {
         val result=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/accept","POST",JSONObject())
