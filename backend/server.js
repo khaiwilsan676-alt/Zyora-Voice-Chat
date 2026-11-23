@@ -1183,6 +1183,21 @@ app.get("/api/users", async (req, res) => {
 
 // ==============================================================
  // Owner-controlled Seller Center visibility. Reuses the profile's existing coinSellerTag field.
+app.get("/api/owner/seller-center", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "User service unavailable" });
+    const users = await db.collection("users").find({ $or: [
+      { coinSellerTag: true }, { coinSeller: true }, { sellerTag: true }
+    ] }).toArray();
+    res.set("Cache-Control", "no-store");
+    return res.json({ users: users.map(normalizeUser) });
+  } catch (error) {
+    console.error("GET /api/owner/seller-center error:", error);
+    return res.status(500).json({ error: "Could not fetch Seller Center users" });
+  }
+});
+
+// Owner-controlled Seller Center visibility.
 app.post("/api/owner/seller-center", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "User service unavailable" });
