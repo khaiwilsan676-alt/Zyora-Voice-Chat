@@ -266,7 +266,7 @@ private fun CountdownTopOrnament(modifier: Modifier = Modifier) {
 
 // DEFAULT USER ICON AVATAR (Jab Top 1, 2, 3 me koi user na ho)
 @Composable
-private fun DefaultUserAvatarIcon(modifier: Modifier = Modifier) {
+fun DefaultUserAvatarIcon(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(50))
