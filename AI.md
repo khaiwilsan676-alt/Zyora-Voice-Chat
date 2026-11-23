@@ -2013,3 +2013,8 @@ Current documentation does not certify that all historical features are build-, 
 - Native Dragon Battle deals its existing round-seeded cards before the betting window, calculates the exact same winner from those cards, and publishes the matching Dragon A/B/C artwork before betting starts; the same dealt cards are reused for the normal reveal.
 - Backend retains the latest result in memory and relays it only to authenticated Owner Panel sockets; the history snapshot request also requires Owner Panel authentication.
 - No betting, wallet settlement, payout, or game display styling logic was intentionally changed. Build and live multi-device verification remain pending.
+
+
+## 2026-11-23 — Family reward system message wording
+- Family reward asset grants (`fr*`) now send a durable Zyora System private message in the exact format `You receive\n<actual granted reward name>\nRegards Zyora Official Team`; the reward line uses the actual granted asset name, so unreceived rewards are never listed. Non-family owner asset notification wording is unchanged.
+- Backend commit: `a271a95d15d060a36f87522ce030dabb5862d219`. Render deployment and recipient-device delivery remain to be verified.
