@@ -3864,11 +3864,12 @@ io.on("connection", (socket) => {
     while (liveAiSupportBuffer.size > 200) {
       liveAiSupportBuffer.delete(liveAiSupportBuffer.keys().next().value);
     }
-    io.emit("ai_support_message", payload);
+    io.to("owner-panel").emit("ai_support_message", payload);
     if (typeof acknowledge === "function") acknowledge({ ok: true, userId, timestamp: payload.timestamp });
   });
 
   socket.on("ai_support_history_request", () => {
+    if (!socket.ownerPanelAuthorized) return;
     // Replay only the in-memory handoff window; the Owner Panel merges it with its local IndexedDB copy.
     socket.emit("ai_support_history_response", {
       chats: Array.from(liveAiSupportBuffer.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
@@ -3897,7 +3898,7 @@ io.on("connection", (socket) => {
     // reconnecting are replayed. Durable owner-side copies remain in browser IndexedDB.
     liveUserReports.set(reportId, payload);
     while (liveUserReports.size > 1000) liveUserReports.delete(liveUserReports.keys().next().value);
-    io.emit("user_report", payload);
+    io.to("owner-panel").emit("user_report", payload);
     if (typeof acknowledge === "function") acknowledge({ ok: true, id: reportId, timestamp: payload.timestamp });
   });
 
@@ -3906,6 +3907,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("user_report_history_request", () => {
+    if (!socket.ownerPanelAuthorized) return;
     socket.emit("user_report_history_response", {
       reports: Array.from(liveUserReports.values()).sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))
     });
@@ -3934,11 +3936,12 @@ io.on("connection", (socket) => {
     // never write feedback content to GitHub storage.
     liveFeedbackBuffer.set(feedbackId, payload);
     while (liveFeedbackBuffer.size > 500) liveFeedbackBuffer.delete(liveFeedbackBuffer.keys().next().value);
-    io.emit("user_feedback", payload);
+    io.to("owner-panel").emit("user_feedback", payload);
     if (typeof acknowledge === "function") acknowledge({ ok: true, id: feedbackId });
   });
 
   socket.on("user_feedback_history_request", () => {
+    if (!socket.ownerPanelAuthorized) return;
     // Replay only the volatile handoff window; Owner Panel persists received items in browser IndexedDB.
     socket.emit("user_feedback_history_response", { feedbacks: Array.from(liveFeedbackBuffer.values()) });
   });
