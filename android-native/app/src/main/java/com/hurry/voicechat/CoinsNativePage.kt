@@ -78,7 +78,7 @@ interface WalletDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveUserData(data: UserDataEntity)
 
-    @Query("SELECT * FROM transactions WHERE type = :type ORDER BY timestamp DESC LIMIT 20")
+    @Query("SELECT * FROM transactions WHERE type = :type ORDER BY timestamp DESC LIMIT 25")
     suspend fun getRecentTransactions(type: String): List<TransactionEntity>
 
     @Insert
@@ -125,7 +125,8 @@ private suspend fun recordTransaction(context: Context, userId: String, title: S
         now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE)
     )
     val timestamp = System.currentTimeMillis()
-    NativeIndexDatabase(context).saveWalletTransaction("${userId}_${timestamp}_${type}", userId, title, amount, dateStr, timestamp, type)
+    val transactionId = "wallet_${userId}_${type}_${java.util.UUID.randomUUID()}"
+    NativeIndexDatabase(context).saveWalletTransaction(transactionId, userId, title, amount, dateStr, timestamp, type)
 }
 
 private suspend fun fetchCanonicalWallet(userId: String): JSONObject? = withContext(Dispatchers.IO) {
@@ -639,10 +640,15 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
 private fun DetailsNativePage(type: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
-    val walletUserId = remember(authPrefs) { authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() } }
+    val walletUserIds = remember(authPrefs) {
+        listOf(authPrefs.getString("uid", "").orEmpty(), authPrefs.getString("accountId", "").orEmpty())
+            .filter { it.isNotBlank() }.distinct()
+    }
     var transactions by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    LaunchedEffect(type, walletUserId) {
-        transactions = withContext(Dispatchers.IO) { NativeIndexDatabase(context).loadWalletTransactions(walletUserId, type, 20) }
+    LaunchedEffect(type, walletUserIds) {
+        transactions = withContext(Dispatchers.IO) {
+            NativeIndexDatabase(context).loadWalletTransactions(walletUserIds, type, 25)
+        }
     }
 
     val valueColor = if (type == "diamond") Color(0xFF3B82F6) else Color(0xFFF59E0B)
