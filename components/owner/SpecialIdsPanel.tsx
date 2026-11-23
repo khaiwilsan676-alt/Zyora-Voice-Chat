@@ -115,7 +115,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
           onChange={event => setUserQuery(event.target.value)}
           placeholder="Search user by App ID or name"
           inputMode="search"
-          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400"
+          className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]"
         />
         {matchingUsers.length > 0 && (
           <div className="absolute left-0 right-0 top-12 z-30 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
@@ -186,7 +186,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             inputMode="numeric"
             className="h-10 w-20 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
           />}
-          <button type="button" onClick={assignId} disabled={saving || !selectedUser} className="h-10 rounded-lg bg-slate-900 px-4 text-xs font-bold text-white disabled:opacity-40">
+          <button type="button" onClick={assignId} disabled={saving || !selectedUser} className="h-10 rounded-lg bg-[#197477] px-4 text-xs font-bold text-white disabled:opacity-40">
             {saving ? 'Saving…' : kind === 'id' ? 'Give ID' : 'Give Image Tag'}
           </button>
         </div>
