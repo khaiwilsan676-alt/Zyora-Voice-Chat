@@ -1,5 +1,8 @@
 package com.hurry.voicechat
 
+import android.content.Intent
+import android.widget.Toast
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,6 +75,7 @@ private suspend fun requestNativeRoomTasks(roomId: String, claimTaskId: Int? = n
 
 @Composable
 fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember { mutableStateOf(false) }
     var hour by remember { mutableIntStateOf(0) }
@@ -347,7 +351,19 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         }
                                         Button(
                                             onClick = {
-                                                if (isComplete && !isClaimed && !isClaiming) {
+                                                if (taskId == 3 || taskId == 4) {
+                                                    val packageName = if (taskId == 3) "com.whatsapp" else "com.facebook.katana"
+                                                    runCatching {
+                                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                            type = "text/plain"
+                                                            putExtra(Intent.EXTRA_TEXT, "Join me on Zyora Voice Chat! https://zyora-voice-chat.vercel.app")
+                                                            setPackage(packageName)
+                                                        }
+                                                        context.startActivity(shareIntent)
+                                                    }.onFailure {
+                                                        Toast.makeText(context, if (taskId == 3) "WhatsApp is not installed" else "Facebook is not installed", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else if (isComplete && !isClaimed && !isClaiming) {
                                                     claimingTaskIds.add(taskId)
                                                     scope.launch {
                                                         runCatching { requestNativeRoomTasks(roomId, taskId) }
@@ -357,7 +373,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                     }
                                                 }
                                             },
-                                            enabled = isComplete && !isClaimed && !isClaiming,
+                                            enabled = (taskId == 3 || taskId == 4) || (isComplete && !isClaimed && !isClaiming),
                                             modifier = Modifier.padding(top = 6.dp).width(85.dp).height(28.dp),
                                             contentPadding = PaddingValues(0.dp),
                                             shape = RoundedCornerShape(18.dp),
@@ -372,7 +388,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    when { isClaimed -> "CLAIMED"; isClaiming -> "..."; else -> "CLAIM" },
+                                                    when { taskId == 3 || taskId == 4 -> "SHARE"; isClaimed -> "CLAIMED"; isClaiming -> "..."; else -> "CLAIM" },
                                                     color = if (isClaimed) Color.White else Color(0xFF4A1F00),
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
