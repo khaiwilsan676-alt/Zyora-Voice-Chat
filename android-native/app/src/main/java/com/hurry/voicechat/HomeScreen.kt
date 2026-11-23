@@ -460,9 +460,7 @@ fun HomeScreen(
     Box(Modifier.fillMaxSize()) {
         
         // Dono states yahan outermost Box me declare kiye hain taaki Red Zone aur Draggable DP dono sync rahe
-        var keptRoomDrag by remember(keptRoom?.id) { mutableStateOf(Offset.Zero) }
         var keptRoomDragging by remember(keptRoom?.id) { mutableStateOf(false) }
-        val density = androidx.compose.ui.platform.LocalDensity.current
 
         Column(
             Modifier.fillMaxSize()
@@ -713,68 +711,13 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(0.2.dp)
         ) {
             if (keptRoom != null) {
-                val keptRoomMusic = rememberInfiniteTransition(label = "home-kept-room-music")
-                val keptRoomMusicPhase by keptRoomMusic.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 900, easing = LinearEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "home-kept-room-wave"
+                KeptRoomFloatingButton(
+                    room = keptRoom,
+                    dragging = keptRoomDragging,
+                    onDraggingChange = { keptRoomDragging = it },
+                    onOpen = onOpenKeptRoom,
+                    onExit = onExitKeptRoom
                 )
-                Box(
-                    Modifier
-                        .offset { IntOffset(keptRoomDrag.x.roundToInt(), keptRoomDrag.y.roundToInt()) }
-                        .size(60.dp)
-                        .border(2.dp, Color.White, CircleShape)
-                        .clip(CircleShape)
-                        .pointerInput(keptRoom.id) {
-                            detectDragGestures(
-                                onDragStart = { keptRoomDragging = true },
-                                onDragEnd = {
-                                    val exitThresholdY = with(density) { 50.dp.toPx() } 
-                                    val exitThresholdX = with(density) { 20.dp.toPx() }
-                                    val shouldExit = keptRoomDrag.y > exitThresholdY || (keptRoomDrag.y > 20f && keptRoomDrag.x > exitThresholdX)
-                                    
-                                    keptRoomDragging = false
-                                    if (shouldExit) onExitKeptRoom()
-                                    keptRoomDrag = Offset.Zero
-                                },
-                                onDragCancel = { keptRoomDragging = false; keptRoomDrag = Offset.Zero },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    keptRoomDrag += amount
-                                }
-                            )
-                        }
-                        .clickable(enabled = !keptRoomDragging) { onOpenKeptRoom() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = keptRoom.image,
-                        contentDescription = "Kept room",
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Canvas(Modifier.fillMaxSize()) {
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
-                        val heights = listOf(0.30f, 0.48f, 0.36f)
-                        val offsets = listOf(-7f, 0f, 7f)
-                        heights.forEachIndexed { index, base ->
-                            val pulse = kotlin.math.abs(kotlin.math.sin((keptRoomMusicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
-                            val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
-                                end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
-                                strokeWidth = 2.6.dp.toPx(),
-                                cap = StrokeCap.Round
-                            )
-                        }
-                    }
-                }
             }
 
             AsyncImage(
@@ -1046,6 +989,84 @@ fun HurryHouseIcon(selected: Boolean = false) {
 // ═══════════════════════════════════════════════════════
 // CATEGORY CARD
 // ═══════════════════════════════════════════════════════
+@Composable
+private fun KeptRoomFloatingButton(
+    room: HurryRoom,
+    dragging: Boolean,
+    onDraggingChange: (Boolean) -> Unit,
+    onOpen: () -> Unit,
+    onExit: () -> Unit
+) {
+    var dragOffset by remember(room.id) { mutableStateOf(Offset.Zero) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val musicTransition = rememberInfiniteTransition(label = "home-kept-room-music")
+    val musicPhase by musicTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "home-kept-room-wave"
+    )
+
+    Box(
+        Modifier
+            .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
+            .size(60.dp)
+            .border(2.dp, Color.White, CircleShape)
+            .clip(CircleShape)
+            .pointerInput(room.id) {
+                detectDragGestures(
+                    onDragStart = { onDraggingChange(true) },
+                    onDragEnd = {
+                        val exitThresholdY = with(density) { 50.dp.toPx() }
+                        val exitThresholdX = with(density) { 20.dp.toPx() }
+                        val shouldExit = dragOffset.y > exitThresholdY ||
+                            (dragOffset.y > 20f && dragOffset.x > exitThresholdX)
+                        onDraggingChange(false)
+                        if (shouldExit) onExit()
+                        dragOffset = Offset.Zero
+                    },
+                    onDragCancel = {
+                        onDraggingChange(false)
+                        dragOffset = Offset.Zero
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        dragOffset += amount
+                    }
+                )
+            }
+            .clickable(enabled = !dragging) { onOpen() },
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = room.image,
+            contentDescription = "Kept room",
+            modifier = Modifier.fillMaxSize().clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            val centerX = size.width / 2f
+            val centerY = size.height / 2f
+            val heights = listOf(0.30f, 0.48f, 0.36f)
+            val offsets = listOf(-7f, 0f, 7f)
+            heights.forEachIndexed { index, base ->
+                val pulse = kotlin.math.abs(kotlin.math.sin((musicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
+                val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
+                drawLine(
+                    color = Color.White,
+                    start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
+                    end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
+                    strokeWidth = 2.6.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun HurryCategoryCard(
     label: String,
