@@ -109,6 +109,14 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
         }
     }
 
+    // Surface a single readable error when the server rejects task access/claims.
+    // The same polling error will not spam a Toast every 15 seconds.
+    LaunchedEffect(taskError) {
+        if (taskError.isNotBlank()) {
+            Toast.makeText(context, taskError, Toast.LENGTH_LONG).show()
+        }
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
             val now = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
