@@ -1888,13 +1888,14 @@ private fun DragonBattleMainOverlay(
                 }
                 walletPendingDelta = (0 until latestQueue.length()).sumOf { latestQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
                 if (result.success && result.balance >= 0L) {
-                    balance = result.balance
+                    // Preserve every still-pending rapid bet over the confirmed server balance.
+                    balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
                     walletReady = true
                     walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
                         .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
                 } else {
                     val latest = fetchDragonWallet(dragonWalletUserId)
-                    if (latest != null) balance = latest
+                    if (latest != null) balance = (latest + walletPendingDelta).coerceAtLeast(0L)
                     walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
                     dragonRejectedCallbacks.remove(txId)?.invoke()
                     showBanner("Wallet rejected bet - coins restored")
