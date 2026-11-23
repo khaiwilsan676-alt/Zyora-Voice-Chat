@@ -394,7 +394,7 @@ export default function OwnerBan() {
 
         <button
           onClick={submitInlineBan}
-          className="w-full bg-blue-600 text-white font-bold py-3 rounded-md mt-4 shadow-none border-none"
+          className="w-full bg-[#197477] text-white font-bold py-3 rounded-md mt-4 shadow-none border-none"
         >
           Ban
         </button>
@@ -412,7 +412,7 @@ export default function OwnerBan() {
         <button
           onClick={handleSearch}
           disabled={searching}
-          className="p-2 bg-blue-600 text-white rounded-lg px-4 whitespace-nowrap"
+          className="p-2 bg-[#197477] text-white rounded-lg px-4 whitespace-nowrap"
         >
           {searching ? '...' : 'Search'}
         </button>
@@ -614,7 +614,7 @@ export default function OwnerBan() {
 
               <button 
                 onClick={submitBan} 
-                className="w-full bg-blue-600 text-white font-bold py-3 rounded-md mt-4 shadow-none border-none"
+                className="w-full bg-[#197477] text-white font-bold py-3 rounded-md mt-4 shadow-none border-none"
               >
                 Ban
               </button>
