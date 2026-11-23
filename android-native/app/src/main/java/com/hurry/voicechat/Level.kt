@@ -1,17 +1,14 @@
 package com.hurry.voicechat
 
+import android.content.Context
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import android.content.Context
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,15 +23,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,11 +46,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val LEVEL_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private fun levelAsset(file: String) = LEVEL_ASSET_BASE + file
@@ -89,13 +99,16 @@ private val levelTiers = listOf(
 )
 
 internal val medalsList = listOf(
-    NativeLevelMedalItem("Lv.5", "IMG_20261024_153426.png", "1000220021-background.mp4"),
-    NativeLevelMedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220022-background.mp4"),
-    NativeLevelMedalItem("Lv.30", "IMG_20261024_153407.png", "1000220023-background.mp4"),
-    NativeLevelMedalItem("Lv.50", "IMG_20261024_153322.png", "1000220024-background.mp4"),
-    NativeLevelMedalItem("Lv.65", "IMG_20261024_153346.png", "1000220025-background.mp4"),
-    NativeLevelMedalItem("Lv.75", "IMG_20261024_153248.png", "1000220026-background.mp4"),
-    NativeLevelMedalItem("Lv.90", "IMG_20261024_153322.png", "1000220027-background.mp4")
+    NativeLevelMedalItem("Lv.10", "IMG_20261123_235528.png", "IMG_20261123_235528.png"),
+    NativeLevelMedalItem("Lv.20", "IMG_20261123_235607.png", "IMG_20261123_235607.png"),
+    NativeLevelMedalItem("Lv.30", "IMG_20261123_235628.png", "IMG_20261123_235628.png"),
+    NativeLevelMedalItem("Lv.40", "IMG_20261123_235643.png", "IMG_20261123_235643.png"),
+    NativeLevelMedalItem("Lv.50", "IMG_20261123_235703.png", "IMG_20261123_235703.png"),
+    NativeLevelMedalItem("Lv.60", "IMG_20261123_235722.png", "IMG_20261123_235722.png"),
+    NativeLevelMedalItem("Lv.70", "IMG_20261123_235749.png", "IMG_20261123_235749.png"),
+    NativeLevelMedalItem("Lv.80", "IMG_20261123_235806.png", "IMG_20261123_235806.png"),
+    NativeLevelMedalItem("Lv.90", "IMG_20261123_235821.png", "IMG_20261123_235821.png"),
+    NativeLevelMedalItem("Lv.100", "IMG_20261123_235841.png", "IMG_20261123_235841.png")
 )
 
 private val framesList = listOf(
@@ -133,7 +146,7 @@ private fun StarRow(starCount: Int, modifier: Modifier = Modifier) {
             AsyncImage(
                 model = levelAsset("file_0000000004e881fa84e61b8616f8eaf8.png"),
                 contentDescription = "Star",
-                modifier = Modifier.size(14.dp) 
+                modifier = Modifier.size(14.dp)
             )
         }
     }
@@ -148,12 +161,12 @@ private fun SectionHeading(title: String) {
     ) {
         Box(modifier = Modifier.weight(1f).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, Color.White))))
         Spacer(Modifier.width(4.dp))
-        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1))) 
+        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1)))
         Spacer(Modifier.width(3.dp))
-        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFFFEB3B))) 
-        
+        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFFFEB3B)))
+
         Spacer(Modifier.width(12.dp))
-        
+
         Text(
             text = title,
             color = Color.White,
@@ -163,14 +176,381 @@ private fun SectionHeading(title: String) {
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
         )
-        
+
         Spacer(Modifier.width(12.dp))
-        
-        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFFFEB3B))) 
+
+        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFFFEB3B)))
         Spacer(Modifier.width(3.dp))
-        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1))) 
+        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1)))
         Spacer(Modifier.width(4.dp))
         Box(modifier = Modifier.weight(1f).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.White, Color.Transparent))))
+    }
+}
+
+private data class LevelSparkleSpec(
+    val xFrac: Float,
+    val yFrac: Float,
+    val maxRadius: Float,
+    val phaseOffset: Float
+)
+
+private data class LevelShiningBubbleSpec(
+    val xFrac: Float,
+    val radiusPx: Float,
+    val phaseOffset: Float,
+    val driftAmp: Float
+)
+
+@Composable
+private fun LevelMedalPreviewDialog(
+    medal: NativeLevelMedalItem,
+    onDismiss: () -> Unit
+) {
+    val popupScale = remember { Animatable(0.45f) }
+    val popupAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(medal.levelText) {
+        popupScale.snapTo(0.45f)
+        popupAlpha.snapTo(0f)
+        launch {
+            popupScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.55f,
+                    stiffness = 260f
+                )
+            )
+        }
+        launch {
+            popupAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 220)
+            )
+        }
+    }
+
+    val floatTransition = rememberInfiniteTransition(label = "levelMedalFloat")
+    val floatOffsetY by floatTransition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "levelMedalFloatY"
+    )
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        // Original background bina kisi black screen ya dim ke show hoga
+        val dialogWindowProvider = androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider
+        dialogWindowProvider?.window?.setDimAmount(0f)
+        dialogWindowProvider?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier.size(310.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                LevelGoldenSunburstEffect(modifier = Modifier.fillMaxSize())
+
+                Box(
+                    modifier = Modifier
+                        .size(215.dp)
+                        .graphicsLayer {
+                            scaleX = popupScale.value
+                            scaleY = popupScale.value
+                            alpha = popupAlpha.value
+                            translationY = floatOffsetY
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = levelAsset(medal.imageFile),
+                        contentDescription = "${medal.levelText} Medal",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                LevelGoldenSparkleAndBubbleOverlay(modifier = Modifier.size(270.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LevelGoldenSunburstEffect(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "levelSunburst")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 28000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "levelSunburstRotation"
+    )
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.80f
+        val rayCount = 18
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFDF7A).copy(alpha = 0.45f),
+                    Color(0xFFD9A12B).copy(alpha = 0.20f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = radius * 0.85f
+            ),
+            radius = radius * 0.85f,
+            center = center
+        )
+
+        rotate(degrees = rotation, pivot = center) {
+            val stepAngle = 360f / rayCount
+            for (i in 0 until rayCount) {
+                val startDeg = i * stepAngle
+                val halfSpread = stepAngle * 0.28f
+                val rad1 = Math.toRadians((startDeg - halfSpread).toDouble())
+                val rad2 = Math.toRadians((startDeg + halfSpread).toDouble())
+
+                val path = Path().apply {
+                    moveTo(center.x, center.y)
+                    lineTo(
+                        center.x + (radius * cos(rad1)).toFloat(),
+                        center.y + (radius * sin(rad1)).toFloat()
+                    )
+                    lineTo(
+                        center.x + (radius * cos(rad2)).toFloat(),
+                        center.y + (radius * sin(rad2)).toFloat()
+                    )
+                    close()
+                }
+                drawPath(
+                    path = path,
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFE694).copy(alpha = 0.58f),
+                            Color(0xFFE0A82E).copy(alpha = 0.28f),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = radius
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LevelGoldenSparkleAndBubbleOverlay(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "levelSparkleAndBubbles")
+
+    val sparklePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "levelSparklePhase"
+    )
+
+    val bubblePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "levelBubblePhase"
+    )
+
+    val shinePulse by infiniteTransition.animateFloat(
+        initialValue = 0.14f,
+        targetValue = 0.34f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "levelShinePulse"
+    )
+
+    val sparkles = remember {
+        listOf(
+            LevelSparkleSpec(0.24f, 0.25f, 15f, 0.00f),
+            LevelSparkleSpec(0.76f, 0.22f, 17f, 0.18f),
+            LevelSparkleSpec(0.50f, 0.16f, 13f, 0.35f),
+            LevelSparkleSpec(0.18f, 0.56f, 14f, 0.52f),
+            LevelSparkleSpec(0.83f, 0.52f, 16f, 0.68f),
+            LevelSparkleSpec(0.34f, 0.74f, 15f, 0.82f),
+            LevelSparkleSpec(0.68f, 0.76f, 14f, 0.26f),
+            LevelSparkleSpec(0.42f, 0.42f, 12f, 0.61f),
+            LevelSparkleSpec(0.61f, 0.38f, 13f, 0.91f),
+            LevelSparkleSpec(0.49f, 0.64f, 12f, 0.44f),
+            LevelSparkleSpec(0.29f, 0.40f, 11f, 0.74f),
+            LevelSparkleSpec(0.72f, 0.63f, 12f, 0.11f)
+        )
+    }
+
+    val bubbles = remember {
+        listOf(
+            LevelShiningBubbleSpec(0.22f, 9f, 0.05f, 10f),
+            LevelShiningBubbleSpec(0.35f, 13f, 0.22f, -12f),
+            LevelShiningBubbleSpec(0.48f, 8f, 0.40f, 9f),
+            LevelShiningBubbleSpec(0.62f, 14f, 0.58f, -11f),
+            LevelShiningBubbleSpec(0.77f, 10f, 0.75f, 10f),
+            LevelShiningBubbleSpec(0.29f, 7f, 0.88f, -8f),
+            LevelShiningBubbleSpec(0.54f, 11f, 0.15f, 12f),
+            LevelShiningBubbleSpec(0.70f, 8f, 0.33f, -9f),
+            LevelShiningBubbleSpec(0.40f, 6f, 0.50f, 8f),
+            LevelShiningBubbleSpec(0.82f, 9f, 0.67f, -10f),
+            LevelShiningBubbleSpec(0.17f, 10f, 0.81f, 9f),
+            LevelShiningBubbleSpec(0.58f, 7f, 0.94f, -8f)
+        )
+    }
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val center = Offset(w / 2f, h / 2f)
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFF4C2).copy(alpha = shinePulse),
+                    Color(0xFFFFD452).copy(alpha = shinePulse * 0.45f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = size.minDimension * 0.48f
+            ),
+            radius = size.minDimension * 0.48f,
+            center = center
+        )
+
+        bubbles.forEach { b ->
+            val progress = (bubblePhase + b.phaseOffset) % 1f
+            val y = h * (0.90f - progress * 0.78f)
+            val x = (w * b.xFrac) + (sin(progress * 2.0 * PI) * b.driftAmp).toFloat()
+            val alpha = when {
+                progress < 0.18f -> (progress / 0.18f)
+                progress > 0.78f -> ((1f - progress) / 0.22f)
+                else -> 1f
+            }.coerceIn(0f, 1f)
+
+            val bubbleCenter = Offset(x, y)
+            val r = b.radiusPx * (0.85f + 0.25f * sin(progress * PI).toFloat())
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFE98A).copy(alpha = 0.50f * alpha),
+                        Color(0xFFE5B230).copy(alpha = 0.22f * alpha),
+                        Color.Transparent
+                    ),
+                    center = bubbleCenter,
+                    radius = r * 2.0f
+                ),
+                radius = r * 2.0f,
+                center = bubbleCenter
+            )
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFFBE0).copy(alpha = 0.35f * alpha),
+                        Color(0xFFFFD863).copy(alpha = 0.22f * alpha),
+                        Color(0xFFE5A924).copy(alpha = 0.42f * alpha)
+                    ),
+                    center = bubbleCenter,
+                    radius = r
+                ),
+                radius = r,
+                center = bubbleCenter
+            )
+
+            drawCircle(
+                color = Color(0xFFFFF0A8).copy(alpha = 0.78f * alpha),
+                radius = r,
+                center = bubbleCenter,
+                style = Stroke(width = 1.2f)
+            )
+
+            drawCircle(
+                color = Color.White.copy(alpha = 0.90f * alpha),
+                radius = r * 0.28f,
+                center = Offset(x - r * 0.32f, y - r * 0.32f)
+            )
+        }
+
+        sparkles.forEach { s ->
+            val wave = ((sin((sparklePhase + s.phaseOffset) * 2.0 * PI) + 1.0) / 2.0).toFloat()
+            val intensity = wave * wave
+            if (intensity > 0.06f) {
+                val cx = w * s.xFrac
+                val cy = h * s.yFrac
+                val outerR = s.maxRadius * (0.35f + 0.65f * intensity)
+                val innerR = outerR * 0.22f
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFF8D2).copy(alpha = 0.85f * intensity),
+                            Color(0xFFFFCC3D).copy(alpha = 0.40f * intensity),
+                            Color.Transparent
+                        ),
+                        center = Offset(cx, cy),
+                        radius = outerR * 1.45f
+                    ),
+                    radius = outerR * 1.45f,
+                    center = Offset(cx, cy)
+                )
+
+                val starPath = Path().apply {
+                    moveTo(cx, cy - outerR)
+                    lineTo(cx + innerR, cy - innerR)
+                    lineTo(cx + outerR, cy)
+                    lineTo(cx + innerR, cy + innerR)
+                    lineTo(cx, cy + outerR)
+                    lineTo(cx - innerR, cy + innerR)
+                    lineTo(cx - outerR, cy)
+                    lineTo(cx - innerR, cy - innerR)
+                    close()
+                }
+                drawPath(
+                    path = starPath,
+                    color = Color(0xFFFFF7CC).copy(alpha = 0.95f * intensity)
+                )
+
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.95f * intensity),
+                    radius = innerR * 0.95f,
+                    center = Offset(cx, cy)
+                )
+            }
+        }
     }
 }
 
@@ -181,8 +561,8 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
 
     val infiniteTransition = rememberInfiniteTransition()
     val floatOffset by infiniteTransition.animateFloat(
-        initialValue = -8f, 
-        targetValue = 8f,   
+        initialValue = -8f,
+        targetValue = 8f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -204,13 +584,13 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
             modifier = Modifier
                 .fillMaxSize()
                 .background(if (isMedal) Color.Black.copy(alpha = 0.6f) else Color.Transparent)
-                .clickable { onDismiss() }, 
+                .clickable { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
             AndroidView(
                 factory = { ctx ->
                     android.view.TextureView(ctx).apply {
-                        isOpaque = false 
+                        isOpaque = false
                         surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                             var mediaPlayer: android.media.MediaPlayer? = null
 
@@ -219,7 +599,7 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                                     try {
                                         setDataSource(videoUrl)
                                         setSurface(android.view.Surface(surface))
-                                        
+
                                         setOnVideoSizeChangedListener { _, w, h ->
                                             if (w > 0 && h > 0) {
                                                 videoAspectRatio = w.toFloat() / h.toFloat()
@@ -231,7 +611,7 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                                             start()
                                         }
                                         setOnCompletionListener {
-                                            onDismiss() 
+                                            onDismiss()
                                         }
                                         prepareAsync()
                                     } catch (e: Exception) {
@@ -241,28 +621,28 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                             }
 
                             override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
-                            
+
                             override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
                                 mediaPlayer?.release()
                                 mediaPlayer = null
                                 return true
                             }
-                            
+
                             override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
                         }
                     }
                 },
                 modifier = Modifier
-                    .fillMaxWidth() 
-                    .aspectRatio(videoAspectRatio) 
+                    .fillMaxWidth()
+                    .aspectRatio(videoAspectRatio)
                     .graphicsLayer {
-                        alpha = 0.99f 
+                        alpha = 0.99f
                         if (isMedal) {
                             val removeBlackMatrix = ColorMatrix(floatArrayOf(
-                                1f, 0f, 0f, 0f, 0f,  
-                                0f, 1f, 0f, 0f, 0f,  
-                                0f, 0f, 1f, 0f, 0f,  
-                                1.2f, 1.2f, 1.2f, 0f, 0f 
+                                1f, 0f, 0f, 0f, 0f,
+                                0f, 1f, 0f, 0f, 0f,
+                                0f, 0f, 1f, 0f, 0f,
+                                1.2f, 1.2f, 1.2f, 0f, 0f
                             ))
                             colorFilter = ColorFilter.colorMatrix(removeBlackMatrix)
                         }
@@ -272,12 +652,12 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                         if (!isMedal) {
                             drawRect(
                                 brush = Brush.verticalGradient(
-                                    0.0f to Color.Transparent, 
-                                    0.1f to Color.Black,       
-                                    0.9f to Color.Black,       
-                                    1.0f to Color.Transparent  
+                                    0.0f to Color.Transparent,
+                                    0.1f to Color.Black,
+                                    0.9f to Color.Black,
+                                    1.0f to Color.Transparent
                                 ),
-                                blendMode = BlendMode.DstIn 
+                                blendMode = BlendMode.DstIn
                             )
                         }
                     }
@@ -290,8 +670,8 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = (configuration.screenHeightDp * 0.10f).dp)
-                        .offset(y = floatOffset.dp) 
-                        .fillMaxWidth(0.6f) 
+                        .offset(y = floatOffset.dp)
+                        .fillMaxWidth(0.6f)
                         .wrapContentHeight(),
                     contentScale = ContentScale.FillWidth
                 )
@@ -480,7 +860,7 @@ fun Level(onBack: () -> Unit = {}) {
     val displayName = profileName.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest", "user", "null", "undefined") }
         ?: userName ?: userUid.take(8).ifBlank { "User" }
     val displayPhoto = profilePhoto.ifBlank { userPhoto }
-    
+
     var showUpgrade by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
@@ -489,8 +869,9 @@ fun Level(onBack: () -> Unit = {}) {
     var showAllFrames by remember { mutableStateOf(false) }
     var showAllMedals by remember { mutableStateOf(false) }
     var showAllVehicles by remember { mutableStateOf(false) }
-    
+
     var selectedVideoData by remember { mutableStateOf<Triple<String, Boolean, String?>?>(null) }
+    var selectedMedalPreview by remember { mutableStateOf<NativeLevelMedalItem?>(null) }
 
     val pagerState = rememberPagerState { profileBgImages.size }
     val themePagerState = rememberPagerState { themeBgImages.size }
@@ -500,14 +881,14 @@ fun Level(onBack: () -> Unit = {}) {
 
     LaunchedEffect(pagerState) {
         while (true) {
-            delay(5000) 
+            delay(5000)
             if (profileBgImages.isNotEmpty()) {
                 val nextPage = (pagerState.currentPage + 1) % profileBgImages.size
                 pagerState.animateScrollToPage(nextPage)
             }
         }
     }
-    
+
     LaunchedEffect(themePagerState) {
         while (true) {
             delay(5000)
@@ -544,11 +925,11 @@ fun Level(onBack: () -> Unit = {}) {
                     Image(
                         painter = profilePainter,
                         contentDescription = "Top Card Frame",
-                        modifier = Modifier.fillMaxWidth().wrapContentHeight(), 
-                        contentScale = ContentScale.FillWidth 
+                        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                        contentScale = ContentScale.FillWidth
                     )
                     Row(
-                        modifier = Modifier.matchParentSize().padding(horizontal = 32.dp), 
+                        modifier = Modifier.matchParentSize().padding(horizontal = 32.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
@@ -597,15 +978,15 @@ fun Level(onBack: () -> Unit = {}) {
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(3.dp)) 
-                            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
+                            Spacer(Modifier.height(3.dp))
+                            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .25f))) {
                                 Box(Modifier.fillMaxWidth(.38f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFFE072), Color(0xFFF4B63F))))) {
                                     Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
                                 }
                             }
                             Text(
                                 text = "4.5k/20.2k remaining to reach Level 5 >",
-                                color = Color.White.copy(alpha=.9f),
+                                color = Color.White.copy(alpha = .9f),
                                 fontSize = 10.5.sp,
                                 modifier = Modifier.padding(top = 4.dp),
                                 maxLines = 1
@@ -624,17 +1005,17 @@ fun Level(onBack: () -> Unit = {}) {
                 // 1. LEVEL SECTION
                 // ==========================================
                 item {
-                    SectionHeading("Level") 
+                    SectionHeading("Level")
                     Spacer(Modifier.height(8.dp))
                 }
 
                 val visibleLevels = if (showAllLevels) levelTiers else levelTiers.take(9)
                 val chunkedLevels = visibleLevels.chunked(3)
-                
+
                 items(chunkedLevels) { rowTiers ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(), 
-                        horizontalArrangement = Arrangement.spacedBy(10.dp) 
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         for (tier in rowTiers) {
                             Box(
@@ -647,16 +1028,16 @@ fun Level(onBack: () -> Unit = {}) {
                                 AsyncImage(
                                     model = levelAsset(tier.badge),
                                     contentDescription = null,
-                                    modifier = Modifier.height(38.dp).align(Alignment.Center) 
+                                    modifier = Modifier.height(38.dp).align(Alignment.Center)
                                 )
-                                
+
                                 val formattedRange = tier.range.replace(" - Lv.", " - ")
                                 Text(
-                                    text = formattedRange, 
-                                    color = Color.White, 
-                                    fontSize = 11.sp, 
+                                    text = formattedRange,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.align(Alignment.BottomCenter) 
+                                    modifier = Modifier.align(Alignment.BottomCenter)
                                 )
                             }
                         }
@@ -673,11 +1054,11 @@ fun Level(onBack: () -> Unit = {}) {
                             Text(
                                 text = if (showAllLevels) "View Less <" else "View More >",
                                 color = Color.White,
-                                fontSize = 11.sp, 
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllLevels = !showAllLevels } 
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp)) 
+                                    .clickable { showAllLevels = !showAllLevels }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         }
@@ -713,28 +1094,28 @@ fun Level(onBack: () -> Unit = {}) {
                                         .align(Alignment.TopStart)
                                         .background(
                                             color = Color.Black.copy(alpha = 0.4f),
-                                            shape = RoundedCornerShape(bottomEnd = 8.dp) 
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 3.dp)
                                 ) {
                                     Text(
-                                        text = "Lv.${reward.first}", 
-                                        color = Color.White, 
-                                        fontSize = 11.sp, 
+                                        text = "Lv.${reward.first}",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                                
+
                                 AsyncImage(
                                     model = levelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png"),
                                     contentDescription = null,
-                                    modifier = Modifier.size(56.dp).align(Alignment.Center) 
+                                    modifier = Modifier.size(56.dp).align(Alignment.Center)
                                 )
-                                
+
                                 Text(
-                                    text = reward.second, 
-                                    color = Color.White, 
-                                    fontSize = 12.sp, 
+                                    text = reward.second,
+                                    color = Color.White,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
                                 )
@@ -751,11 +1132,11 @@ fun Level(onBack: () -> Unit = {}) {
                             Text(
                                 text = if (showAllRewards) "View Less <" else "View More >",
                                 color = Color.White,
-                                fontSize = 11.sp, 
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllRewards = !showAllRewards } 
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp)) 
+                                    .clickable { showAllRewards = !showAllRewards }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         }
@@ -774,7 +1155,7 @@ fun Level(onBack: () -> Unit = {}) {
 
                 val visibleFrames = if (showAllFrames) framesList else framesList.take(4)
                 val chunkedFrames = visibleFrames.chunked(2)
-                
+
                 items(chunkedFrames) { rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -786,14 +1167,14 @@ fun Level(onBack: () -> Unit = {}) {
                                     .weight(1f)
                                     .aspectRatio(0.85f)
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                                    .clip(RoundedCornerShape(8.dp)) 
+                                    .clip(RoundedCornerShape(8.dp))
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopStart)
                                         .background(
                                             color = Color.Black.copy(alpha = 0.4f),
-                                            shape = RoundedCornerShape(bottomEnd = 8.dp) 
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp)
                                         )
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
@@ -808,9 +1189,9 @@ fun Level(onBack: () -> Unit = {}) {
                                 AsyncImage(
                                     model = levelAsset(frame.imageFile),
                                     contentDescription = null,
-                                    modifier = Modifier.size(110.dp).align(Alignment.Center).offset(y = (-15).dp) 
+                                    modifier = Modifier.size(110.dp).align(Alignment.Center).offset(y = (-15).dp)
                                 )
-                                
+
                                 val starCount = (frame.levelText.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) % 3 + 3
                                 Column(
                                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
@@ -838,11 +1219,11 @@ fun Level(onBack: () -> Unit = {}) {
                             Text(
                                 text = if (showAllFrames) "View Less <" else "View More >",
                                 color = Color.White,
-                                fontSize = 11.sp, 
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllFrames = !showAllFrames } 
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp)) 
+                                    .clickable { showAllFrames = !showAllFrames }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         }
@@ -852,7 +1233,7 @@ fun Level(onBack: () -> Unit = {}) {
                 item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
-                // 3. MEDAL SECTION 
+                // 3. MEDAL SECTION (Lv.10 to Lv.100 Rich Medal Images + Original BG Popup/Sparkle Animation)
                 // ==============================================
                 item {
                     SectionHeading("Medal")
@@ -860,11 +1241,11 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 val visibleMedals = if (showAllMedals) medalsList else medalsList.take(4)
-                val chunkedMedals = visibleMedals.chunked(2) 
-                
+                val chunkedMedals = visibleMedals.chunked(2)
+
                 items(chunkedMedals) { rowItems ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(), 
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         for (medal in rowItems) {
@@ -874,8 +1255,8 @@ fun Level(onBack: () -> Unit = {}) {
                                     .aspectRatio(0.85f)
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                     .clip(RoundedCornerShape(8.dp))
-                                    .clickable { 
-                                        selectedVideoData = Triple(levelAsset(medal.videoFile), true, null)
+                                    .clickable {
+                                        selectedMedalPreview = medal
                                     }
                             ) {
                                 Box(
@@ -883,7 +1264,7 @@ fun Level(onBack: () -> Unit = {}) {
                                         .align(Alignment.TopStart)
                                         .background(
                                             color = Color.Black.copy(alpha = 0.4f),
-                                            shape = RoundedCornerShape(bottomEnd = 8.dp) 
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp)
                                         )
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
@@ -898,9 +1279,9 @@ fun Level(onBack: () -> Unit = {}) {
                                 AsyncImage(
                                     model = levelAsset(medal.imageFile),
                                     contentDescription = null,
-                                    modifier = Modifier.size(90.dp).align(Alignment.Center) 
+                                    modifier = Modifier.size(90.dp).align(Alignment.Center)
                                 )
-                                
+
                                 val starCount = (medal.levelText.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) % 3 + 3
                                 Column(
                                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
@@ -909,9 +1290,9 @@ fun Level(onBack: () -> Unit = {}) {
                                     StarRow(starCount = starCount)
                                     Spacer(Modifier.height(2.dp))
                                     Text(
-                                        text = "${medal.levelText} Medal", 
-                                        color = Color.LightGray, 
-                                        fontSize = 12.sp, 
+                                        text = "${medal.levelText} Medal",
+                                        color = Color.LightGray,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -928,11 +1309,11 @@ fun Level(onBack: () -> Unit = {}) {
                             Text(
                                 text = if (showAllMedals) "View Less <" else "View More >",
                                 color = Color.White,
-                                fontSize = 11.sp, 
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllMedals = !showAllMedals } 
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp)) 
+                                    .clickable { showAllMedals = !showAllMedals }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         }
@@ -951,7 +1332,7 @@ fun Level(onBack: () -> Unit = {}) {
 
                 val visibleVehicles = if (showAllVehicles) vehiclesList else vehiclesList.take(4)
                 val chunkedVehicles = visibleVehicles.chunked(2)
-                
+
                 items(chunkedVehicles) { rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -963,8 +1344,8 @@ fun Level(onBack: () -> Unit = {}) {
                                     .weight(1f)
                                     .aspectRatio(0.85f)
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                                    .clip(RoundedCornerShape(8.dp)) 
-                                    .clickable { 
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
                                         selectedVideoData = Triple(levelAsset(vehicle.videoFile), false, levelAsset(vehicle.overlayImage))
                                     }
                             ) {
@@ -972,8 +1353,8 @@ fun Level(onBack: () -> Unit = {}) {
                                     modifier = Modifier
                                         .align(Alignment.TopStart)
                                         .background(
-                                            color = Color.Black.copy(alpha = 0.4f), 
-                                            shape = RoundedCornerShape(bottomEnd = 8.dp) 
+                                            color = Color.Black.copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp)
                                         )
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
@@ -988,7 +1369,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 AsyncImage(
                                     model = levelAsset(vehicle.imageFile),
                                     contentDescription = null,
-                                    modifier = Modifier.size(110.dp).align(Alignment.Center).offset(y = (-15).dp) 
+                                    modifier = Modifier.size(110.dp).align(Alignment.Center).offset(y = (-15).dp)
                                 )
 
                                 val starCount = (vehicle.levelText.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) % 3 + 3
@@ -1000,7 +1381,7 @@ fun Level(onBack: () -> Unit = {}) {
                                     Spacer(Modifier.height(2.dp))
                                     Text(
                                         text = "${vehicle.levelText} Entry",
-                                        color = Color.LightGray, 
+                                        color = Color.LightGray,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -1018,11 +1399,11 @@ fun Level(onBack: () -> Unit = {}) {
                             Text(
                                 text = if (showAllVehicles) "View Less <" else "View More >",
                                 color = Color.White,
-                                fontSize = 11.sp, 
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllVehicles = !showAllVehicles } 
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp)) 
+                                    .clickable { showAllVehicles = !showAllVehicles }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         }
@@ -1032,11 +1413,11 @@ fun Level(onBack: () -> Unit = {}) {
                 item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
-                // 5. CUSTOMIZE PROFILE BACKGROUND SECTION 
+                // 5. CUSTOMIZE PROFILE BACKGROUND SECTION
                 // ==============================================
                 item {
                     SectionHeading("Customize Profile Background")
-                    
+
                     Text(
                         text = "Customized Your Profile Background Upload Image",
                         color = Color.LightGray,
@@ -1059,7 +1440,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 model = levelAsset(profileBgImages[page]),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop 
+                                contentScale = ContentScale.Crop
                             )
                         }
 
@@ -1067,7 +1448,7 @@ fun Level(onBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .background(
-                                    color = Color.Black.copy(alpha = 0.3f), 
+                                    color = Color.Black.copy(alpha = 0.3f),
                                     shape = RoundedCornerShape(bottomEnd = 8.dp)
                                 )
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -1098,15 +1479,15 @@ fun Level(onBack: () -> Unit = {}) {
                             }
                         }
                     }
-                    Spacer(Modifier.height(24.dp)) 
+                    Spacer(Modifier.height(24.dp))
                 }
 
                 // ==============================================
-                // NEW: CUSTOMIZED THEME SECTION 
+                // NEW: CUSTOMIZED THEME SECTION
                 // ==============================================
                 item {
                     SectionHeading("Customized Theme")
-                    
+
                     Text(
                         text = "Customized your Room Theme upload image",
                         color = Color.LightGray,
@@ -1121,7 +1502,7 @@ fun Level(onBack: () -> Unit = {}) {
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(0.48f) 
+                                .fillMaxWidth(0.48f)
                                 .height(280.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color.White.copy(alpha = 0.1f))
@@ -1142,7 +1523,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 modifier = Modifier
                                     .align(Alignment.TopStart)
                                     .background(
-                                        color = Color.Black.copy(alpha = 0.4f), 
+                                        color = Color.Black.copy(alpha = 0.4f),
                                         shape = RoundedCornerShape(bottomEnd = 8.dp)
                                     )
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -1174,14 +1555,14 @@ fun Level(onBack: () -> Unit = {}) {
                             }
                         }
                     }
-                    
+
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        StarRow(starCount = 3) 
+                        StarRow(starCount = 3)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Lv.30 Customized Theme",
@@ -1199,6 +1580,12 @@ fun Level(onBack: () -> Unit = {}) {
     }
 
     if (showUpgrade) LevelUpgradeDialog { showUpgrade = false }
+
+    selectedMedalPreview?.let { medal ->
+        LevelMedalPreviewDialog(medal = medal) {
+            selectedMedalPreview = null
+        }
+    }
 
     selectedVideoData?.let { (videoUrl, isMedal, overlayImg) ->
         FullScreenVideoDialog(videoUrl = videoUrl, isMedal = isMedal, overlayImageUrl = overlayImg) {
