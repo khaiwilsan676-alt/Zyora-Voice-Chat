@@ -405,12 +405,14 @@ fun HomeScreen(
                         try {
                             if (connection.responseCode !in 200..299) error("Leaderboard unavailable")
                             val rows = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("leaderboard") ?: org.json.JSONArray()
-                            (0 until minOf(3, rows.length())).mapNotNull { index ->
-                                val row = rows.optJSONObject(index) ?: return@mapNotNull null
-                                row.optString("image").trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" }?.let { image ->
-                                    if (image.startsWith("http", true)) image else RAW + image.removePrefix("/")
-                                }
+                            val rankedAvatars = (0 until 3).map { index ->
+                                val row = rows.optJSONObject(index)
+                                val image = row?.optString("image", "").orEmpty().trim()
+                                if (image.isBlank() || image == "null" || image == "undefined") ""
+                                else if (image.startsWith("http", true)) image else RAW + image.removePrefix("/")
                             }
+                            // Rank 1 stays centred; rank 2 left; rank 3 right.
+                            listOf(rankedAvatars[1], rankedAvatars[0], rankedAvatars[2])
                         } finally { connection.disconnect() }
                     }.getOrDefault(emptyList())
                     withContext(Dispatchers.Main) { dailyTopThreeAvatars[category] = avatars }
@@ -442,10 +444,12 @@ fun HomeScreen(
     var pullDistance by remember { mutableFloatStateOf(0f) }
     val pullRefreshConnection = remember(listState) {
         object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // Observe the unconsumed pull at the top; never consume normal scroll movement.
                 if (available.y > 0f && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
                     pullDistance = (pullDistance + available.y).coerceAtMost(180f)
-                    return Offset(0f, available.y)
+                } else if (available.y < 0f) {
+                    pullDistance = 0f
                 }
                 return Offset.Zero
             }
@@ -1075,15 +1079,22 @@ private fun HurryCategoryCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val fallbackAvatar = RAW + "default_avatar.png"
     Box(modifier.height(92.dp).clip(RoundedCornerShape(16.dp)).clickable { onClick() }) {
         AsyncImage(model = bg, contentDescription = label, modifier = Modifier.fillMaxSize().offset(y = 1.dp).graphicsLayer { val s = if (label.equals("Honour", true)) 1.08f else 1.02f; scaleX = s; scaleY = s }, contentScale = ContentScale.Fit)
         Text(text = label.uppercase(), modifier = Modifier.fillMaxWidth().padding(top = 16.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 3.dp, end = 3.dp, bottom = 2.dp)) {
             Row(Modifier.matchParentSize().offset(y = (-1).dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 (0..2).forEach { index ->
-                    val avatar = topThreeAvatars.getOrNull(index) ?: fallbackAvatar
-                    AsyncImage(model = avatar, contentDescription = "Daily top avatar", modifier = Modifier.offset(x = if (index == 0) (-4).dp else if (index == 2) 4.dp else 0.dp).size(if (index == 1) 31.dp else 26.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
+                    val avatar = topThreeAvatars.getOrNull(index).orEmpty()
+                    val avatarModifier = Modifier
+                        .offset(x = if (index == 0) (-4).dp else if (index == 2) 4.dp else 0.dp)
+                        .size(if (index == 1) 31.dp else 26.dp)
+                        .clip(RoundedCornerShape(50))
+                    if (avatar.isBlank()) {
+                        DefaultUserAvatarIcon(modifier = avatarModifier)
+                    } else {
+                        AsyncImage(model = avatar, contentDescription = "Daily top avatar", modifier = avatarModifier, contentScale = ContentScale.Crop)
+                    }
                     if (index != 2) Spacer(Modifier.width(2.dp))
                 }
             }
