@@ -2032,3 +2032,10 @@ Current documentation does not certify that all historical features are build-, 
 - `Wildparty.kt`: Wild Party republishes the current round's actual deterministic outcome and HTTPS winner artwork whenever its Socket.IO connection connects or reconnects, so a result calculated before the socket was ready is not lost.
 - `DragonBattle.kt`: Dragon Battle recomputes the current round from the same deterministic dealt cards and republishes the actual winning dragon artwork after every Socket.IO reconnect.
 - This restores the latest-result snapshot in `Zyora-Server/server.js` without changing game odds, betting, payout, round timing, or UI. A fresh native APK build and Render deployment/runtime verification are still required.
+
+## 2026-11-24 — Wallet history visibility and 25-record local cap
+- Root cause: Wallet Details looked up history using permanent account ID first, while wallet transaction writes use the Firebase UID first. This made valid device-local rows invisible for signed-in users.
+- Wallet Details now searches both Firebase UID and permanent account ID aliases, with Firebase UID first, so older rows and current rows can both be found.
+- History query and retention are capped at the latest 25 rows per account and wallet type in the device's existing `index.db`; no wallet history is uploaded to MongoDB or Redis.
+- Recharge and Diamond Exchange continue writing to the same local history store. Family creation now also writes its successful 30,000,000-coin debit to the same local coin history; failed family creation is not logged.
+- No Wallet UI redesign or balance/accounting behavior change. Native APK compilation and on-device history verification are still required.
