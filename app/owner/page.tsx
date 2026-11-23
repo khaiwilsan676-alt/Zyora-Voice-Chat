@@ -643,6 +643,7 @@ export default function StaffPanel() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('All Roles');
+  const [selectedUserStatusFilter, setSelectedUserStatusFilter] = useState<'All' | 'Online' | 'Offline' | 'Banned'>('All');
 
   const [giftTabFilter, setGiftTabFilter] = useState<'All' | 'Hot' | 'Lucky'>('All');
   const [giftSearchQuery, setGiftSearchQuery] = useState('');
@@ -1504,18 +1505,22 @@ export default function StaffPanel() {
   };
 
   const filteredUsers = users.filter(u => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
+    const q = searchQuery.trim().toLowerCase();
+    const userData = u as any;
+    const matchesSearch = !q ||
       u.name.toLowerCase().includes(q) ||
       u.username.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       u.hurryId.toLowerCase().includes(q);
-
-    const matchesRole =
-      selectedRoleFilter === 'All Roles' ||
+    const matchesRole = selectedRoleFilter === 'All Roles' ||
       u.role.toUpperCase() === selectedRoleFilter.toUpperCase();
-
-    return matchesSearch && matchesRole;
+    const isBanned = Boolean(userData.isBanned || userData.isBlocked || /banned|blocked/i.test(String(userData.accountStatus || userData.state || '')));
+    const isOnline = Boolean(userData.isOnline || userData.online || userData.onlineStatus || userData.roomId || userData.currentRoomId);
+    const matchesStatus = selectedUserStatusFilter === 'All' ||
+      (selectedUserStatusFilter === 'Banned' && isBanned) ||
+      (selectedUserStatusFilter === 'Online' && !isBanned && isOnline) ||
+      (selectedUserStatusFilter === 'Offline' && !isBanned && !isOnline);
+    return matchesSearch && matchesRole && matchesStatus;
   }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   const filteredGifts = ALL_GIFTS.filter(g => {
@@ -1682,42 +1687,57 @@ export default function StaffPanel() {
 
         {activeTab === 'manage_users' && (
           <div className="flex flex-col h-full bg-white">
-            <div className="px-8 py-6 pb-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">Users</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Registered users</p>
-              </div>
-              <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">
-                Total Users: {users.length}
-              </span>
-            </div>
-
-            <div className="p-8 flex-1 overflow-y-auto">
-              <div className="flex flex-col gap-4 mb-6">
-                <div className="relative w-full max-w-3xl">
+            <div className="px-8 py-6 pb-4 border-b border-gray-100">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">Users</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Registered users</p>
+                </div>
+                <div className="relative w-full md:w-[340px]">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={handleSearchQueryChange}
-                    placeholder="Search by real name, email, Zyora ID, username..."
+                    placeholder="Search by ID or name..."
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
                   />
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
+              </div>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-slate-700">Total Users</span>
+                  <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">{users.length.toLocaleString()}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(['All', 'Online', 'Offline', 'Banned'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setSelectedUserStatusFilter(filter)}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${selectedUserStatusFilter === filter ? 'bg-[#197477] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
                   <select
                     value={selectedRoleFilter}
                     onChange={(e) => setSelectedRoleFilter(e.target.value)}
+                    aria-label="Filter by role"
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none hover:bg-slate-50 cursor-pointer"
                   >
-                    <option>All Roles</option>
+                    <option value="All Roles">Filter</option>
                     <option>NORMAL</option>
                     <option>HOST</option>
                     <option>AGENCY</option>
                     <option>ADMIN</option>
                   </select>
+                  <span className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600">A–Z</span>
                 </div>
               </div>
+            </div>
+
+            <div className="p-8 flex-1 overflow-y-auto">
 
               {loadingUsers ? (
                 <div className="py-12 text-center text-slate-400 font-medium text-sm">
