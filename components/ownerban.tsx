@@ -650,7 +650,7 @@ export default function OwnerBan() {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <button onClick={() => setIsUnbanConfirmOpen(true)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">
+              <button onClick={() => setIsUnbanConfirmOpen(true)} className="flex-1 bg-[#197477] text-white font-bold py-2 rounded-lg hover:bg-[#17696c]">
                 Unban
               </button>
               <button onClick={() => setIsDetailModalOpen(false)} className="flex-1 bg-slate-200 font-bold py-2 rounded-lg hover:bg-slate-300">
@@ -676,7 +676,7 @@ export default function OwnerBan() {
             />
             <div className="flex gap-3">
               <button onClick={() => setIsUnbanConfirmOpen(false)} className="flex-1 bg-slate-200 font-bold py-2 rounded-lg">Cancel</button>
-              <button onClick={submitUnban} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">Confirm Unban</button>
+              <button onClick={submitUnban} className="flex-1 bg-[#197477] text-white font-bold py-2 rounded-lg hover:bg-[#17696c]">Confirm Unban</button>
             </div>
           </div>
         </div>
