@@ -105,7 +105,7 @@ export default function SellerCenterUsers() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by user ID..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
           />
         </div>
         {message && <p className="mb-4 text-sm font-medium text-red-500">{message}</p>}
@@ -128,7 +128,7 @@ export default function SellerCenterUsers() {
                     <td className="py-3 pl-4 pr-2 text-xs font-bold text-slate-500">{index + 1}</td>
                     <td className="py-3 px-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-indigo-100 shrink-0 flex items-center justify-center text-indigo-600 font-bold">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-indigo-100 shrink-0 flex items-center justify-center text-[#197477] font-bold">
                           {user.image ? <img src={user.image} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="text-sm font-bold text-slate-800">{user.name}</span>
