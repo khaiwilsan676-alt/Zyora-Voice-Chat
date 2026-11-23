@@ -169,7 +169,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   return (
     <section className="w-full max-w-xl pt-2">
       <div className="space-y-4">
-        <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="h-12 w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" inputMode="numeric" />
+        <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="h-12 w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" inputMode="numeric" />
         {user && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <img src={user.avatar || '/default-avatar.png'} alt="" className="h-10 w-10 rounded-full object-cover" />
           <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{user.name}</div><div className="text-xs text-slate-500">ID: {user.accountId}</div></div>
@@ -177,11 +177,11 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         <div className="relative space-y-2">
           <label className="block text-xs font-bold text-slate-600" htmlFor="owner-asset-title">Title</label>
           <div className="relative w-full max-w-sm">
-            <input id="owner-asset-title" value={title} readOnly placeholder="Select title" className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 pr-12 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
+            <input id="owner-asset-title" value={title} readOnly placeholder="Select title" className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 pr-12 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" />
             <button type="button" aria-label="Choose title" aria-expanded={typeMenuOpen} onClick={() => setTypeMenuOpen((open) => !open)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center border-l border-slate-200 text-lg text-slate-600">⌄</button>
             {typeMenuOpen && <div className="absolute left-0 top-[52px] z-30 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
               {(['Chat bubble', 'Theme', 'Frame', 'Vehicle', 'Level Entry', 'Level Frame', 'Level Medal', 'Family Reward', 'Daily Check-in'] as AssetType[]).map((value) => (
-                <button key={value} type="button" onClick={() => { setType(value); setTitle(value); setSelected(null); setAssetNameQuery(''); setTypeMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold ${type === value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{value}</button>
+                <button key={value} type="button" onClick={() => { setType(value); setTitle(value); setSelected(null); setAssetNameQuery(''); setTypeMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold ${type === value ? 'bg-[#197477] text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{value}</button>
               ))}
             </div>}
           </div>
@@ -189,7 +189,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         <div className="space-y-2">
           <label className="block text-xs font-bold text-slate-600" htmlFor="owner-asset-name">Assets Name</label>
           <div className="flex items-center gap-3">
-            <input id="owner-asset-name" value={assetNameQuery} onChange={(event) => { setAssetNameQuery(event.target.value); setSelected(null); }} placeholder="Type asset name" list="owner-asset-name-options" className="h-12 w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
+            <input id="owner-asset-name" value={assetNameQuery} onChange={(event) => { setAssetNameQuery(event.target.value); setSelected(null); }} placeholder="Type asset name" list="owner-asset-name-options" className="h-12 w-full max-w-sm rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" />
             {matchedAsset && <img src={assetUrl(matchedAsset)} alt={matchedAsset.name} title={matchedAsset.name} className="h-14 w-14 shrink-0 rounded-lg border border-slate-200 bg-white object-contain p-1" />}
           </div>
           <datalist id="owner-asset-name-options">
@@ -198,9 +198,9 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         </div>
         <div className="flex items-center gap-3">
           <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-days">Days</label>
-          <input id="owner-asset-days" value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className="h-12 w-24 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
+          <input id="owner-asset-days" value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className="h-12 w-24 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" />
         </div>
-        <button type="button" onClick={sendAsset} disabled={busy || !user || !(matchedAsset || selected)} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
+        <button type="button" onClick={sendAsset} disabled={busy || !user || !(matchedAsset || selected)} className="w-full rounded-xl bg-[#197477] px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
       </div>
 
