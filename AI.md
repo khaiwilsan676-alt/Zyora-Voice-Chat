@@ -2100,3 +2100,8 @@ Current documentation does not certify that all historical features are build-, 
 - Reduced the source-to-seat Lucky Gift flight to 540 ms with a smoother cubic-bezier ease and a gentler 14 dp arc.
 - Kept the gift's small launch, centre growth, and target-seat landing sequence; target-seat effect now starts after 560 ms.
 - Changes are animation-only; no room UI, notification layout, or combo behavior changed. APK/device verification remains pending.
+
+
+## 2026-11-24 — Homepage cold-start scroll responsiveness
+- `HomeScreen.kt`: prioritize the first homepage frame and initial scroll window by deferring the room-list network refresh briefly after the Room/memory cache warm-up, delaying non-critical leaderboard avatar requests, and delaying daily check-in status I/O.
+- No UI, card layout, colors, room data model, or scroll behavior changed; only background startup task timing changed.
