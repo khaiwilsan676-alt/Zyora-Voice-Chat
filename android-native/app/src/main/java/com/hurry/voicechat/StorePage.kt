@@ -1030,10 +1030,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                 if (!purchaseBusy && storeInventoryUserId.isNotBlank()) {
                                                     val nextEquipped = !equipped
                                                     val previousTabEquipped = equippedIds.filter { id ->
-                                                        (0 until serverInventory.length()).mapNotNull { serverInventory.optJSONObject(it) }
+                                                        ((0 until serverInventory.length()).mapNotNull { serverInventory.optJSONObject(it) }
                                                             .firstOrNull { it.optString("itemId") == id }?.optString("tab")
-                                                            ?: nativeStoreItems.firstOrNull { it.id == id }?.tab
-                                                        == item.tab
+                                                            ?: nativeStoreItems.firstOrNull { it.id == id }?.tab) == item.tab
                                                     }
                                                     // Optimistic UI: update Use/Remove immediately; restore only if server rejects it.
                                                     if (nextEquipped) {
