@@ -269,6 +269,8 @@ fun HomeScreen(
 
     LaunchedEffect(checkInUserId) {
         if (checkInUserId.isBlank()) return@LaunchedEffect
+        // Let the first homepage frame and initial touch/scroll settle before non-critical check-in I/O.
+        kotlinx.coroutines.delay(2_000L)
         runCatching {
             withContext(Dispatchers.IO) {
                 val encoded = java.net.URLEncoder.encode(checkInUserId, "UTF-8")
@@ -289,6 +291,9 @@ fun HomeScreen(
 
 
     LaunchedEffect(Unit) {
+        // Give the first homepage frame priority; room data still comes from the warm cache/Room DB.
+        withFrameNanos { }
+        kotlinx.coroutines.delay(650L)
         // Warm the shared snapshot from Room DB before network completes. This makes
         // cards immediately available after tab navigation and cold app starts.
         if (NativeRoomMemoryCache.rooms == null && dao != null) {
@@ -400,6 +405,9 @@ fun HomeScreen(
     }
     val dailyTopThreeAvatars = NativeLeaderboardAvatarCache.avatars
     LaunchedEffect(Unit) {
+        // Defer leaderboard avatar requests until the homepage's first scroll window is responsive.
+        withFrameNanos { }
+        kotlinx.coroutines.delay(1_500L)
         val cache = NativeLeaderboardAvatarCache
         val cacheIsFresh = cache.avatars.size == 3 &&
             System.currentTimeMillis() - cache.lastRefreshAt < 300_000L
