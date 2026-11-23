@@ -257,6 +257,19 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
                                         }
                                         try {
                                             FamilyProfileApi.create(familyCode, familyName.trim(), familyPhoto, announcement)
+                                            val transactionTime = System.currentTimeMillis()
+                                            val transactionDate = java.text.SimpleDateFormat(
+                                                "yyyy.MM.dd HH:mm", java.util.Locale.getDefault()
+                                            ).format(java.util.Date(transactionTime))
+                                            NativeIndexDatabase(context).saveWalletTransaction(
+                                                "family_create_${familyAuthUid}_${transactionTime}",
+                                                familyAuthUid,
+                                                "Create Family",
+                                                -30_000_000L,
+                                                transactionDate,
+                                                transactionTime,
+                                                "coin"
+                                            )
                                         } catch (familyError: Throwable) {
                                             walletDao.saveUserData(current)
                                             ProfilePersistence.save(
