@@ -2053,3 +2053,11 @@ Current documentation does not certify that all historical features are build-, 
 - Honour, Charm, and Room cards now show rank 1 in the centre, rank 2 on the left, and rank 3 on the right. Missing rank slots remain in place instead of shifting other users.
 - Empty avatar slots reuse the exact `DefaultUserAvatarIcon` composable from `Leaderboard.kt`; it is now shared with HomeScreen. Card artwork and styling remain unchanged.
 - Native APK compilation and real-device scroll/visual verification remain pending.
+
+## 2026-11-24 — Family weekly rewards use existing Bag, Room and Wallet paths
+- Family reward Frame/Vehicle/Theme assets remain ordinary expiring rows in the existing `storeInventory`: Frames appear under Bag → Frame and use the existing equip/Avatar Frame overlay path; Vehicles appear under Bag → Vehicle and the existing equipped-vehicle room-entry event plays the stored reward MP4 in the same Room position/renderer as other vehicles; Themes appear under Bag → Theme and the existing Room Settings theme picker reads owned Theme inventory and applies the selected image.
+- Fixed Bag equip bookkeeping for granted non-catalogue reward IDs: switching Use/Remove now resolves the item's actual inventory tab instead of relying only on built-in Store catalogue IDs, so granted Frames, Vehicles and Themes can be equipped and replace another equipped item in the same tab.
+- Family reward coins are credited to the existing MongoDB user `coins` balance and wallet balance event path; no separate coin inventory is created.
+- Family reward Tag fields are now copied from the remote profile response and re-applied after remote merge, so the expiring reward image can replace the existing Public Profile Family card background on other devices, not only when present in local profile cache.
+- The Store Family Tag tab remains removed. Medal rewards continue to use the existing Medal page.
+- Verification: source commits completed; Android APK build, Render deployment, and live reward/room/profile tests are still required before runtime behavior can be called verified.
