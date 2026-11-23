@@ -135,17 +135,18 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
         familyImage = uri?.toString().orEmpty()
     }
     var activeRank by remember { mutableIntStateOf(0) }
+    var rankingPeriod by remember { mutableStateOf("this_week") }
     var seconds by remember { mutableIntStateOf(0) }
     var topFamilies by remember { mutableStateOf<List<FamilyRecord>>(emptyList()) }
     var myFamilyRecord by remember { mutableStateOf<FamilyRecord?>(null) }
-    LaunchedEffect(context) {
-        // Paint the last known rankings immediately; refresh from MongoDB in background.
-        val cached = withContext(Dispatchers.IO) { FamilyProfileApi.cachedLeaderboard(context) }
+    LaunchedEffect(context, rankingPeriod) {
+        // Restore the selected week's last known ranking immediately, then refresh from MongoDB.
+        val cached = withContext(Dispatchers.IO) { FamilyProfileApi.cachedLeaderboard(context, rankingPeriod) }
         if (cached.isNotEmpty()) topFamilies = cached
         while (true) {
-            runCatching { FamilyProfileApi.leaderboard() }.onSuccess { latest ->
+            runCatching { FamilyProfileApi.leaderboard(rankingPeriod) }.onSuccess { latest ->
                 topFamilies = latest
-                withContext(Dispatchers.IO) { FamilyProfileApi.saveLeaderboardCache(context, latest) }
+                withContext(Dispatchers.IO) { FamilyProfileApi.saveLeaderboardCache(context, latest, rankingPeriod) }
             }
             delay(30000)
         }
@@ -299,7 +300,9 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
                 else -> FamilyHome(
                     onBack = onBack, 
                     onRules = { showRules = true }, 
-                    seconds = seconds, 
+                    seconds = seconds,
+                    rankingPeriod = rankingPeriod,
+                    onRankingPeriod = { rankingPeriod = it },
                     activeRank = activeRank, 
                     onRank = { 
                         activeRank = it
@@ -339,7 +342,7 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>, myFamily: FamilyRecord?, familyCode: String, onOpenFamily: (String) -> Unit) {
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, rankingPeriod: String, onRankingPeriod: (String) -> Unit, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>, myFamily: FamilyRecord?, familyCode: String, onOpenFamily: (String) -> Unit) {
     val scrollState = rememberScrollState()
     val familyMemberCountText = myFamily?.members?.size?.coerceAtMost(50)?.toString() ?: "—"
     val activeFilter = null
@@ -396,6 +399,21 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     Text("%02d".format(seconds % 60), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
                 }
 
+                Spacer(Modifier.height(10.dp))
+
+                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp).background(Color(0xFF24180B), RoundedCornerShape(12.dp)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("this_week" to "This Week", "last_week" to "Last Week").forEach { (period, label) ->
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(9.dp))
+                                .background(if (rankingPeriod == period) familyGold else Color.Transparent)
+                                .clickable { onRankingPeriod(period) }
+                                .padding(vertical = 9.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(label, color = if (rankingPeriod == period) Color(0xFF24180B) else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
                 Spacer(Modifier.height(10.dp))
 
                 // 1, 2, 3 Cards
