@@ -3264,8 +3264,8 @@ io.on("connection", (socket) => {
       .filter(Boolean)
       .filter((id, index, arr) => arr.indexOf(id) === index);
 
-    if (validRecipients.length === 0) {
-      await rejectTransfer("no_valid_recipients");
+    if (validRecipients.length === 0 || validRecipients.length !== recipients.length) {
+      await rejectTransfer("recipient_unavailable");
       return;
     }
 
