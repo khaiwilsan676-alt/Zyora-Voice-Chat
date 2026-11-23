@@ -1163,6 +1163,7 @@ export default function StaffPanel() {
         setLoadingUsers(true);
         let fetchedList: UserRecord[] = [];
         let rawUsers: any[] = [];
+        let createdRoomAccountIds = new Set<string>();
 
         try {
           // MongoDB is the canonical user-profile source. Fetch it directly;
@@ -1209,10 +1210,27 @@ export default function StaffPanel() {
             country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
             accountStatus: String(u.accountStatus || u.status || (u.isDeleted ? 'Delete' : u.isActive === false ? 'Delete' : 'Using')),
             deviceName: String(u.deviceName || u.deviceModel || u.lastDeviceName || u.userDevice || u.device?.name || u.lastDevice?.name || u.deviceInfo?.model || '—'),
-            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || u.lastLogin?.ip || '—')
+            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || u.lastLogin?.ip || '—'),
+            coins: Number(u.coins ?? u.coin ?? u.walletCoins ?? u.balance ?? u.wallet?.coins ?? u.wallet?.coin ?? 0),
+            diamonds: Number(u.diamonds ?? u.diamond ?? u.walletDiamonds ?? u.wallet?.diamonds ?? u.wallet?.diamond ?? 0),
+            roomsCreated: [u.accountId, u.accountNumber, u.uid, u.firebaseUid, u.userId, u._id, u.id].filter(Boolean).some((value: any) => createdRoomAccountIds.has(String(value))) ? 1 : 0
           }));
         } catch (err) {
           console.warn('Socket.IO owner users load failed; trying HTTP users API:', err);
+        }
+
+        try {
+          const roomsResponse = await fetch(apiUrl('/api/rooms'), { method: 'GET', cache: 'no-store', headers: { Accept: 'application/json' } });
+          if (roomsResponse.ok) {
+            const roomsData = await roomsResponse.json();
+            const roomList = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
+            createdRoomAccountIds = new Set(roomList.flatMap((room: any) =>
+              [room.accountId, room.id, room.roomId, room.ownerUid, room.ownerId, room.userId]
+                .filter(Boolean).map((value: any) => String(value))
+            ));
+          }
+        } catch (roomLoadError) {
+          console.warn('Manage Users room ownership lookup failed:', roomLoadError);
         }
 
         // Always recover through the REST endpoint when Socket.IO timed out,
@@ -1247,7 +1265,10 @@ export default function StaffPanel() {
             country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
             accountStatus: String(u.accountStatus || u.status || (u.isDeleted ? 'Delete' : u.isActive === false ? 'Delete' : 'Using')),
             deviceName: String(u.deviceName || u.deviceModel || u.lastDeviceName || u.device?.name || u.lastDevice?.name || '—'),
-            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || '—')
+            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || '—'),
+            coins: Number(u.coins ?? u.coin ?? u.walletCoins ?? u.balance ?? u.wallet?.coins ?? u.wallet?.coin ?? 0),
+            diamonds: Number(u.diamonds ?? u.diamond ?? u.walletDiamonds ?? u.wallet?.diamonds ?? u.wallet?.diamond ?? 0),
+            roomsCreated: [u.accountId, u.accountNumber, u.uid, u.firebaseUid, u.userId, u._id, u.id].filter(Boolean).some((value: any) => createdRoomAccountIds.has(String(value))) ? 1 : 0
           }));
         }
 
@@ -1704,16 +1725,17 @@ export default function StaffPanel() {
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[820px]">
+                  <table className="w-full text-left border-collapse min-w-[920px]">
                     <thead>
                       <tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
                         <th className="py-3 pl-4 pr-2 w-14">S.No</th>
                         <th className="py-3 px-2">User</th>
+                        <th className="py-3 px-2">ID Number</th>
                         <th className="py-3 px-2">Gmail</th>
                         <th className="py-3 px-2">State</th>
                         <th className="py-3 px-2">Coins</th>
                         <th className="py-3 px-2">Diamond</th>
-                        <th className="py-3 px-2">Online Room</th>
+                        <th className="py-3 px-2">Rooms</th>
                         <th className="py-3 pr-4 text-right">Action</th>
                       </tr>
                     </thead>
@@ -1722,9 +1744,9 @@ export default function StaffPanel() {
                         const userData = u as any;
                         const isOnline = Boolean(userData.isOnline || userData.online || userData.onlineStatus || userData.roomId || userData.currentRoomId);
                         const userState = String(userData.accountStatus || userData.state || (userData.isBlocked ? 'Blocked' : 'Active'));
-                        const coins = userData.coins ?? userData.coin ?? userData.walletCoins ?? userData.balance ?? 0;
-                        const diamonds = userData.diamonds ?? userData.diamond ?? userData.walletDiamonds ?? 0;
-                        const onlineRoom = userData.onlineRoom ?? userData.roomId ?? userData.currentRoomId ?? userData.currentRoom ?? '0';
+                        const coins = Number(userData.coins ?? 0);
+                        const diamonds = Number(userData.diamonds ?? 0);
+                        const roomsCreated = Number(userData.roomsCreated ?? 0);
                         return (
                           <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                             <td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{idx + 1}</td>
@@ -1755,10 +1777,10 @@ export default function StaffPanel() {
                                 )}
                                 <div className="flex flex-col min-w-0">
                                   <span className="text-xs font-medium text-slate-800 truncate max-w-[150px]">{u.name}</span>
-                                  <span className="text-[10px] text-slate-400 truncate">{u.hurryId || u.id}</span>
                                 </div>
                               </div>
                             </td>
+                            <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{u.hurryId || u.id || '—'}</td>
                             <td className="py-3 px-2 text-xs text-slate-600">
                               <span className="block max-w-[220px] truncate" title={u.email || ''}>{u.email && u.email !== '—' ? u.email : '—'}</span>
                             </td>
@@ -1769,7 +1791,7 @@ export default function StaffPanel() {
                             </td>
                             <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{Number(coins || 0).toLocaleString()}</td>
                             <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{Number(diamonds || 0).toLocaleString()}</td>
-                            <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{isOnline ? String(onlineRoom || 'Online') : '0'}</td>
+                            <td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{roomsCreated}</td>
                             <td className="py-3 pr-4 text-right">
                               <button
                                 type="button"
@@ -1784,7 +1806,7 @@ export default function StaffPanel() {
                       })}
                       {filteredUsers.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="py-8 text-center text-slate-400 font-medium text-sm">
+                          <td colSpan={9} className="py-8 text-center text-slate-400 font-medium text-sm">
                             No users found matching query
                           </td>
                         </tr>
