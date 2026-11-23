@@ -404,21 +404,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ra
 
                 Spacer(Modifier.height(10.dp))
 
-                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp).background(Color(0xFF24180B), RoundedCornerShape(12.dp)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("this_week" to "This Week", "last_week" to "Last Week").forEach { (period, label) ->
-                        Box(
-                            Modifier.weight(1f).clip(RoundedCornerShape(9.dp))
-                                .background(if (rankingPeriod == period) familyGold else Color.Transparent)
-                                .clickable { onRankingPeriod(period) }
-                                .padding(vertical = 9.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(label, color = if (rankingPeriod == period) Color(0xFF24180B) else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-
                 // 1, 2, 3 Cards
                 val topOffsets = listOf(0.dp, (-10).dp, (-19).dp)
                 topFamilies.take(3).forEachIndexed { index, family ->
@@ -597,6 +582,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 1 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 7 Days", "IMG_20261117_222458.png", "green", videoUrl = "VID_20261119_100449_690_bsl.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 Days", "IMG_20261117_210225.png", "medal"),
                     RewardItemData("Top1 Tag 7 Days", "IMG_20261117_193617.png", "tag")
                 ),
                 row2 = listOf(
@@ -616,6 +602,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 2 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 7 Days", "IMG_20261117_222526.png", "green", videoUrl = "VID_20261119_100523_352_bsl.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 Days", "IMG_20261117_210250.png", "medal"),
                     RewardItemData("Top2 Tag 7 Days", "IMG_20261117_193700.png", "tag")
                 ),
                 row2 = listOf(
@@ -631,6 +618,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 3 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 7 Days", "IMG_20261117_222701.png", "green", videoUrl = "VID_20261119_100548_604_bsl.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 Days", "IMG_20261117_210313.png", "medal"),
                     RewardItemData("Top3 Tag 7 Days", "IMG_20261117_193640.png", "tag")
                 ),
                 row2 = listOf(
@@ -646,6 +634,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 title = "TOP 4-10 Reward",
                 row1 = listOf(
                     RewardItemData("Frames 3 Days", "IMG_20261117_222718.png", "green", videoUrl = "VID_20261119_100632_615_bsl.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 3 Days", "IMG_20261117_210200.png", "medal")
                 ),
                 onClick = onOpenModal,
                 label = "TOP4-10 Family"
