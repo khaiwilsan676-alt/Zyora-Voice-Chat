@@ -128,7 +128,7 @@ export default function Reports() {
             placeholder="Search reports..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-blue-500"
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#197477]"
           />
           <div className="relative">
             <button
@@ -145,7 +145,7 @@ export default function Reports() {
                     key={status}
                     type="button"
                     onClick={() => { setStatusFilter(status); setFilterOpen(false); }}
-                    className={`block w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 ${statusFilter === status ? 'font-bold text-blue-600' : 'text-slate-700'}`}
+                    className={`block w-full px-4 py-2.5 text-left text-sm hover:bg-[#197477]/10 ${statusFilter === status ? 'font-bold text-[#197477]' : 'text-slate-700'}`}
                   >
                     {status}
                   </button>
@@ -156,7 +156,7 @@ export default function Reports() {
           <button
             type="button"
             onClick={() => { setPage(1); setFilterOpen(false); }}
-            className="rounded-xl bg-green-800 px-6 py-3 text-sm font-bold text-white hover:bg-green-900"
+            className="rounded-xl bg-[#197477] px-6 py-3 text-sm font-bold text-white hover:bg-[#17696c]"
           >
             Filter
           </button>
@@ -183,7 +183,7 @@ export default function Reports() {
                     <td className="px-4 py-4 font-semibold">{getTargetId(report)}</td>
                     <td className="px-4 py-4">{getReason(report)}</td>
                     <td className="px-4 py-4">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatus(report) === 'Handled' ? 'bg-emerald-50 text-emerald-700' : getStatus(report) === 'Ignored' ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-blue-700'}`}>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatus(report) === 'Handled' ? 'bg-emerald-50 text-emerald-700' : getStatus(report) === 'Ignored' ? 'bg-slate-100 text-slate-600' : 'bg-[#197477]/10 text-[#197477]'}`}>
                         {getStatus(report)}
                       </span>
                     </td>
@@ -194,7 +194,7 @@ export default function Reports() {
                       <button
                         type="button"
                         onClick={() => setSelectedReport(report)}
-                        className="rounded-lg bg-green-800 px-4 py-2 text-xs font-bold text-white hover:bg-green-900"
+                        className="rounded-lg bg-[#197477] px-4 py-2 text-xs font-bold text-white hover:bg-[#17696c]"
                       >
                         Open
                       </button>
@@ -274,7 +274,7 @@ export default function Reports() {
                       key={status}
                       type="button"
                       onClick={() => updateStatus(selectedReport, status)}
-                      className={`rounded-lg px-3 py-2 text-xs font-bold ${getStatus(selectedReport) === status ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-blue-50'}`}
+                      className={`rounded-lg px-3 py-2 text-xs font-bold ${getStatus(selectedReport) === status ? 'bg-[#197477] text-white' : 'bg-slate-100 text-slate-700 hover:bg-[#197477]/10'}`}
                     >
                       {status}
                     </button>
