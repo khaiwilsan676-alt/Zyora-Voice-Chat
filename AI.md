@@ -2094,3 +2094,9 @@ Current documentation does not certify that all historical features are build-, 
 - Flight duration is 760 ms with Compose `FastOutSlowInEasing`; target-seat effect timing remains 1.8 seconds. Existing room seat layout, gift button, banner dimensions and colors are unchanged.
 - Combo replay starts the same flight animation again. For the same sender, the notification keeps its existing identity and position and only updates the `× multiplier` text; its five-second dismissal timer is safely renewed without an older timer hiding a newer combo.
 - Verification pending: native APK compilation and real-device visual testing (especially target seat coordinates across 5/10/15 mic layouts). No build/device pass is claimed yet.
+
+
+### Lucky Gift animation speed refinement
+- Reduced the source-to-seat Lucky Gift flight to 540 ms with a smoother cubic-bezier ease and a gentler 14 dp arc.
+- Kept the gift's small launch, centre growth, and target-seat landing sequence; target-seat effect now starts after 560 ms.
+- Changes are animation-only; no room UI, notification layout, or combo behavior changed. APK/device verification remains pending.
