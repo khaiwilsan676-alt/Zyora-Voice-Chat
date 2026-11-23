@@ -458,8 +458,26 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [language, setLanguage] = useState<'English' | 'Hindi'>('English');
-  const hi = language === 'Hindi';
+  const [language, setLanguage] = useState('English');
+
+  const translations: Record<string, { language: string; email: string; password: string; login: string; loggingIn: string; invalid: string; failed: string }> = {
+    English: { language: 'Language', email: 'Email', password: 'Password', login: 'Login', loggingIn: 'Logging in...', invalid: 'Invalid email or password.', failed: 'Login failed. Please try again.' },
+    Hindi: { language: 'भाषा', email: 'ईमेल', password: 'पासवर्ड', login: 'लॉगिन', loggingIn: 'लॉगिन हो रहा है...', invalid: 'ईमेल या पासवर्ड गलत है।', failed: 'लॉगिन विफल। दोबारा कोशिश करें।' },
+    Bengali: { language: 'ভাষা', email: 'ইমেইল', password: 'পাসওয়ার্ড', login: 'লগইন', loggingIn: 'লগইন হচ্ছে...', invalid: 'ভুল ইমেইল বা পাসওয়ার্ড।', failed: 'লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।' },
+    Urdu: { language: 'زبان', email: 'ای میل', password: 'پاس ورڈ', login: 'لاگ اِن', loggingIn: 'لاگ اِن ہو رہا ہے...', invalid: 'ای میل یا پاس ورڈ غلط ہے۔', failed: 'لاگ اِن ناکام۔ دوبارہ کوشش کریں۔' },
+    Arabic: { language: 'اللغة', email: 'البريد الإلكتروني', password: 'كلمة المرور', login: 'تسجيل الدخول', loggingIn: 'جارٍ تسجيل الدخول...', invalid: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', failed: 'فشل تسجيل الدخول. حاول مرة أخرى.' },
+    Spanish: { language: 'Idioma', email: 'Correo electrónico', password: 'Contraseña', login: 'Iniciar sesión', loggingIn: 'Iniciando sesión...', invalid: 'Correo o contraseña incorrectos.', failed: 'No se pudo iniciar sesión. Inténtalo de nuevo.' },
+    French: { language: 'Langue', email: 'E-mail', password: 'Mot de passe', login: 'Connexion', loggingIn: 'Connexion...', invalid: 'E-mail ou mot de passe incorrect.', failed: 'Échec de connexion. Réessayez.' },
+    Portuguese: { language: 'Idioma', email: 'E-mail', password: 'Senha', login: 'Entrar', loggingIn: 'Entrando...', invalid: 'E-mail ou senha inválidos.', failed: 'Falha no login. Tente novamente.' },
+    Indonesian: { language: 'Bahasa', email: 'Email', password: 'Kata sandi', login: 'Masuk', loggingIn: 'Sedang masuk...', invalid: 'Email atau kata sandi salah.', failed: 'Gagal masuk. Silakan coba lagi.' },
+    Turkish: { language: 'Dil', email: 'E-posta', password: 'Şifre', login: 'Giriş yap', loggingIn: 'Giriş yapılıyor...', invalid: 'E-posta veya şifre hatalı.', failed: 'Giriş başarısız. Tekrar deneyin.' },
+    Russian: { language: 'Язык', email: 'Электронная почта', password: 'Пароль', login: 'Войти', loggingIn: 'Вход...', invalid: 'Неверная почта или пароль.', failed: 'Не удалось войти. Попробуйте ещё раз.' },
+    Chinese: { language: '语言', email: '电子邮箱', password: '密码', login: '登录', loggingIn: '正在登录...', invalid: '邮箱或密码错误。', failed: '登录失败，请重试。' },
+    Japanese: { language: '言語', email: 'メールアドレス', password: 'パスワード', login: 'ログイン', loggingIn: 'ログイン中...', invalid: 'メールアドレスまたはパスワードが違います。', failed: 'ログインに失敗しました。もう一度お試しください。' },
+    Korean: { language: '언어', email: '이메일', password: '비밀번호', login: '로그인', loggingIn: '로그인 중...', invalid: '이메일 또는 비밀번호가 올바르지 않습니다.', failed: '로그인에 실패했습니다. 다시 시도하세요.' }
+  };
+  const t = translations[language] || translations.English;
+  const isRtl = language === 'Urdu' || language === 'Arabic';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -475,54 +493,66 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.token) {
-        throw new Error(result?.error || (hi ? 'ईमेल या पासवर्ड गलत है।' : 'Invalid email or password.'));
+        throw new Error(result?.error || t.invalid);
       }
       onLoginSuccess(String(result.token));
     } catch (err: any) {
-      setError(err?.message || (hi ? 'लॉगिन विफल। दोबारा कोशिश करें।' : 'Login failed. Please try again.'));
+      setError(err?.message || t.failed);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#f4f6fb] p-4 relative">
+    <div dir={isRtl ? 'rtl' : 'ltr'} className="min-h-screen w-full flex items-center justify-center bg-[#f4f6fb] p-4 relative">
       <div className="absolute top-3 right-3 flex flex-col items-start gap-1">
-        <label htmlFor="owner-login-language" className="text-[9px] text-slate-500">Language</label>
+        <label htmlFor="owner-login-language" className="text-[9px] text-slate-500">{t.language}</label>
         <select
           id="owner-login-language"
           value={language}
-          onChange={(e) => setLanguage(e.target.value as 'English' | 'Hindi')}
-          className="h-7 min-w-[96px] px-2 bg-white border border-[#9bbfc0] rounded text-[10px] text-slate-600 outline-none"
+          onChange={(e) => setLanguage(e.target.value)}
+          className="h-7 min-w-[112px] px-2 bg-white border border-[#9bbfc0] rounded text-[10px] text-slate-600 outline-none"
         >
           <option value="English">English</option>
           <option value="Hindi">हिन्दी</option>
+          <option value="Bengali">বাংলা</option>
+          <option value="Urdu">اردو</option>
+          <option value="Arabic">العربية</option>
+          <option value="Spanish">Español</option>
+          <option value="French">Français</option>
+          <option value="Portuguese">Português</option>
+          <option value="Indonesian">Bahasa Indonesia</option>
+          <option value="Turkish">Türkçe</option>
+          <option value="Russian">Русский</option>
+          <option value="Chinese">中文</option>
+          <option value="Japanese">日本語</option>
+          <option value="Korean">한국어</option>
         </select>
       </div>
       <div className="w-full max-w-[290px] bg-white rounded-md border border-slate-200 shadow-sm p-4">
         <h1 className="text-[16px] font-semibold text-slate-800 mb-3">Zyora App</h1>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-[10px] font-medium text-slate-600 mb-1">{hi ? 'ईमेल' : 'Email'}</label>
+            <label className="block text-[10px] font-medium text-slate-600 mb-1">{t.email}</label>
             <input
               type="email"
               autoComplete="username"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={hi ? 'ईमेल' : 'Email'}
+              placeholder={t.email}
               className="w-full h-7 px-2 bg-white border border-slate-200 rounded text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-medium text-slate-600 mb-1">{hi ? 'पासवर्ड' : 'Password'}</label>
+            <label className="block text-[10px] font-medium text-slate-600 mb-1">{t.password}</label>
             <input
               type="password"
               autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={hi ? 'पासवर्ड' : 'Password'}
+              placeholder={t.password}
               className="w-full h-7 px-2 bg-white border border-slate-200 rounded text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
             />
           </div>
@@ -532,7 +562,7 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
             disabled={loading}
             className="w-full h-7 bg-[#197477] hover:bg-[#17696c] disabled:opacity-70 text-white text-[11px] font-semibold rounded"
           >
-            {loading ? (hi ? 'लॉगिन हो रहा है...' : 'Logging in...') : (hi ? 'लॉगिन' : 'Login')}
+            {loading ? t.loggingIn : t.login}
           </button>
         </form>
       </div>
