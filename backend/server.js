@@ -99,6 +99,53 @@ const crypto = require("node:crypto");
 function authSession() { return crypto.randomBytes(32).toString("base64url"); }
 function passwordHash(password, salt) { return crypto.scryptSync(password, salt, 64).toString("hex"); }
 function normalizeEmail(value) { return String(value || "").trim().toLowerCase(); }
+
+function safeSecretEqual(left, right) {
+  const a = Buffer.from(String(left || ""));
+  const b = Buffer.from(String(right || ""));
+  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+}
+
+function createOwnerPanelToken() {
+  const secret = String(process.env.OWNER_PANEL_SESSION_SECRET || "");
+  if (secret.length < 32) throw new Error("OWNER_PANEL_SESSION_SECRET must be at least 32 characters.");
+  const payload = Buffer.from(JSON.stringify({ role: "owner", exp: Date.now() + 12 * 60 * 60 * 1000 })).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return payload + "." + signature;
+}
+
+function verifyOwnerPanelToken(token) {
+  const secret = String(process.env.OWNER_PANEL_SESSION_SECRET || "");
+  if (secret.length < 32) return false;
+  const parts = String(token || "").split(".");
+  if (parts.length !== 2) return false;
+  const expected = crypto.createHmac("sha256", secret).update(parts[0]).digest("base64url");
+  if (!safeSecretEqual(parts[1], expected)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    return payload?.role === "owner" && Number(payload.exp) > Date.now();
+  } catch { return false; }
+}
+
+app.post("/api/owner/login", (req, res) => {
+  const configuredEmail = normalizeEmail(process.env.OWNER_PANEL_EMAIL);
+  const configuredPassword = String(process.env.OWNER_PANEL_PASSWORD || "");
+  const sessionSecret = String(process.env.OWNER_PANEL_SESSION_SECRET || "");
+  if (!configuredEmail || !configuredPassword || sessionSecret.length < 32) {
+    return res.status(503).json({ error: "Owner login is not configured on the server yet." });
+  }
+  const email = normalizeEmail(req.body?.email);
+  const password = String(req.body?.password || "");
+  if (!safeSecretEqual(email, configuredEmail) || !safeSecretEqual(password, configuredPassword)) {
+    return res.status(401).json({ error: "Invalid email or password." });
+  }
+  return res.json({ token: createOwnerPanelToken(), expiresIn: 12 * 60 * 60 });
+});
+
+app.post("/api/owner/verify", (req, res) => {
+  if (!verifyOwnerPanelToken(req.body?.token)) return res.status(401).json({ error: "Owner session expired." });
+  return res.json({ ok: true });
+});
 app.post("/api/auth/email", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Account service is temporarily unavailable." });
@@ -2306,6 +2353,19 @@ app.get("/", (_req, res) => {
 });
 
 io.on("connection", (socket) => {
+  socket.on("owner_panel_authenticate", (data = {}, acknowledge) => {
+    const authorized = verifyOwnerPanelToken(data.token);
+    if (!authorized) {
+      socket.ownerPanelAuthorized = false;
+      socket.leave("owner-panel");
+      if (typeof acknowledge === "function") acknowledge({ ok: false });
+      return;
+    }
+    socket.ownerPanelAuthorized = true;
+    socket.join("owner-panel");
+    if (typeof acknowledge === "function") acknowledge({ ok: true });
+  });
+
   console.log("User connected:", socket.id);
 
   // Send the current Daisy state to every newly connected support client.
@@ -3718,12 +3778,11 @@ io.on("connection", (socket) => {
     }
     livePrivateMessageMonitorBuffer.set(String(normalizedMessage.id || `${normalizedMessage.senderId || ""}_${normalizedMessage.timestamp || Date.now()}`), normalizedMessage);
     while (livePrivateMessageMonitorBuffer.size > 5000) livePrivateMessageMonitorBuffer.delete(livePrivateMessageMonitorBuffer.keys().next().value);
-    io.emit("private_message_monitor", normalizedMessage);
+    io.to("owner-panel").emit("private_message_monitor", normalizedMessage);
   });
 
-  socket.on("owner_private_message_history_request", (data = {}) => {
-    const ownerKey = String(data.ownerKey || "");
-    if (!process.env.OWNER_PANEL_ACCESS_KEY || ownerKey !== process.env.OWNER_PANEL_ACCESS_KEY) {
+  socket.on("owner_private_message_history_request", () => {
+    if (!socket.ownerPanelAuthorized) {
       socket.emit("owner_private_message_history_response", { messages: [], error: "owner_access_required" });
       return;
     }
