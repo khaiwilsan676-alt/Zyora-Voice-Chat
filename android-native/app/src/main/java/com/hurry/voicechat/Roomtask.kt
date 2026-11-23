@@ -42,6 +42,34 @@ import org.json.JSONArray
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
 
+private suspend fun requestNativeRoomTasks(roomId: String, claimTaskId: Int? = null): JSONObject = withContext(Dispatchers.IO) {
+    val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
+    val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token ?: error("Authentication token unavailable.")
+    val encodedRoomId = java.net.URLEncoder.encode(roomId, "UTF-8")
+    val endpoint = if (claimTaskId == null) "https://zyora-server.onrender.com/api/room-owner-tasks/$encodedRoomId"
+        else "https://zyora-server.onrender.com/api/room-owner-tasks/$encodedRoomId/claim"
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = if (claimTaskId == null) "GET" else "POST"
+        connectTimeout = 12000
+        readTimeout = 16000
+        setRequestProperty("Authorization", "Bearer $token")
+        setRequestProperty("Accept", "application/json")
+        if (claimTaskId != null) { doOutput = true; setRequestProperty("Content-Type", "application/json") }
+    }
+    try {
+        if (claimTaskId != null) connection.outputStream.use {
+            it.write(JSONObject().put("taskId", claimTaskId).toString().toByteArray(Charsets.UTF_8))
+        }
+        val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        val result = JSONObject(body.ifBlank { "{}" })
+        if (connection.responseCode !in 200..299 || !result.optBoolean("success")) {
+            error(result.optString("error").ifBlank { "Room Task request failed" })
+        }
+        result
+    } finally { connection.disconnect() }
+}
+
 @Composable
 fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
