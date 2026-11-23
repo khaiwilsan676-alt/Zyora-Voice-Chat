@@ -619,6 +619,31 @@ export default function StaffPanel() {
   };
 
   const [activeTab, setActiveTab] = useState('manage_users');
+  useEffect(() => {
+    if (!isLoggedIn || !ownerSessionToken || !['game_wild_party', 'game_dragon_battle'].includes(activeTab)) return;
+    let active = true;
+    const authenticateAndRequest = () => {
+      socket.emit('owner_panel_authenticate', { token: ownerSessionToken }, (result: any) => {
+        if (!active || !result?.ok) return;
+        socket.emit('owner_game_round_results_request');
+      });
+    };
+    const handleResult = (result: any) => {
+      if (!active || !result?.game || !['wildparty', 'dragonbattle'].includes(result.game)) return;
+      setGameRoundResults(prev => ({ ...prev, [result.game]: result }));
+    };
+    socket.on('owner_game_round_result', handleResult);
+    socket.on('connect', authenticateAndRequest);
+    if (!socket.connected) socket.connect();
+    else authenticateAndRequest();
+    return () => {
+      active = false;
+      socket.off('owner_game_round_result', handleResult);
+      socket.off('connect', authenticateAndRequest);
+    };
+  }, [activeTab, isLoggedIn, ownerSessionToken]);
+
+
   const [inviteBindRows, setInviteBindRows] = useState<any[]>([]);
   useEffect(() => {
     if (activeTab !== 'events' || !isLoggedIn) return;
@@ -652,27 +677,7 @@ export default function StaffPanel() {
   const [themeSearchQuery, setThemeSearchQuery] = useState('');
   const [enlargedThemeImage, setEnlargedThemeImage] = useState<string | null>(null);
 
-  const [livePrediction, setLivePrediction] = useState({
-    round: 0,
-    winnerIdx: 0,
-    winnerImg: '',
-    wName: 'Apple',
-    wEmoji: '🍎',
-    wMult: '5x',
-    countdown: 0,
-    phase: 'Betting'
-  });
-
-  const [wildPrediction, setWildPrediction] = useState({
-    round: 0,
-    winnerIdx: 0,
-    winnerImg: '',
-    wName: 'Lion',
-    wEmoji: '🦁',
-    wMult: '5x',
-    countdown: 0,
-    phase: 'Betting'
-  });
+  const [gameRoundResults, setGameRoundResults] = useState<Record<string, any>>({});
 
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [selectedTagUserData, setSelectedTagUserData] = useState<UserRecord | null>(null);
@@ -1409,80 +1414,6 @@ export default function StaffPanel() {
     };
   }, []);
 
-  useEffect(() => {
-    const clock = setInterval(() => {
-      const CYCLE_MS = 40000;
-      const now = Date.now();
-      const roundNumber = (Math.floor(now / CYCLE_MS) % 10000) + 1000;
-      const elapsed = now % CYCLE_MS;
-      const seed = Math.sin(roundNumber) * 10000;
-      const randomVal = seed - Math.floor(seed);
-
-      let winnerIdx = 0;
-      if (randomVal < 0.04) winnerIdx = 10;
-      else if (randomVal < 0.06) winnerIdx = 11;
-      else if (randomVal < 0.80) winnerIdx = [0, 2, 8, 6][Math.floor(randomVal * 100) % 4];
-      else winnerIdx = [1, 5, 7, 3][Math.floor(randomVal * 100) % 4];
-
-      const details = FRUIT_DETAILS[winnerIdx] || FRUIT_DETAILS[0];
-
-      let currentPhase = 'Betting', currentCountdown = 0;
-      if (elapsed < 30000) { currentPhase = 'Betting Phase'; currentCountdown = 30 - Math.floor(elapsed / 1000); }
-      else if (elapsed < 35000) { currentPhase = 'Spinning Phase'; currentCountdown = 5 - Math.floor((elapsed - 30000) / 1000); }
-      else { currentPhase = 'Result Phase'; currentCountdown = 5 - Math.floor((elapsed - 35000) / 1000); }
-
-      setLivePrediction({
-        round: roundNumber,
-        winnerIdx,
-        winnerImg: details.img,
-        wName: details.name,
-        wEmoji: details.emoji,
-        wMult: details.mult,
-        countdown: currentCountdown,
-        phase: currentPhase
-      });
-    }, 100);
-
-    return () => clearInterval(clock);
-  }, []);
-
-  useEffect(() => {
-    const clock = setInterval(() => {
-      const CYCLE_MS = 45000;
-      const now = Date.now();
-      const roundNumber = (Math.floor(now / CYCLE_MS) % 10000) + 5000;
-      const elapsed = now % CYCLE_MS;
-      const seed = Math.cos(roundNumber) * 10000;
-      const randomVal = seed - Math.floor(seed);
-
-      let winnerIdx = 0;
-      if (randomVal < 0.05) winnerIdx = 10;
-      else if (randomVal < 0.08) winnerIdx = 11;
-      else if (randomVal < 0.75) winnerIdx = [1, 3, 6, 8][Math.floor(randomVal * 100) % 4];
-      else winnerIdx = [0, 2, 5, 7][Math.floor(randomVal * 100) % 4];
-
-      const details = WILD_DETAILS[winnerIdx] || WILD_DETAILS[0];
-
-      let currentPhase = 'Betting', currentCountdown = 0;
-      if (elapsed < 35000) { currentPhase = 'Betting Phase'; currentCountdown = 35 - Math.floor(elapsed / 1000); }
-      else if (elapsed < 40000) { currentPhase = 'Spinning Phase'; currentCountdown = 5 - Math.floor((elapsed - 35000) / 1000); }
-      else { currentPhase = 'Result Phase'; currentCountdown = 5 - Math.floor((elapsed - 40000) / 1000); }
-
-      setWildPrediction({
-        round: roundNumber,
-        winnerIdx,
-        winnerImg: details.img,
-        wName: details.name,
-        wEmoji: details.emoji,
-        wMult: details.mult,
-        countdown: currentCountdown,
-        phase: currentPhase
-      });
-    }, 100);
-
-    return () => clearInterval(clock);
-  }, []);
-
   const openTagModal = (user: UserRecord) => {
     setSelectedTagUserData(user);
     setIsTagModalOpen(true);
@@ -1679,8 +1610,8 @@ export default function StaffPanel() {
           <SidebarCategory
             icon="🎮" title="Game Management" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
             items={[
-              { id: 'game_fruit_party', label: 'Fruit Party', icon: '🍓' },
-              { id: 'game_wild_party', label: 'Wild Party', icon: '🦁' }
+              { id: 'game_wild_party', label: 'Wild Party', icon: '🦁' },
+              { id: 'game_dragon_battle', label: 'Dragon Battle', icon: '🐉' }
             ]}
           />
 
@@ -1856,106 +1787,26 @@ export default function StaffPanel() {
         {activeTab === 'manage_rooms' && <ManageRooms />}
       {activeTab === 'seller_center' && <SellerCenterUsers />}
 
-        {activeTab === 'game_fruit_party' && (
-          <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <span>🍓</span> Fruit Party Prediction
-            </h2>
-
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <Gamepad2 className="w-6 h-6 text-[#197477]" />
-                <h3 className="text-xl font-bold text-slate-800">
-                  Live Real-Time Winner Prediction
-                  <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
-                </h3>
-              </div>
-
-              <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
-                <div className="flex flex-col items-center md:items-start gap-3">
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
-                  <span className="text-4xl font-black text-slate-800">#{livePrediction.round}</span>
-                  <div className="flex items-center gap-2 mt-1 bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl">
-                    <Timer className="w-5 h-5 text-[#197477]" />
-                    <span className="text-sm font-bold text-[#197477] uppercase tracking-wide">
-                      {livePrediction.phase} - {livePrediction.countdown}s
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider animate-pulse border border-emerald-200">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>PREDICTED WINNER</span>
-                  </div>
-
-                  <div className="w-40 h-40 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
-                    <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center p-3">
-                      {livePrediction.winnerImg ? (
-                        <img src={livePrediction.winnerImg} alt={livePrediction.wName} className="w-16 h-16 object-contain drop-shadow-md mb-1" />
-                      ) : (
-                        <span className="text-5xl drop-shadow-md mb-1">{livePrediction.wEmoji}</span>
-                      )}
-                      <span className="font-black text-slate-800 text-base">{livePrediction.wName}</span>
-                      <span className="text-xs font-bold text-[#197477] bg-indigo-50 px-2 py-0.5 rounded-md mt-1">
-                        {livePrediction.wMult}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+        {activeTab === 'game_wild_party' && (
+          <div className="flex h-full w-full items-center justify-center bg-white p-8">
+            <div className="flex flex-col items-center gap-5">
+              <h2 className="text-2xl font-bold text-slate-800">Winner</h2>
+              <div className="flex items-center justify-center gap-3">
+                {(gameRoundResults.wildparty?.winnerImages || []).map((src: string, index: number) => (
+                  <img key={index} src={src} alt="Wild Party winner" className="h-28 w-28 object-contain" />
+                ))}
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === 'game_wild_party' && (
-          <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <span>🦁</span> Wild Party Prediction
-            </h2>
-
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <Gamepad2 className="w-6 h-6 text-orange-600" />
-                <h3 className="text-xl font-bold text-slate-800">
-                  Live Real-Time Winner Prediction
-                  <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
-                </h3>
-              </div>
-
-              <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
-                <div className="flex flex-col items-center md:items-start gap-3">
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
-                  <span className="text-4xl font-black text-slate-800">#{wildPrediction.round}</span>
-                  <div className="flex items-center gap-2 mt-1 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl">
-                    <Timer className="w-5 h-5 text-orange-600" />
-                    <span className="text-sm font-bold text-orange-700 uppercase tracking-wide">
-                      {wildPrediction.phase} - {wildPrediction.countdown}s
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider animate-pulse border border-emerald-200">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>PREDICTED WINNER</span>
-                  </div>
-
-                  <div className="w-40 h-40 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-1 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
-                    <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center p-3">
-                      {wildPrediction.winnerImg ? (
-                        <img src={wildPrediction.winnerImg} alt={wildPrediction.wName} className="w-16 h-16 object-contain drop-shadow-md mb-1" />
-                      ) : (
-                        <span className="text-5xl drop-shadow-md mb-1">{wildPrediction.wEmoji}</span>
-                      )}
-                      <span className="font-black text-slate-800 text-base">{wildPrediction.wName}</span>
-                      <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md mt-1">
-                        {wildPrediction.wMult}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {activeTab === 'game_dragon_battle' && (
+          <div className="flex h-full w-full items-center justify-center bg-white p-8">
+            <div className="flex flex-col items-center gap-5">
+              <h2 className="text-2xl font-bold text-slate-800">Winner</h2>
+              {gameRoundResults.dragonbattle?.winnerImage && (
+                <img src={gameRoundResults.dragonbattle.winnerImage} alt="Dragon Battle winner" className="h-36 w-36 object-contain" />
+              )}
             </div>
           </div>
         )}
