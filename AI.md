@@ -2084,3 +2084,6 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: added per-user MongoDB idempotency markers (bounded to the most recent 5,000 transfer IDs) for coin debit, recipient diamond credit, and Lucky return credit. This protects retries across process restarts and prevents duplicate wallet deltas for the same transfer ID. Failure events now include room/transfer IDs and current balance when it can be read.
 - Server now returns the authoritative Lucky percentage/amount and recipient mode in the room event. Aggregate send cost is split into one gift-value diamond credit per resolved recipient instead of crediting the aggregate total to every recipient.
 - Verification pending: native APK compile, backend deployment, two-device realtime send/receive, low-balance rejection, combo spam/retry, multi-recipient credit, and server-restart duplicate tests. No production behavior is claimed verified until these pass.
+
+
+- Follow-up hardening: Lucky reward percentage is deterministically derived from the unique transfer ID, so a retry cannot show a different return than the already-applied wallet credit. Backend rejects the transfer if any selected recipient is no longer present, preventing a partial recipient payout while charging the original aggregate amount.
