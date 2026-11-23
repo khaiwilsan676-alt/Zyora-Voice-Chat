@@ -1696,8 +1696,8 @@ export default function StaffPanel() {
                 <h2 className="text-xl font-bold text-slate-800">Users</h2>
                 <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">Total Users: {users.length.toLocaleString()}</span>
               </div>
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                <div className="relative w-full md:w-[340px]">
+              <div className="mt-5 flex flex-nowrap items-center gap-3 overflow-x-auto">
+                <div className="relative w-[180px] md:w-[340px] shrink-0">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
@@ -1707,7 +1707,7 @@ export default function StaffPanel() {
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-nowrap items-center gap-2 shrink-0">
                   {(['All', 'Online', 'Offline', 'Banned'] as const).map((filter) => (
                     <button
                       key={filter}
