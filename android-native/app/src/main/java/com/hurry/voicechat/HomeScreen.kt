@@ -1062,7 +1062,7 @@ private fun HurryCategoryCard(
             Row(Modifier.matchParentSize().offset(y = (-1).dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 (0..2).forEach { index ->
                     val avatar = topThreeAvatars.getOrNull(index) ?: fallbackAvatar
-                    AsyncImage(model = avatar, contentDescription = "Daily top avatar", modifier = Modifier.size(if (index == 1) 29.dp else 24.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
+                    AsyncImage(model = avatar, contentDescription = "Daily top avatar", modifier = Modifier.offset(x = if (index == 0) (-4).dp else if (index == 2) 4.dp else 0.dp).size(if (index == 1) 31.dp else 26.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                     if (index != 2) Spacer(Modifier.width(2.dp))
                 }
             }
