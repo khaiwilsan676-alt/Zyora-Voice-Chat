@@ -1475,7 +1475,7 @@ fun RoomPage(
                                 }
                             }, 1800L)
                         }
-                    }, 820L)
+                    }, 760L)
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
@@ -3755,7 +3755,7 @@ private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Un
     val arcHeightPx = with(density) { 22.dp.toPx() }
 
     LaunchedEffect(flight.id) {
-        progress.animateTo(1f, animationSpec = tween(820, easing = FastOutSlowInEasing))
+        progress.animateTo(1f, animationSpec = tween(760, easing = FastOutSlowInEasing))
         onFinished()
     }
 
