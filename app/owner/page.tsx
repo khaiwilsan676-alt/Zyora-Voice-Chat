@@ -15,15 +15,6 @@ import SpecialIdsPanel from '@/components/owner/SpecialIdsPanel';
 import { apiUrl } from "@/src/lib/api";
 
 // ==============================================================
-// VALID LOGIN CREDENTIALS
-// ==============================================================
-const VALID_CREDENTIALS = {
-  accountName: 'Zyora Owner',
-  password: 'Hurry.in-owner & ceo',
-  secretKey: '18 July 2026'
-};
-
-// ==============================================================
 // INDEXEDDB HELPERS
 // ==============================================================
 const loadAllFeedbacksFromIndexedDB = async (): Promise<any[]> => {
@@ -458,110 +449,72 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
 // ==============================================================
 // LOGIN FORM COMPONENT
 // ==============================================================
-const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
-  const [accountName, setAccountName] = useState('');
+const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      accountName.trim() === VALID_CREDENTIALS.accountName &&
-      password === VALID_CREDENTIALS.password &&
-      secretKey.trim() === VALID_CREDENTIALS.secretKey
-    ) {
-      setError('');
-      onLoginSuccess();
-    } else {
-      setError('Invalid credentials. Please check and try again.');
+    if (loading) return;
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(apiUrl('/api/owner/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ email: email.trim(), password })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result?.token) {
+        throw new Error(result?.error || 'Invalid email or password.');
+      }
+      onLoginSuccess(String(result.token));
+    } catch (err: any) {
+      setError(err?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#1a1c29] via-[#232641] to-[#1a1c29] p-4">
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <ShieldAlert className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-800">Staff Panel Login</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">Enter your credentials to continue</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#f4f6fb] p-4">
+      <div className="w-full max-w-[290px] bg-white rounded-md border border-slate-200 shadow-sm p-4">
+        <h1 className="text-[16px] font-semibold text-slate-800 mb-3">Zyora Owner</h1>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
-              Account Name
-            </label>
-            <div className="relative">
-              <div className="absolute left-3.5 top-3 text-slate-400">
-                <User className="w-4 h-4" />
-              </div>
-              <input
-                type="text"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder="Zyora Owner"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
-              />
-            </div>
+            <label className="block text-[10px] font-medium text-slate-600 mb-1">Email</label>
+            <input
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full h-7 px-2 bg-white border border-slate-200 rounded text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
+            />
           </div>
-
           <div>
-            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <div className="absolute left-3.5 top-3 text-slate-400">
-                <Lock className="w-4 h-4" />
-              </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Hurry.in-owner & ceo"
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
+            <label className="block text-[10px] font-medium text-slate-600 mb-1">Password</label>
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full h-7 px-2 bg-white border border-slate-200 rounded text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
+            />
           </div>
-
-          <div>
-            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
-              Secret Key
-            </label>            <div className="relative">
-              <div className="absolute left-3.5 top-3 text-slate-400">
-                <Key className="w-4 h-4" />
-              </div>
-              <input
-                type="text"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                placeholder="18 July 2026"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-3 py-2.5 rounded-xl text-center">
-              {error}
-            </div>
-          )}
-
+          {error && <div className="text-[10px] font-medium text-red-600">{error}</div>}
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-extrabold rounded-xl shadow-lg hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all"
+            disabled={loading}
+            className="w-full h-7 bg-[#197477] hover:bg-[#17696c] disabled:opacity-70 text-white text-[11px] font-semibold rounded"
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </div>
@@ -575,21 +528,41 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 export default function StaffPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [ownerSessionToken, setOwnerSessionToken] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hurry_staff_panel_auth');
-      if (saved === 'true') {
-        setIsLoggedIn(true);
+    let active = true;
+    const verifySavedSession = async () => {
+      const saved = typeof window !== 'undefined' ? sessionStorage.getItem('zyora_owner_panel_session_v2') : null;
+      if (!saved) {
+        if (active) setAuthChecked(true);
+        return;
       }
-      setAuthChecked(true);
-    }
+      try {
+        const response = await fetch(apiUrl('/api/owner/verify'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ token: saved })
+        });
+        if (!response.ok) throw new Error('Owner session expired');
+        if (active) {
+          setOwnerSessionToken(saved);
+          setIsLoggedIn(true);
+        }
+      } catch {
+        sessionStorage.removeItem('zyora_owner_panel_session_v2');
+      } finally {
+        if (active) setAuthChecked(true);
+      }
+    };
+    void verifySavedSession();
+    return () => { active = false; };
   }, []);
 
-  const handleLoginSuccess = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hurry_staff_panel_auth', 'true');
-    }
+  const handleLoginSuccess = (token: string) => {
+    sessionStorage.setItem('zyora_owner_panel_session_v2', token);
+    setOwnerSessionToken(token);
     setIsLoggedIn(true);
   };
 
@@ -1037,7 +1010,13 @@ export default function StaffPanel() {
   }, [privateMessages, selectedPair]);
 
   useEffect(() => {
+    if (!isLoggedIn || !ownerSessionToken) return;
     let isMounted = true;
+    const logoutExpiredOwner = () => {
+      sessionStorage.removeItem('zyora_owner_panel_session_v2');
+      setOwnerSessionToken('');
+      setIsLoggedIn(false);
+    };
     const mergePrivateMessages = (incoming: any[]) => {
       if (!isMounted || !Array.isArray(incoming) || !incoming.length) return;
       setPrivateMessages((current) => {
@@ -1062,7 +1041,8 @@ export default function StaffPanel() {
         }
       } catch (error) {
         console.error("Owner private chat IndexedDB load failed:", error);
-      } finally {        if (isMounted) setLoadingPrivateMessages(false);
+      } finally {
+        if (isMounted) setLoadingPrivateMessages(false);
       }
     };
     const handlePrivateMessage = (message: any) => {
@@ -1070,12 +1050,22 @@ export default function StaffPanel() {
       mergePrivateMessages([message]);
     };
     const handlePrivateMessageHistory = (data: any) => {
-      if (!isMounted || !Array.isArray(data?.messages)) return;
-      mergePrivateMessages(data.messages);
+      if (!isMounted) return;
+      if (data?.error === 'owner_access_required') {
+        logoutExpiredOwner();
+        return;
+      }
+      if (Array.isArray(data?.messages)) mergePrivateMessages(data.messages);
     };
     const requestPrivateMessageHistory = () => {
-      // Only the backend's short-lived live handoff is requested; durable history is this browser's IndexedDB.
-      socket.emit('owner_private_message_history_request', { ownerKey: VALID_CREDENTIALS.secretKey });
+      socket.emit('owner_panel_authenticate', { token: ownerSessionToken }, (result: any) => {
+        if (!isMounted) return;
+        if (!result?.ok) {
+          logoutExpiredOwner();
+          return;
+        }
+        socket.emit('owner_private_message_history_request');
+      });
     };
     const handleSocketConnect = () => requestPrivateMessageHistory();
 
@@ -1092,7 +1082,7 @@ export default function StaffPanel() {
       socket.off('owner_private_message_history_response', handlePrivateMessageHistory);
       socket.off('connect', handleSocketConnect);
     };
-  }, []);
+  }, [isLoggedIn, ownerSessionToken]);
 
   useEffect(() => {
     if (!privateMessageSearchQuery.trim()) {
