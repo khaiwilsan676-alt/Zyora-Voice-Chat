@@ -1,0 +1,57 @@
+name: Build Zyora iOS
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ios-native/**"
+      - ".github/workflows/ios-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios-native
+        run: xcodegen generate
+
+      - name: Build iOS Simulator app
+        working-directory: ios-native
+        run: |
+          xcodebuild \
+            -project Zyora.xcodeproj \
+            -scheme Zyora \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package simulator app
+        run: |
+          APP_PATH="ios-native/build/DerivedData/Build/Products/Debug-iphonesimulator/Zyora.app"
+          test -d "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" ios-native/Zyora-iOS-Simulator.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zyora-iOS-Simulator
+          path: ios-native/Zyora-iOS-Simulator.zip
+          if-no-files-found: error
+          retention-days: 14
