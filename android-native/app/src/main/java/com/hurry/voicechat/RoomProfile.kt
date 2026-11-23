@@ -471,7 +471,10 @@ fun RoomProfile(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { onMute() }
+                                    modifier = Modifier.weight(1f).clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { onMute() }
                                 ) {
                                     Icon(
                                         imageVector = if (user.isSelfMuted) Icons.Default.Mic else Icons.Default.MicOff,
@@ -484,7 +487,10 @@ fun RoomProfile(
                                 }
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { onLeaveSeat() }
+                                    modifier = Modifier.weight(1f).clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { onLeaveSeat() }
                                 ) {
                                     Box(modifier = Modifier.size(26.dp)) {
                                         Icon(
@@ -520,7 +526,7 @@ fun RoomProfile(
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             // Bhai weight(1f) dene se inki size ekdam fixed rahegi, chahe click kar ya text badal jaye (Mute/Unmute) toh UI hilta nahi hai.
-                                            modifier = Modifier.weight(1f).clickable { onMute() }
+                                            modifier = Modifier.weight(1f).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onMute() }
                                         ) {
                                             Icon(
                                                 imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
@@ -535,7 +541,7 @@ fun RoomProfile(
                                         // LOCK ICON 
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.weight(1f).clickable { onLock() }
+                                            modifier = Modifier.weight(1f).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onLock() }
                                         ) {
                                             Icon(
                                                 imageVector = if (user.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
@@ -550,7 +556,7 @@ fun RoomProfile(
                                         // LEAVE ICON 
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.weight(1f).clickable { onLeaveSeat() }
+                                            modifier = Modifier.weight(1f).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onLeaveSeat() }
                                         ) {
                                             Box(modifier = Modifier.size(26.dp)) {
                                                 Icon(
