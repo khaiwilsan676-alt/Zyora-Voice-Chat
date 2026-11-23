@@ -1036,12 +1036,16 @@ fun RoomPage(
     }
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
+    var roomImageUploading by remember(roomId, accountId) { mutableStateOf(false) }
             val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
             LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex, scrollOffset = 0) }
     val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            val messageId = accountId + "-" + System.currentTimeMillis()
-            CoroutineScope(Dispatchers.Main).launch {
+        if (uri == null) return@rememberLauncherForActivityResult
+        if (roomImageUploading) return@rememberLauncherForActivityResult
+        roomImageUploading = true
+        val messageId = accountId + "-" + java.util.UUID.randomUUID().toString()
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
                 val imageUrl = runCatching { uploadChatImage(appContext, uri, messageId, "room-chat-image") }.getOrNull()
                 val activeRoomSocket = roomSocketRef.value
                 if (!imageUrl.isNullOrBlank() && activeRoomSocket?.connected() == true) {
@@ -1051,6 +1055,8 @@ fun RoomPage(
                         senderImage = roomDisplayImage, senderAccountId = accountId,
                         timestamp = createdAt, type = "image", imageUrl = imageUrl
                     )
+                    // Server echoes to the sender in the room-chat channel; add once by ID.
+                    if (messages.none { it.id == messageId }) messages.add(imageMessage)
                     activeRoomSocket.emit(
                         "room_message",
                         JSONObject().put("id", messageId).put("roomId", roomId)
@@ -1059,10 +1065,11 @@ fun RoomPage(
                             .put("senderImage", roomDisplayImage).put("text", "📷 Image")
                             .put("type", "image").put("imageUrl", imageUrl).put("createdAt", createdAt)
                     )
-                    messages.add(imageMessage)
                 } else {
-                    android.widget.Toast.makeText(appContext, "Image upload failed. Try an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(appContext, "Image upload failed. Try again.", android.widget.Toast.LENGTH_LONG).show()
                 }
+            } finally {
+                roomImageUploading = false
             }
         }
     }
@@ -2089,6 +2096,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     ) {
                         IconButton(
                             onClick={roomImagePickerLauncher.launch("image/*")},
+                            enabled = !roomImageUploading,
                             modifier=Modifier.size(28.dp)
                         ) {
                             Image(
@@ -2242,7 +2250,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(10.dp)
                 ) {
-                    IconButton(onClick={roomImagePickerLauncher.launch("image/*")}, modifier=Modifier.size(28.dp)) {
+                    IconButton(onClick={roomImagePickerLauncher.launch("image/*")}, enabled = !roomImageUploading, modifier=Modifier.size(28.dp)) {
                         Image(painterResource(R.drawable.ic_hurry_chat_image), contentDescription="Image", modifier=Modifier.size(26.dp))
                     }
                     Row(
