@@ -137,16 +137,6 @@ private val multipliers = listOf("1", "10", "299", "599", "999")
 private val Blue500 = Color(0xFF3B82F6)
 private val Blue600 = Color(0xFF2563EB)
 
-fun rollLuckyWin(): Int {
-    val luck = Math.random()
-    if (luck > 0.999) return 30
-    if (luck > 0.980) return 15
-    if (luck > 0.966) return 10
-    if (luck > 0.910) return 5
-    if (luck > 0.900) return 2
-    return 0
-}
-
 // ============================================================
 // MAIN COMPOSABLE
 // ============================================================
@@ -252,23 +242,16 @@ fun GiftPicker(
 
         sending = true
         scope.launch {
-            var luckyReturnAmount = 0L
-            var winTimes = 0
-            var netDeductionCost = totalSendCostToSend
-
-            if (isLuckyToSend) {
-                winTimes = rollLuckyWin()
-                luckyReturnAmount = if (winTimes > 0) totalSendCostToSend * winTimes else 0L
-                netDeductionCost = totalSendCostToSend - luckyReturnAmount
-            }
-
-            val updatedBalance = onDebitWallet(netDeductionCost)
+            // The server is the single source of truth for Lucky Gift rewards.
+            // Debit the gross send amount here; client-side random multipliers could
+            // produce a negative debit and reject valid sends before the server ran.
+            val updatedBalance = onDebitWallet(totalSendCostToSend)
             if (updatedBalance == null) {
                 sending = false
                 triggerInsufficient("Insufficient Balance", true)
                 return@launch
             }
-            onRecordGiftTransaction(giftToSend.name, -netDeductionCost)
+            onRecordGiftTransaction(giftToSend.name, -totalSendCostToSend)
 
             if ((roomId.isNotEmpty() || directMode) && currentUserAccountId.isNotEmpty() && targetsToSend.isNotEmpty()) {
                 val uniqueTransferId = "tx-$currentUserAccountId-${System.currentTimeMillis()}-${(0..999999).random()}"
@@ -287,10 +270,7 @@ fun GiftPicker(
                     "recipientImage" to (firstRecipientToSend?.image ?: "/default-avatar.png"),
                     "multiplier" to multiplierToSend,
                     "luckyGift" to isLuckyToSend,
-                    "luckyReturnAmount" to luckyReturnAmount,
-                    "luckyReturnPercent" to winTimes,
                     "luckyImage" to giftToSend.image,
-                    "winTimes" to winTimes,
                     "transferId" to uniqueTransferId,
                     "eventId" to uniqueTransferId,
                     "timestamp" to System.currentTimeMillis(),
