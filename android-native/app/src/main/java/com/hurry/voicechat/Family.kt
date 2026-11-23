@@ -142,7 +142,7 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
     LaunchedEffect(context, rankingPeriod) {
         // Restore the selected week's last known ranking immediately, then refresh from MongoDB.
         val cached = withContext(Dispatchers.IO) { FamilyProfileApi.cachedLeaderboard(context, rankingPeriod) }
-        if (cached.isNotEmpty()) topFamilies = cached
+        topFamilies = cached
         while (true) {
             runCatching { FamilyProfileApi.leaderboard(rankingPeriod) }.onSuccess { latest ->
                 topFamilies = latest
