@@ -3204,6 +3204,15 @@ io.on("connection", (socket) => {
     const sender = String(senderId || "");
     const value = Number(amount);
     const eventId = String(transferId || "").trim();
+    const rejectTransfer = async (reason) => {
+      let balance = -1;
+      if (sender && socketOwnsIdentity(socket, sender)) {
+        try { balance = await walletBalance(sender); } catch (_) {}
+      }
+      socket.emit("coin_transfer_failed", {
+        roomId: room, transferId: eventId, reason, balance
+      });
+    };
 
     const recipients = Array.isArray(recipientIds)
       ? [...new Set(recipientIds.map((id) => String(id)).filter(Boolean))]
@@ -3211,6 +3220,7 @@ io.on("connection", (socket) => {
 
     if (!room || !sender || !eventId || eventId.length > 120 ||
         !Number.isSafeInteger(value) || value <= 0 || value > 1000000000) {
+      await rejectTransfer("invalid_transfer");
       return;
     }
 
@@ -3221,11 +3231,15 @@ io.on("connection", (socket) => {
       String(socket.roomId || "") !== room ||
       !socketOwnsIdentity(socket, sender)
     ) {
+      await rejectTransfer("not_in_room");
       return;
     }
 
     const roomMap = roomUsers.get(room);
-    if (!roomMap || recipients.length === 0) return;
+    if (!roomMap || recipients.length === 0) {
+      await rejectTransfer("invalid_recipients");
+      return;
+    }
 
     // Only users currently present in this room can receive the diamonds.
     // GiftPicker sends accountId, while roomUsers is keyed by userId.
@@ -3250,15 +3264,19 @@ io.on("connection", (socket) => {
       .filter(Boolean)
       .filter((id, index, arr) => arr.indexOf(id) === index);
 
-    if (validRecipients.length === 0) return;
+    if (validRecipients.length === 0) {
+      await rejectTransfer("no_valid_recipients");
+      return;
+    }
 
     const isLucky = luckyGift === true || String(giftType || "") === "Lucky";
-    const diamondAmount =
-      Number.isFinite(value) && value > 0
-        ? Math.floor(value)
-        : 0;
-
-    if (diamondAmount <= 0) return;
+    // GiftPicker sends the aggregate spend (unit gift price × recipient count).
+    // Credit one unit gift to each resolved recipient, not the aggregate to every user.
+    const diamondAmount = Math.floor(value / validRecipients.length);
+    if (diamondAmount <= 0 || diamondAmount * validRecipients.length !== value) {
+      await rejectTransfer("invalid_amount");
+      return;
+    }
 
     let senderUser = null;
     for (const [userId, user] of roomMap.entries()) {
