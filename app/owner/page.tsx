@@ -1788,25 +1788,74 @@ export default function StaffPanel() {
       {activeTab === 'seller_center' && <SellerCenterUsers />}
 
         {activeTab === 'game_wild_party' && (
-          <div className="flex h-full w-full items-center justify-center bg-white p-8">
-            <div className="flex flex-col items-center gap-5">
-              <h2 className="text-2xl font-bold text-slate-800">Winner</h2>
-              <div className="flex items-center justify-center gap-3">
-                {(gameRoundResults.wildparty?.winnerImages || []).map((src: string, index: number) => (
-                  <img key={index} src={src} alt="Wild Party winner" className="h-28 w-28 object-contain" />
-                ))}
+          <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <span>🦁</span> Wild Party
+            </h2>
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                <Gamepad2 className="w-6 h-6 text-orange-600" />
+                <h3 className="text-xl font-bold text-slate-800">Actual Round Winner</h3>
+              </div>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
+                <div className="flex flex-col items-center md:items-start gap-3">
+                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Round ID</span>
+                  <span className="text-4xl font-black text-slate-800">#{gameRoundResults.wildparty?.round ?? '—'}</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Confirmed game result</span>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider border border-emerald-200">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>ACTUAL WINNER</span>
+                  </div>
+                  <div className="min-h-40 min-w-40 max-w-full bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-1 rounded-3xl shadow-2xl flex items-center justify-center">
+                    <div className="min-h-40 min-w-40 rounded-[22px] bg-white flex flex-wrap items-center justify-center gap-2 p-4">
+                      {(gameRoundResults.wildparty?.winnerImages || []).map((src: string, index: number) => (
+                        <img key={index} src={src} alt="Wild Party actual winning animal" className="h-20 w-20 object-contain drop-shadow-md" />
+                      ))}
+                      {!gameRoundResults.wildparty?.winnerImages?.length && <span className="text-sm font-semibold text-slate-400">Waiting for game result</span>}
+                    </div>
+                  </div>
+                  {gameRoundResults.wildparty?.winnerKey && <span className="font-black text-slate-800 text-base">{gameRoundResults.wildparty.winnerKey}</span>}
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'game_dragon_battle' && (
-          <div className="flex h-full w-full items-center justify-center bg-white p-8">
-            <div className="flex flex-col items-center gap-5">
-              <h2 className="text-2xl font-bold text-slate-800">Winner</h2>
-              {gameRoundResults.dragonbattle?.winnerImage && (
-                <img src={gameRoundResults.dragonbattle.winnerImage} alt="Dragon Battle winner" className="h-36 w-36 object-contain" />
-              )}
+          <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <span>🐉</span> Dragon Battle
+            </h2>
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                <Gamepad2 className="w-6 h-6 text-red-600" />
+                <h3 className="text-xl font-bold text-slate-800">Actual Round Winner</h3>
+              </div>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
+                <div className="flex flex-col items-center md:items-start gap-3">
+                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Round ID</span>
+                  <span className="text-4xl font-black text-slate-800">#{gameRoundResults.dragonbattle?.round ?? '—'}</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Confirmed game result</span>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider border border-emerald-200">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>ACTUAL WINNER</span>
+                  </div>
+                  <div className="w-44 h-44 bg-gradient-to-br from-red-600 via-orange-500 to-amber-400 p-1 rounded-3xl shadow-2xl">
+                    <div className="w-full h-full bg-white rounded-[22px] flex items-center justify-center p-3">
+                      {gameRoundResults.dragonbattle?.winnerImage ? (
+                        <img src={gameRoundResults.dragonbattle.winnerImage} alt="Dragon Battle actual winning dragon" className="w-36 h-36 object-contain drop-shadow-md" />
+                      ) : (
+                        <span className="text-sm font-semibold text-slate-400">Waiting for game result</span>
+                      )}
+                    </div>
+                  </div>
+                  {gameRoundResults.dragonbattle?.winnerKey && <span className="font-black text-slate-800 text-base">{gameRoundResults.dragonbattle.winnerKey}</span>}
+                </div>
+              </div>
             </div>
           </div>
         )}
