@@ -2899,7 +2899,7 @@ export default function StaffPanel() {
                   />
 
                   {officialImage ? (
-                    <div className="relative inline-block border border-slate-200 rounded-md overflow-hidden bg-[#197477] max-w-xs">
+                    <div className="relative inline-block border border-slate-200 rounded-md overflow-hidden bg-slate-900 max-w-xs">
                       <img src={officialImage} alt="Attachment" className="max-h-48 object-contain" />
                       <button
                         onClick={() => {
