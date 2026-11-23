@@ -2992,7 +2992,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             RoomGiftVideoOverlay(src = roomGiftVideoPreview) { roomGiftVideoPreview = "" }
         }
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onDragonBattle={showGames=false;showDragonBattle=true})
-        if(showRoomTask) Roomtask(onBack={showRoomTask=false})
+        if(showRoomTask) Roomtask(roomId=roomId, onBack={showRoomTask=false})
         if (showWildParty || wildPartyMinimized) Wildparty(
             onClose = { showWildParty = false; wildPartyMinimized = false },
             onMinimize = { showWildParty = false; wildPartyMinimized = true },

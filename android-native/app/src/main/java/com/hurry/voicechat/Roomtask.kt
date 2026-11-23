@@ -1,5 +1,8 @@
 package com.hurry.voicechat
 
+import android.content.Intent
+import android.widget.Toast
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,32 +31,104 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.TimeUnit
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
+import org.json.JSONObject
+import org.json.JSONArray
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
 
+private suspend fun requestNativeRoomTasks(roomId: String, claimTaskId: Int? = null): JSONObject = withContext(Dispatchers.IO) {
+    val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
+    val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token ?: error("Authentication token unavailable.")
+    val encodedRoomId = java.net.URLEncoder.encode(roomId, "UTF-8")
+    val endpoint = if (claimTaskId == null) "https://zyora-server.onrender.com/api/room-owner-tasks/$encodedRoomId"
+        else "https://zyora-server.onrender.com/api/room-owner-tasks/$encodedRoomId/claim"
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = if (claimTaskId == null) "GET" else "POST"
+        connectTimeout = 12000
+        readTimeout = 16000
+        setRequestProperty("Authorization", "Bearer $token")
+        setRequestProperty("Accept", "application/json")
+        if (claimTaskId != null) { doOutput = true; setRequestProperty("Content-Type", "application/json") }
+    }
+    try {
+        if (claimTaskId != null) connection.outputStream.use {
+            it.write(JSONObject().put("taskId", claimTaskId).toString().toByteArray(Charsets.UTF_8))
+        }
+        val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        val result = JSONObject(body.ifBlank { "{}" })
+        if (connection.responseCode !in 200..299 || !result.optBoolean("success")) {
+            error(result.optString("error").ifBlank { "Room Task request failed" })
+        }
+        result
+    } finally { connection.disconnect() }
+}
+
 @Composable
-fun Roomtask(onBack: () -> Unit = {}) {
+fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember { mutableStateOf(false) }
     var hour by remember { mutableIntStateOf(0) }
     var minute by remember { mutableIntStateOf(0) }
     var second by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val claimedTaskIds = remember { mutableStateListOf<Int>() }
+    val completedTaskIds = remember { mutableStateListOf<Int>() }
+    val claimingTaskIds = remember { mutableStateListOf<Int>() }
+    var taskError by remember { mutableStateOf("") }
+
+    LaunchedEffect(roomId) {
+        if (roomId.isBlank()) return@LaunchedEffect
+        while (true) {
+            runCatching { requestNativeRoomTasks(roomId) }.onSuccess { response ->
+                val rows = response.optJSONArray("tasks") ?: JSONArray()
+                val completed = mutableListOf<Int>()
+                val claimed = mutableListOf<Int>()
+                for (index in 0 until rows.length()) {
+                    val row = rows.optJSONObject(index) ?: continue
+                    val id = row.optInt("taskId")
+                    if (row.optBoolean("complete")) completed.add(id)
+                    if (row.optBoolean("claimed")) claimed.add(id)
+                }
+                completedTaskIds.clear(); completedTaskIds.addAll(completed)
+                claimedTaskIds.clear(); claimedTaskIds.addAll(claimed)
+                taskError = ""
+            }.onFailure { taskError = it.message.orEmpty() }
+            delay(15000)
+        }
+    }
+
+    // Surface a single readable error when the server rejects task access/claims.
+    // The same polling error will not spam a Toast every 15 seconds.
+    LaunchedEffect(taskError) {
+        if (taskError.isNotBlank()) {
+            Toast.makeText(context, taskError, Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
-            val now = Calendar.getInstance()
-            val target = Calendar.getInstance().apply {
-                val days = (Calendar.MONDAY - get(Calendar.DAY_OF_WEEK) + 7) % 7
-                add(Calendar.DAY_OF_MONTH, if (days == 0) 7 else days)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
+            val now = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+            val target = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+                set(Calendar.HOUR_OF_DAY, 5)
+                set(Calendar.MINUTE, 30)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= now.timeInMillis) add(Calendar.DAY_OF_MONTH, 1)
             }
             val left = ((target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)) / 1000L
-            hour = ((left / 3600) % 24).toInt()
+            hour = (left / 3600).toInt()
             minute = ((left / 60) % 60).toInt()
             second = (left % 60).toInt()
             delay(1000)
@@ -175,30 +250,36 @@ fun Roomtask(onBack: () -> Unit = {}) {
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier.offset(y = (-15).dp).padding(vertical = 0.dp).zIndex(5f)
-                ) {
-                    Text("Countdown", color = Color(0xFFF5B8B8), fontSize = 10.sp)
-                    listOf(hour to "Hour", minute to "Minute", second to "Second").forEach { pair ->
-                        Box(
-                            Modifier.background(
-                                Brush.verticalGradient(listOf(Color(0xFF8F1A1A), Color(0xFF470A0A))),
-                                RoundedCornerShape(4.dp)
-                            ).padding(horizontal = 5.dp, vertical = 3.dp)
-                        ) {
-                            Text(pair.first.toString(), color = Color(0xFFFFE0E0), fontSize = 11.sp)
-                        }
-                        Text(pair.second, color = Color(0xFFF5B8B8), fontSize = 10.sp)
-                    }
-                }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 34.dp)
+                        .offset(y = (-15).dp)
+                        .zIndex(5f)
+                        .height(2.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.Transparent,
+                                    0.16f to Color(0xFF8F1A1A).copy(alpha = 0.45f),
+                                    0.50f to Color(0xFFFFD7A0),
+                                    0.84f to Color(0xFF8F1A1A).copy(alpha = 0.45f),
+                                    1.00f to Color.Transparent
+                                )
+                            ),
+                            RoundedCornerShape(50)
+                        )
+                )
 
                 Column(
                     modifier = Modifier.fillMaxWidth().offset(y = (-25).dp).zIndex(1f),
                     verticalArrangement = Arrangement.spacedBy((-60).dp)
                 ) {
-                    tasks.forEach { task ->
+                    tasks.forEachIndexed { taskIndex, task ->
+                        val taskId = taskIndex + 1
+                        val isClaimed = taskId in claimedTaskIds
+                        val isComplete = taskId in completedTaskIds
+                        val isClaiming = taskId in claimingTaskIds
                         Box(Modifier.fillMaxWidth().height(175.dp)) {
 
                             AsyncImage(
@@ -277,7 +358,30 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                             )
                                         }
                                         Button(
-                                            onClick = {},
+                                            onClick = {
+                                                if (taskId == 3 || taskId == 4) {
+                                                    val packageName = if (taskId == 3) "com.whatsapp" else "com.facebook.katana"
+                                                    runCatching {
+                                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                            type = "text/plain"
+                                                            putExtra(Intent.EXTRA_TEXT, "Join me on Zyora Voice Chat! https://zyora-voice-chat.vercel.app")
+                                                            setPackage(packageName)
+                                                        }
+                                                        context.startActivity(shareIntent)
+                                                    }.onFailure {
+                                                        Toast.makeText(context, if (taskId == 3) "WhatsApp is not installed" else "Facebook is not installed", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else if (isComplete && !isClaimed && !isClaiming) {
+                                                    claimingTaskIds.add(taskId)
+                                                    scope.launch {
+                                                        runCatching { requestNativeRoomTasks(roomId, taskId) }
+                                                            .onSuccess { claimedTaskIds.add(taskId); taskError = "" }
+                                                            .onFailure { taskError = it.message.orEmpty() }
+                                                        claimingTaskIds.remove(taskId)
+                                                    }
+                                                }
+                                            },
+                                            enabled = (taskId == 3 || taskId == 4) || (isComplete && !isClaimed && !isClaiming),
                                             modifier = Modifier.padding(top = 6.dp).width(85.dp).height(28.dp),
                                             contentPadding = PaddingValues(0.dp),
                                             shape = RoundedCornerShape(18.dp),
@@ -286,14 +390,14 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                         ) {
                                             Box(
                                                 Modifier.fillMaxSize().background(
-                                                    Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
+                                                    Brush.verticalGradient(if (isClaimed) listOf(Color(0xFF777777), Color(0xFF555555)) else listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
                                                     RoundedCornerShape(18.dp)
                                                 ),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    "CLAIM",
-                                                    color = Color(0xFF4A1F00),
+                                                    when { taskId == 3 || taskId == 4 -> "SHARE"; isClaimed -> "CLAIMED"; isClaiming -> "..."; else -> "CLAIM" },
+                                                    color = if (isClaimed) Color.White else Color(0xFF4A1F00),
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
                                                     letterSpacing = 1.sp
