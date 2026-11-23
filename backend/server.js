@@ -214,6 +214,8 @@ const presenceLeaseRefresh = setInterval(() => {
 }, 20000);
 if (typeof presenceLeaseRefresh.unref === "function") presenceLeaseRefresh.unref();
 
+const latestGameRoundResults = { wildparty: null, dragonbattle: null };
+
 const memoryRoundWinners = {
   fruitparty: { round: -1, winners: [] },
   wildparty: { round: -1, winners: [] },
@@ -2368,6 +2370,37 @@ app.get("/", (_req, res) => {
 });
 
 io.on("connection", (socket) => {
+  socket.on("game_round_result_update", (payload = {}) => {
+    const game = String(payload.game || "");
+    if (!["wildparty", "dragonbattle"].includes(game)) return;
+    const round = Number(payload.round || 0);
+    if (!Number.isSafeInteger(round) || round <= 0) return;
+    const result = {
+      game,
+      round,
+      winnerKey: String(payload.winnerKey || "").slice(0, 32),
+      winnerMode: String(payload.winnerMode || "").slice(0, 24),
+      winnerImages: Array.isArray(payload.winnerImages) ? payload.winnerImages.filter((url) => typeof url === "string" && url.startsWith("https://")).slice(0, 4) : [],
+      winnerImage: typeof payload.winnerImage === "string" && payload.winnerImage.startsWith("https://") ? payload.winnerImage : "",
+      timestamp: Date.now()
+    };
+    if (!result.winnerKey || (game === "wildparty" && !result.winnerImages.length) || (game === "dragonbattle" && !result.winnerImage)) return;
+    const previous = latestGameRoundResults[game];
+    if (previous && previous.round > round) return;
+    latestGameRoundResults[game] = result;
+    io.to("owner-panel").emit("owner_game_round_result", result);
+  });
+
+  socket.on("owner_game_round_results_request", () => {
+    if (!socket.ownerPanelAuthorized) {
+      socket.emit("owner_game_round_result", { error: "owner_access_required" });
+      return;
+    }
+    Object.values(latestGameRoundResults).filter(Boolean).forEach(result => {
+      socket.emit("owner_game_round_result", result);
+    });
+  });
+
   socket.on("owner_panel_authenticate", (data = {}, acknowledge) => {
     const authorized = verifyOwnerPanelToken(data.token);
     if (!authorized) {
