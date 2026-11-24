@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
-import android.content.Intent\nimport androidx.compose.foundation.background
+import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -52,6 +53,7 @@ private object NativeRoomTaskApi {
             ?: error("Authentication token unavailable.")
         val encodedRoomId = java.net.URLEncoder.encode(roomId, "UTF-8")
         val endpoint = if (claimTaskId == null) "/api/room-owner-tasks/$encodedRoomId"
+            else if (shareTask) "/api/room-owner-tasks/$encodedRoomId/share"
             else "/api/room-owner-tasks/$encodedRoomId/claim"
         val connection = (URL(BASE + endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = if (claimTaskId == null) "GET" else "POST"
@@ -102,7 +104,8 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                             taskStatuses = (0 until array.length()).mapNotNull { index ->
                                 array.optJSONObject(index)?.let { item ->
                                     item.optInt("taskId") to NativeRoomTaskStatus(
-                                        item.optBoolean("complete"), item.optBoolean("claimed")
+                                        item.optBoolean("complete"), item.optBoolean("claimed"),
+                                        (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
                                     )
                                 }
                             }.toMap()
