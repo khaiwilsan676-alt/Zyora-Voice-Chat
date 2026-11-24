@@ -2111,3 +2111,9 @@ Current documentation does not certify that all historical features are build-, 
 - Fixed the chat-profile mute callback so a seated user can toggle their own microphone through the existing `self_mute` Socket.IO action without needing owner/admin privileges. Muting another user's seat remains restricted to the existing owner/admin authorization check and continues using `owner_mute`.
 - No Room Profile layout, seat layout, voice transport, or wallet behavior changed. Leave-seat continues to use the existing room-seat action and seat removal flow.
 - Status: source change committed; native APK build and two-account/device mute/leave verification remain pending.
+
+## 2026-11-24 — Locked-seat take and homepage room-card press feedback
+- Seat action sheet now keeps **Take Mic** enabled for an empty locked seat. The existing **Unlock Mic** action remains available; taking a locked seat as an authorized room owner/admin automatically clears the lock on the server and assigns the seat.
+- Backend still rejects attempts to take a locked empty seat by a non-moderator, and still rejects taking another user's occupied seat.
+- Removed the default Compose ripple/grey pressed indication from homepage room cards only; click navigation is unchanged.
+- Status: source changes committed; native build and live owner/member verification remain pending.
