@@ -2957,12 +2957,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         }
         luckyGiftNotice?.let { notice ->
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().offset(y = 12.dp).zIndex(250f)) {
-                LuckyGiftNotificationSlider(notice = notice)
+                LuckyAnimationNotificationSlider(notice = notice)
             }
         }
         if (showLuckyComboButton) {
             Box(Modifier.fillMaxSize().zIndex(251f)) {
-                LuckyComboButton(
+                LuckyAnimationComboButton(
                     visible = true,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
