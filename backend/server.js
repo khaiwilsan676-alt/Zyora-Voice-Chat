@@ -2478,8 +2478,8 @@ io.on("connection", (socket) => {
     }
     if (!accepted.length) return;
     try {
-      const changed = await db.collection("ownerPanelSharedRecords").bulkUpsert(accepted);
-      if (changed.length) io.to("owner-panel").emit("owner_shared_records", { records: changed });
+      const result = await db.collection("ownerPanelSharedRecords").bulkUpsert(accepted);
+      if (Array.isArray(result?.changed) && result.changed.length) io.to("owner-panel").emit("owner_shared_records", { records: result.changed });
     } catch (error) {
       console.error("Owner shared record batch save failed:", error);
     }
