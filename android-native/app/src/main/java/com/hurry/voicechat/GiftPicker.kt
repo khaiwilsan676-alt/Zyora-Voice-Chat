@@ -159,6 +159,8 @@ fun GiftPicker(
     currentUserName: String = "User",
     currentUserImage: String = "/default-avatar.png",
     roomUsers: List<ActiveUserNative> = emptyList(),
+    roomOwnerId: String = "",
+    roomAdminIds: List<String> = emptyList(),
     walletBalance: Long = 0L,
     onDebitWallet: suspend (Long) -> Long? = { null },
     onCreditDiamonds: suspend (Int) -> Unit = {},
@@ -419,17 +421,43 @@ fun GiftPicker(
                                     items(seats.filter { it.occupied && it.accountId.isNotBlank() }, key = { it.accountId }) { seat ->
                                         val uid = seat.accountId
                                         val selected = selectedTargets.contains(uid)
-                                        AsyncImage(
-                                            model = seat.userImage,
-                                            contentDescription = seat.userName,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.size(44.dp).clip(CircleShape)
-                                                .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
-                                                .clickable {
-                                                    selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
-                                                    recipientMode = RecipientMode.SINGLE
-                                                },
-                                        )
+                                        val roleLabel = when {
+                                            uid.isNotBlank() && uid == roomOwnerId -> "Owner"
+                                            uid.isNotBlank() && uid in roomAdminIds -> "Admin"
+                                            else -> null
+                                        }
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        ) {
+                                            AsyncImage(
+                                                model = seat.userImage,
+                                                contentDescription = seat.userName,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.size(44.dp).clip(CircleShape)
+                                                    .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
+                                                    .clickable {
+                                                        selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
+                                                        recipientMode = RecipientMode.SINGLE
+                                                    },
+                                            )
+                                            if (roleLabel != null) {
+                                                Surface(
+                                                    color = Blue500,
+                                                    shape = RoundedCornerShape(50),
+                                                    border = BorderStroke(0.75.dp, Color.White),
+                                                ) {
+                                                    Text(
+                                                        text = roleLabel,
+                                                        color = Color.White,
+                                                        fontSize = 7.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 Row(
