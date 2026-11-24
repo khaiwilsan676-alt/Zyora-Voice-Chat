@@ -169,7 +169,7 @@ object ZyoraMessageBannerState {
 }
 
 // Added unreadCount to track new messages
-private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0, val isInRoom: Boolean = false, val roomId: String = "")
+private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0, val isInRoom: Boolean = false, val roomId: String = "", val isOnline: Boolean = false)
 
 private fun refreshTotalUnreadCount(context: Context, accountId: String) {
     if (accountId.isBlank()) return
@@ -529,15 +529,40 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             if (index >= 0) {
                 val old = chats[index]
                 val inRoom = payload.optBoolean("inRoom", false) && payload.optString("roomId").isNotBlank()
-                chats[index] = old.copy(isInRoom = inRoom, roomId = if (inRoom) payload.optString("roomId") else "")
+                val online = payload.optBoolean("online", old.isOnline || inRoom) || inRoom
+                chats[index] = old.copy(isInRoom = inRoom, roomId = if (inRoom) payload.optString("roomId") else "", isOnline = online)
             }
         }
         val statusListener = Emitter.Listener { args -> applyRoomStatus(args.firstOrNull() as? JSONObject) }
         val updateListener = Emitter.Listener { args -> applyRoomStatus(args.firstOrNull() as? JSONObject) }
+        val onlineListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            val peerId = payload?.optString("accountId").orEmpty().ifBlank { payload?.optString("userId").orEmpty() }
+                .ifBlank { args.firstOrNull()?.toString().orEmpty() }
+            val index = chats.indexOfFirst { it.uid == peerId }
+            if (index >= 0) chats[index] = chats[index].copy(isOnline = true)
+        }
+        val offlineListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            val peerId = payload?.optString("accountId").orEmpty().ifBlank { payload?.optString("userId").orEmpty() }
+                .ifBlank { args.firstOrNull()?.toString().orEmpty() }
+            val index = chats.indexOfFirst { it.uid == peerId }
+            if (index >= 0) chats[index] = chats[index].copy(isOnline = false, isInRoom = false, roomId = "")
+        }
+        val presenceStatusListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val peerId = payload.optString("accountId").ifBlank { payload.optString("userId") }
+            val index = chats.indexOfFirst { it.uid == peerId }
+            if (index >= 0) chats[index] = chats[index].copy(isOnline = payload.optBoolean("online", false))
+        }
         presenceSocket.on("user_room_status", statusListener)
         presenceSocket.on("user_room_status_updated", updateListener)
+        presenceSocket.on("presence_status", presenceStatusListener)
+        presenceSocket.on("user_online", onlineListener)
+        presenceSocket.on("user_offline", offlineListener)
         presenceSocket.on(Socket.EVENT_CONNECT) {
             chats.filter { it.uid.isNotBlank() && !it.uid.startsWith("hurry_") }.forEach { chat ->
+                presenceSocket.emit("check_presence", chat.uid)
                 presenceSocket.emit("user_room_status_request", JSONObject().put("userId", chat.uid).put("accountId", chat.uid))
             }
         }
@@ -545,6 +570,9 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         onDispose {
             presenceSocket.off("user_room_status", statusListener)
             presenceSocket.off("user_room_status_updated", updateListener)
+            presenceSocket.off("presence_status", presenceStatusListener)
+            presenceSocket.off("user_online", onlineListener)
+            presenceSocket.off("user_offline", offlineListener)
             presenceSocket.disconnect()
             presenceSocket.close()
         }
@@ -704,6 +732,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
     // Require a confirmed live room ID; stale booleans must not keep room UI visible.
     val isOfficial = chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"
     val showRoomPresence = !isOfficial && chat.isInRoom && chat.roomId.isNotBlank()
+    val showOnlineDot = !isOfficial && !showRoomPresence && chat.isOnline
 
     Row(
         Modifier.fillMaxWidth()
@@ -713,7 +742,10 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
     ) {
         
         // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable { onOpenProfile(RoomProfileUser(id = chat.uid, uid = chat.uid, accountId = chat.uid, name = chat.name, image = chat.image)) }) {
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable(
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+            indication = null
+        ) { onOpenProfile(RoomProfileUser(id = chat.uid, uid = chat.uid, accountId = chat.uid, name = chat.name, image = chat.image)) }) {
             AsyncImage(
                 model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
                 modifier = Modifier
@@ -724,6 +756,17 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
                 contentScale = ContentScale.Crop
             )
             
+            // Online-only users get a small green status dot; room presence takes priority.
+            if (showOnlineDot) {
+                Box(
+                    Modifier.align(Alignment.BottomEnd)
+                        .offset(x = 1.dp, y = 1.dp)
+                        .size(10.dp)
+                        .background(Color(0xFF22C55E), CircleShape)
+                        .border(1.5.dp, Color.White, CircleShape)
+                )
+            }
+
             // Music Pill Icon at bottom center (Sirf normal user ke liye)
             if (showRoomPresence) {
                 Box(
