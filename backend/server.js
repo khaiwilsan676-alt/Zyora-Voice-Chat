@@ -84,6 +84,7 @@ const io = new Server(server, {
 function publishLuckyBagTransaction(transaction) {
   if (!transaction?.id || !transaction?.userId || !transaction?.type) return;
   const payload = { id: String(transaction.id), userId: String(transaction.userId), type: String(transaction.type), amount: Number(transaction.amount || 0), bagId: String(transaction.bagId || ""), createdAt: Number(transaction.createdAt || Date.now()) };
+  if (db) { void db.collection("ownerPanelSharedRecords").updateOne({ key: "transactions:" + payload.id }, { $set: { key: "transactions:" + payload.id, store: "transactions", record: payload, updatedAt: Number(payload.createdAt || Date.now()) } }, { upsert: true }).catch(error => console.error("Persist Owner Lucky Bag transaction failed:", error)); }
   liveLuckyBagTransactions.set(payload.id, payload);
   while (liveLuckyBagTransactions.size > 2000) liveLuckyBagTransactions.delete(liveLuckyBagTransactions.keys().next().value);
   io.emit("lucky_bag_transaction", payload);
@@ -2434,6 +2435,53 @@ io.on("connection", (socket) => {
     if (typeof acknowledge === "function") acknowledge({ ok: true });
   });
 
+  // Durable, cross-device Owner Panel IndexedDB replication.
+  // Only whitelisted Owner Panel stores are accepted and every operation
+  // requires a valid Owner Panel session on this socket.
+  const OWNER_SHARED_STORE_KEYS = {
+    userFeedbacks: "id",
+    supportChats: "userId",
+    privateMessages: "id",
+    transactions: "id",
+    transferHistory: "id",
+    bindUserIds: "id",
+    userReports: "id"
+  };
+  socket.on("owner_shared_snapshot_request", async () => {
+    if (!socket.ownerPanelAuthorized || !db) {
+      socket.emit("owner_shared_records", { records: [], error: socket.ownerPanelAuthorized ? "storage_unavailable" : "owner_access_required" });
+      return;
+    }
+    try {
+      const records = await db.collection("ownerPanelSharedRecords").find({}).limit(20000).toArray();
+      socket.emit("owner_shared_records", { records: records.map(({ _id, ...record }) => record) });
+    } catch (error) {
+      console.error("Owner shared snapshot failed:", error);
+      socket.emit("owner_shared_records", { records: [], error: "storage_unavailable" });
+    }
+  });
+  socket.on("owner_shared_records_upsert", async (data = {}) => {
+    if (!socket.ownerPanelAuthorized || !db || !Array.isArray(data.records)) return;
+    const collection = db.collection("ownerPanelSharedRecords");
+    const batch = data.records.slice(0, 100);
+    const changed = [];
+    for (const item of batch) {
+      const store = String(item?.store || "");
+      const keyField = OWNER_SHARED_STORE_KEYS[store];
+      const record = item?.record;
+      if (!keyField || !record || typeof record !== "object" || Array.isArray(record) || record[keyField] == null) continue;
+      const recordId = String(record[keyField]).slice(0, 256);
+      const updatedAt = Math.max(0, Number(item.updatedAt || record.updatedAt || record.timestamp || record.createdAt || 0));
+      const key = store + ":" + recordId;
+      const existing = await collection.findOne({ key });
+      if (existing && Number(existing.updatedAt || 0) > updatedAt) continue;
+      const normalized = { key, store, record: { ...record }, updatedAt: updatedAt || Date.now() };
+      await collection.updateOne({ key }, { $set: normalized }, { upsert: true });
+      changed.push(normalized);
+    }
+    if (changed.length) io.to("owner-panel").emit("owner_shared_records", { records: changed });
+  });
+
   console.log("User connected:", socket.id);
 
   // Send the current Daisy state to every newly connected support client.
@@ -3986,6 +4034,7 @@ io.on("connection", (socket) => {
 
     // Keep a bounded in-memory handoff so reports submitted while Owner Panel is
     // reconnecting are replayed. Durable owner-side copies remain in browser IndexedDB.
+    if (db) { try { await db.collection("ownerPanelSharedRecords").updateOne({ key: "userReports:" + reportId }, { $set: { key: "userReports:" + reportId, store: "userReports", record: { ...payload, status: "Open" }, updatedAt: Number(payload.timestamp || Date.now()) } }, { upsert: true }); } catch (error) { console.error("Persist owner report failed:", error); } }
     liveUserReports.set(reportId, payload);
     while (liveUserReports.size > 1000) liveUserReports.delete(liveUserReports.keys().next().value);
     io.to("owner-panel").emit("user_report", payload);
@@ -4024,6 +4073,7 @@ io.on("connection", (socket) => {
 
     // Live-only relay. Feedback is stored locally by clients/Owner IndexedDB;
     // never write feedback content to GitHub storage.
+    if (db) { try { await db.collection("ownerPanelSharedRecords").updateOne({ key: "userFeedbacks:" + feedbackId }, { $set: { key: "userFeedbacks:" + feedbackId, store: "userFeedbacks", record: payload, updatedAt: Number(payload.timestamp || Date.now()) } }, { upsert: true }); } catch (error) { console.error("Persist owner feedback failed:", error); } }
     liveFeedbackBuffer.set(feedbackId, payload);
     while (liveFeedbackBuffer.size > 500) liveFeedbackBuffer.delete(liveFeedbackBuffer.keys().next().value);
     io.to("owner-panel").emit("user_feedback", payload);
