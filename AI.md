@@ -2210,3 +2210,10 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-25 — Set Heart lamp gift price
 - Added Heart lamp to Hot for 45,000 coins with the supplied image and video assets.
 - Uses the existing top-and-bottom fade video overlay; no other picker behavior or UI changed.
+
+
+## 18. Honour / Charm / Room avatar loading fix (2026-11-25)
+- `android-native/app/src/main/java/com/hurry/voicechat/Leaderboard.kt`: normalized podium avatar URLs the same way as the ranked list so relative avatar paths are resolved to a usable image URL instead of being passed directly to Coil.
+- Added a dedicated shared Coil 3 image loader for leaderboard avatars with a 20% memory-cache budget and a 64 MB disk cache. Rank 1–3, ranked-list, and current-user avatars now reuse that cache across Honour, Charm, and Room tabs and subsequent visits.
+- No avatar dimensions, positions, clipping, leaderboard layout, colors, rank data, or tab behavior intentionally changed.
+- Status: **Implemented in repository**. Native APK build and Redmi 14C first-load / repeat-load timing still require CI and device verification; no runtime speed claim is certified yet.
