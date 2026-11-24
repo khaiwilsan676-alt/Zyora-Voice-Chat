@@ -1436,7 +1436,11 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      val code=connection.responseCode
      val body=(if(code in 200..299)connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
      val json=JSONObject(body)
-     if(code !in 200..299||!json.optBoolean("success"))error(json.optString("error","Wallet sync failed"))
+     // HTTP 409 is a definitive rejected bet, not a retryable pending debit.
+     // Use its canonical balance and remove the rejected local delta.
+     if ((code !in 200..299 && code != 409) || (code in 200..299 && !json.optBoolean("success"))) {
+      error(json.optString("error","Wallet sync failed"))
+     }
      json.optLong("balance",-1L).also{check(it>=0L)}
     }finally{connection.disconnect()}
    }}
