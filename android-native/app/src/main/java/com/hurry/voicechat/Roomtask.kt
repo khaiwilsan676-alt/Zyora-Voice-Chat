@@ -25,12 +25,56 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.TimeUnit
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import java.util.Calendar
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
+private data class NativeRoomTaskStatus(val complete: Boolean, val claimed: Boolean)
+
+private object NativeRoomTaskApi {
+    private const val BASE = "https://zyora-server.onrender.com"
+
+    suspend fun request(roomId: String, claimTaskId: Int? = null): JSONObject = withContext(Dispatchers.IO) {
+        val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
+        val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token
+            ?: error("Authentication token unavailable.")
+        val endpoint = if (claimTaskId == null) "/api/room-owner-tasks/$roomId"
+            else "/api/room-owner-tasks/$roomId/claim"
+        val connection = (URL(BASE + endpoint).openConnection() as HttpURLConnection).apply {
+            requestMethod = if (claimTaskId == null) "GET" else "POST"
+            connectTimeout = 12000
+            readTimeout = 16000
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            setRequestProperty("Cache-Control", "no-cache")
+            if (claimTaskId != null) doOutput = true
+        }
+        try {
+            if (claimTaskId != null) connection.outputStream.use {
+                it.write(JSONObject().put("taskId", claimTaskId).toString().toByteArray(Charsets.UTF_8))
+            }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val json = if (raw.isBlank()) JSONObject() else JSONObject(raw)
+            if (code !in 200..299) error(json.optString("error").ifBlank { "Room task request failed ($code)." })
+            json
+        } finally {
+            connection.disconnect()
+        }
+    }
+}
 
 @Composable
 fun Roomtask(onBack: () -> Unit = {}) {
@@ -292,7 +336,7 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    "CLAIM",
+                                                    if (status?.claimed == true) "CLAIMED" else "CLAIM",
                                                     color = Color(0xFF4A1F00),
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
@@ -305,6 +349,10 @@ fun Roomtask(onBack: () -> Unit = {}) {
                             }
                         }
                     }
+                }
+
+                if (taskError.isNotBlank()) {
+                    Text(taskError, color = Color(0xFFFFD0D0), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 }
 
                 // Bottom image thori upar kar di aur bottom scroll space bhi kam kar diya
