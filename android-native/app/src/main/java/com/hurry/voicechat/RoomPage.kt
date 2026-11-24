@@ -3719,7 +3719,7 @@ private fun RoomSeatInviteDialog(
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{onDismiss()},contentAlignment=Alignment.BottomCenter){
         Surface(Modifier.fillMaxWidth(),color=Color.White.copy(alpha=.96f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp)){
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
-                if(!seat.occupied && !isMySeat) SeatSheetAction("Take Mic",enabled=!seat.locked,onClick=onTake)
+                if(!seat.occupied && !isMySeat) SeatSheetAction("Take Mic",onClick=onTake)
                 if(isMySeat) SeatSheetAction("Leave Seat",onClick=onLeave)
                 if(!isMySeat && (isOwner || seat.occupied)) SeatSheetAction(if(seat.muted)"Unmute Seat" else "Mute Seat",onClick=onMute)
                 if(isOwner) SeatSheetAction(if(seat.locked)"Unlock Mic" else "Lock Mic",onClick=onLock)
