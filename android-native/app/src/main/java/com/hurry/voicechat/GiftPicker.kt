@@ -507,7 +507,36 @@ fun GiftPicker(
                                 columns = GridCells.Fixed(4),
                                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                                 verticalArrangement = Arrangement.spacedBy(0.dp),
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (activeTab == "Hot") {
+                                Modifier
+                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                    .drawWithContent {
+                                        drawContent()
+                                        val edgeFade = 0.01f
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                0f to Color.Transparent,
+                                                edgeFade to Color.White,
+                                                (1f - edgeFade) to Color.White,
+                                                1f to Color.Transparent,
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                edgeFade to Color.White,
+                                                (1f - edgeFade) to Color.White,
+                                                1f to Color.Transparent,
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    }
+                            } else Modifier
+                        ),
                             ) {
                                 items(currentGifts, key = { it.id }) { gift ->
                                     GiftCard(
