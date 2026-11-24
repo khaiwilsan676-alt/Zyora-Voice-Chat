@@ -401,7 +401,7 @@ fun GiftPicker(
                     Column(Modifier.fillMaxSize()) {
 
                         Row(
-                            Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                            Modifier.fillMaxWidth().padding(bottom = 2.dp),
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -410,7 +410,7 @@ fun GiftPicker(
                                     model = directRecipient.image,
                                     contentDescription = directRecipient.name,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(44.dp).clip(CircleShape)
+                                    modifier = Modifier.size(38.dp).clip(CircleShape)
                                         .border(2.5.dp, Blue500, CircleShape)
                                 )
                             } else {
@@ -427,12 +427,12 @@ fun GiftPicker(
                                             else -> null
                                         }
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Box(modifier = Modifier.size(44.dp)) {
+                                            Box(modifier = Modifier.size(38.dp)) {
                                                 AsyncImage(
                                                     model = seat.userImage,
                                                     contentDescription = seat.userName,
                                                     contentScale = ContentScale.Crop,
-                                                    modifier = Modifier.size(44.dp).clip(CircleShape)
+                                                    modifier = Modifier.size(38.dp).clip(CircleShape)
                                                         .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
                                                         .clickable {
                                                             selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
@@ -540,7 +540,7 @@ fun GiftPicker(
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(4),
                                 horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                verticalArrangement = Arrangement.spacedBy(0.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -776,7 +776,7 @@ private fun GiftCard(
                 if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
             )
             .clickable { onClick() }
-            .padding(horizontal = 2.dp, vertical = 1.dp),
+            .padding(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 1.dp),
     ) {
         if (activeTab == "Lucky") {
             AsyncImage(
@@ -792,7 +792,7 @@ private fun GiftCard(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val size = if (gift.noMask) 52.dp else 64.dp
+            val size = if (gift.noMask) 48.dp else 64.dp
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
             val isHotEdgeFade = activeTab == "Hot" && (gift.id == 2001 || gift.id == 2002 || gift.id == 2003)
 
@@ -927,7 +927,7 @@ private fun RecipientButton(
     iconType: RecipientIconType,
 ) {
     val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
-    Box(Modifier.width(44.dp).height(50.dp), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.width(44.dp).height(46.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
                 .size(38.dp)
