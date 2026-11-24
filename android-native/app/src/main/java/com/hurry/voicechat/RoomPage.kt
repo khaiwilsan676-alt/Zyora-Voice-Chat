@@ -3031,6 +3031,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     name = profileMessage.sender.ifBlank { "User" }, image = profileMessage.senderImage,
                     isInSeat = seats.any { it.occupied && it.accountId == profileId },
                     isMuted = seats.firstOrNull { it.occupied && it.accountId == profileId }?.muted ?: false,
+                    isSelfMuted = seats.firstOrNull { it.occupied && it.accountId == profileId }?.selfMuted ?: false,
                     isLocked = seats.firstOrNull { it.occupied && it.accountId == profileId }?.locked ?: false
                 ),
                 isCurrentUser = profileId == accountId,
@@ -3086,13 +3087,20 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 },
                 onMute = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
-                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
+                    if (index >= 0) {
                         val isSelfSeat = seats[index].accountId.trim() == accountId.trim()
-                        val nextMuted = if (isSelfSeat) !seats[index].selfMuted else !seats[index].muted
-                        seats[index] = if (isSelfSeat) seats[index].copy(selfMuted = nextMuted) else seats[index].copy(muted = nextMuted)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId)
-                            .put("action", if (isSelfSeat) "self_mute" else "owner_mute")
-                            .put("seatNumber", seats[index].number).put("isMuted", nextMuted))
+                        val canModerateTarget = accountId == roomOwner.accountId || accountId == roomOwner.id ||
+                            accountId == roomOwner.uid || accountId == roomId ||
+                            roomAdminIds.any { it.trim() in currentUserSeatIds }
+                        // A user may always toggle their own microphone from a chat-opened Room Profile.
+                        // Only another user's moderator mute remains owner/admin restricted.
+                        if (isSelfSeat || canModerateTarget) {
+                            val nextMuted = if (isSelfSeat) !seats[index].selfMuted else !seats[index].muted
+                            seats[index] = if (isSelfSeat) seats[index].copy(selfMuted = nextMuted) else seats[index].copy(muted = nextMuted)
+                            roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId)
+                                .put("action", if (isSelfSeat) "self_mute" else "owner_mute")
+                                .put("seatNumber", seats[index].number).put("isMuted", nextMuted))
+                        }
                     }
                 },
                 onLock = {
