@@ -283,7 +283,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                     Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-22).dp))
                                 }
                             }
-                            Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,softWrap=false,overflow=TextOverflow.Clip)
+                            Text(formatRoomCupTotal(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,softWrap=false,overflow=TextOverflow.Clip,modifier=Modifier.widthIn(min=24.dp))
                             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                         }
                     }
@@ -315,7 +315,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                         }
                     }
                     
-                    Text(formatCupCoins(mine?.coins ?: 0L),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false,overflow=TextOverflow.Clip)
+                    Text(formatRoomCupTotal(mine?.coins ?: 0L),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false,overflow=TextOverflow.Clip,modifier=Modifier.widthIn(min=24.dp))
                     AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=6.dp).size(18.dp),contentScale=ContentScale.Fit)
                 }
             }
