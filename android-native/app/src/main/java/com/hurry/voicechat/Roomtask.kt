@@ -51,7 +51,7 @@ private object NativeRoomTaskApi {
 
     suspend fun request(roomId: String, claimTaskId: Int? = null, shareTask: Boolean = false): JSONObject = withContext(Dispatchers.IO) {
         val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
-        val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token
+        val token = Tasks.await(user.getIdToken(true), 30, TimeUnit.SECONDS).token
             ?: error("Authentication token unavailable.")
         val encodedRoomId = java.net.URLEncoder.encode(roomId, "UTF-8")
         val endpoint = if (claimTaskId == null) "/api/room-owner-tasks/$encodedRoomId"
@@ -59,8 +59,9 @@ private object NativeRoomTaskApi {
             else "/api/room-owner-tasks/$encodedRoomId/claim"
         val connection = (URL(BASE + endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = if (claimTaskId == null) "GET" else "POST"
-            connectTimeout = 12000
-            readTimeout = 16000
+            connectTimeout = 20000
+            readTimeout = 20000
+            useCaches = false
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
             setRequestProperty("Cache-Control", "no-cache")
@@ -130,8 +131,11 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
 
     LaunchedEffect(taskRoomId) {
         if (taskRoomId.isNotBlank()) {
-            runCatching { NativeRoomTaskApi.request(taskRoomId) }
-                .onSuccess { response ->
+            var lastError: Throwable? = null
+            repeat(3) { attempt ->
+                val result = runCatching { NativeRoomTaskApi.request(taskRoomId) }
+                if (result.isSuccess) {
+                    val response = result.getOrThrow()
                     val array = response.optJSONArray("tasks")
                     if (array != null) {
                         taskStatuses = (0 until array.length()).mapNotNull { index ->
@@ -143,8 +147,20 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                             }
                         }.toMap()
                     }
+                    lastError = null
+                    return@LaunchedEffect
+                } else {
+                    lastError = result.exceptionOrNull()
+                    if (attempt < 2) delay(1200L * (attempt + 1))
                 }
-                .onFailure { /* retain last known state if the initial refresh fails */ }
+            }
+            lastError?.let { error ->
+                android.widget.Toast.makeText(
+                    context,
+                    error.message ?: "Room tasks could not be loaded. Please try again.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
