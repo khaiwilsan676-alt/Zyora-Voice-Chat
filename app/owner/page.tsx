@@ -622,10 +622,18 @@ export default function StaffPanel() {
   useEffect(() => {
     if (!isLoggedIn || !ownerSessionToken || !['game_wild_party', 'game_dragon_battle'].includes(activeTab)) return;
     let active = true;
+    let refreshTimer: ReturnType<typeof setInterval> | null = null;
     const authenticateAndRequest = () => {
       socket.emit('owner_panel_authenticate', { token: ownerSessionToken }, (result: any) => {
         if (!active || !result?.ok) return;
         socket.emit('owner_game_round_results_request');
+        // Keep the live winner preview in sync even if the initial Socket.IO
+        // broadcast was missed while the owner tab was reconnecting.
+        if (refreshTimer === null) {
+          refreshTimer = setInterval(() => {
+            if (active && socket.connected) socket.emit('owner_game_round_results_request');
+          }, 2000);
+        }
       });
     };
     const handleResult = (result: any) => {
@@ -638,6 +646,7 @@ export default function StaffPanel() {
     else authenticateAndRequest();
     return () => {
       active = false;
+      if (refreshTimer !== null) clearInterval(refreshTimer);
       socket.off('owner_game_round_result', handleResult);
       socket.off('connect', authenticateAndRequest);
     };
