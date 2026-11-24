@@ -1420,13 +1420,16 @@ fun RoomPage(
                 }
             }
             mainHandler.post {
-                val isSameSenderCombo = isComboReplay && luckyGiftNotice?.senderId == senderId
+                val isSameSenderCombo = (isComboReplay || (senderId == accountId && luckyComboPending)) &&
+                        luckyGiftNotice?.senderId == senderId
                 val activeNoticeId = if (isSameSenderCombo) luckyGiftNotice?.id ?: noticeId else noticeId
                 if (isSameSenderCombo) {
                     // A combo changes only the multiplier text; keep the same banner,
                     // sender, recipient, image, and position without replaying its entrance.
                     luckyGiftNotice = luckyGiftNotice?.copy(
-                        multiplier = (luckyGiftNotice?.multiplier ?: multiplier) + 1,
+                        multiplier = if (senderId == accountId && luckyComboPending)
+                            (luckyGiftNotice?.multiplier ?: multiplier)
+                        else (luckyGiftNotice?.multiplier ?: multiplier) + 1,
                         isExiting = false
                     )
                 } else {
@@ -2959,6 +2962,26 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("eventId", nextTransferId)
                                     .put("comboReplay", true)
                                     .put("timestamp", System.currentTimeMillis())
+                                val recipientJson = comboTransfer.optJSONArray("recipientIds") ?: JSONArray()
+                                val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
+                                val targetCenter = recipientIds.firstNotNullOfOrNull { luckySeatCenters[it] }
+                                val image = comboTransfer.optString("giftImage").ifBlank { comboTransfer.optString("luckyImage") }
+                                val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
+                                if (targetCenter != null && roomRootSize != IntSize.Zero && resolvedImage.isNotBlank()) {
+                                    luckyGiftFlight = LuckyGiftFlight(
+                                        id = nextTransferId,
+                                        image = resolvedImage,
+                                        start = luckyGiftOrigin ?: Offset(roomRootSize.width / 2f, roomRootSize.height * 0.88f),
+                                        target = targetCenter,
+                                        rootCenter = Offset(roomRootSize.width / 2f, roomRootSize.height / 2f)
+                                    )
+                                }
+                                // Optimistically reflect the tap; the server echo confirms the
+                                // same combo without adding a second multiplier increment.
+                                luckyGiftNotice = luckyGiftNotice?.copy(
+                                    multiplier = (luckyGiftNotice?.multiplier ?: 1) + 1,
+                                    isExiting = false
+                                )
                                 luckyComboPending = true
                                 socket.emit("coin_transfer", comboTransfer)
                             }
