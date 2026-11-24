@@ -744,23 +744,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 },
                                 mineCreatedRoom = mineCreatedRoom,
                                 mineSelected = homeMine,
-                                keptRoom = keptRoom,
-                                onOpenKeptRoom = {
-                                    // Restore the already-authorized kept session directly.
-                                    // Re-running tryOpenRoom starts a fresh access/join flow
-                                    // instead of simply resuming the retained room socket.
-                                    keptRoom?.let { room ->
-                                        if (roomSession?.id != room.id) roomSession = room
-                                        openedRoom = room
-                                        keptRoom = null
-                                    }
-                                },
-                                onExitKeptRoom = {
-                                    openedRoom = null
-                                    roomSession = null
-                                    keptRoom = null
-                                    authPrefs.edit().remove("kept_room_data").apply()
-                                }
                             )
                             }
                         }
