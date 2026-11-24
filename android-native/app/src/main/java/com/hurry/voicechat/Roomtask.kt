@@ -399,7 +399,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         val isClaimed = status?.claimed == true
                                         val canClaim = status?.complete == true && !isClaimed
                                         val buttonLabel = when {
-                                            isClaimed -> "CLAIMED"
+                                            isClaimed -> "CLAIM"
                                             canClaim -> "CLAIM"
                                             isShareTask -> "SHARE"
                                             else -> "CLAIM"
@@ -469,7 +469,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                             )
                                         ) {
                                             if (isClaimed) {
-                                                Text("CLAIMED", color = Color(0xFFB8B8B8), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                                Text("CLAIM", color = Color(0xFFB8B8B8), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                             } else {
                                                 Box(
                                                     Modifier.fillMaxSize().background(
