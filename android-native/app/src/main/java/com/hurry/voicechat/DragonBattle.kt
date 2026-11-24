@@ -1897,7 +1897,9 @@ private fun DragonBattleMainOverlay(
                     showBanner("Wallet rejected bet - coins restored")
                     android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
                 }
-                break
+                // Keep draining the durable queue in this same sync pass.
+                // A break here processed only one bet per invocation, so rapid bets
+                // accumulated behind separate HTTP round-trips and appeared to debit slowly.
             }
         }
     }
