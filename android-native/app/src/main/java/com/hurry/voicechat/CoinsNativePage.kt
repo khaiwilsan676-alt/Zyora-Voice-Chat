@@ -290,6 +290,8 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         mutableStateOf(walletCachePrefs.getLong("diamonds_$walletUserId", 0L).coerceAtLeast(0L))
     }
     var lastWalletEventAt by remember(walletUserId) { mutableLongStateOf(0L) }
+    // In-flight HTTP snapshots must never replace a newer Socket.IO wallet event.
+    var walletEventGeneration by remember(walletUserId) { mutableIntStateOf(0) }
     DisposableEffect(walletSocket, walletUserId, walletAccountId) {
         val registerWalletIdentity = {
             if (walletUserId.isNotBlank()) {
@@ -307,6 +309,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
             val eventAt = payload.optLong("updatedAt", System.currentTimeMillis())
             if (eventUserId in setOf(walletUserId, walletAccountId) && updatedBalance >= 0L && eventAt >= lastWalletEventAt) {
                 lastWalletEventAt = eventAt
+                walletEventGeneration += 1
                 val updatedDiamonds = payload.optLong("diamonds", diamonds).coerceAtLeast(0L)
                 scope.launch {
                     coins = updatedBalance
@@ -365,8 +368,11 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
 
         // Always refresh from the server-owned wallet whenever this page opens.
         // A short cache throttle could keep a stale local zero visible after a credit.
-        // If the request fails, keep the last known snapshot untouched.
+        // If a newer live wallet event arrives while this request is in flight,
+        // discard this older snapshot instead of overwriting the confirmed balance.
+        val refreshGeneration = walletEventGeneration
         val wallet = fetchCanonicalWallet(walletUserId) ?: return@LaunchedEffect
+        if (walletEventGeneration != refreshGeneration) return@LaunchedEffect
         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
         val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
         // Only MongoDB-confirmed coins are spendable. Device-only recharge credits
@@ -530,8 +536,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                             val c = cin.toLongOrNull() ?: 0L
                             if (d > 0 && c > 0) {
                                 scope.launch {
+                                    val requestGeneration = walletEventGeneration
                                     val updated = exchangeCanonicalWallet(walletUserId, d)
-                                    if (updated != null) {
+                                    if (updated != null && walletEventGeneration == requestGeneration) {
                                         val serverBalance = updated.optLong("balance").coerceAtLeast(0L)
                                         val serverDiamonds = updated.optLong("diamonds").coerceAtLeast(0L)
                                         dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
@@ -570,8 +577,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                             val c = cin.toLongOrNull() ?: 0L
                             if (d > 0 && c > 0) {
                                 scope.launch {
+                                    val requestGeneration = walletEventGeneration
                                     val updated = exchangeCanonicalWallet(walletUserId, d)
-                                    if (updated != null) {
+                                    if (updated != null && walletEventGeneration == requestGeneration) {
                                         val serverBalance = updated.optLong("balance").coerceAtLeast(0L)
                                         val serverDiamonds = updated.optLong("diamonds").coerceAtLeast(0L)
                                         dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
@@ -611,8 +619,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                 onSelect = {
                     scope.launch {
                         val credit = selectedCoins + selectedBonus
+                        val requestGeneration = walletEventGeneration
                         val wallet = rechargeCanonicalWallet(walletUserId, selectedPrice)
-                        if (wallet != null) {
+                        if (wallet != null && walletEventGeneration == requestGeneration) {
                             val newBalance = wallet.optLong("balance", -1L)
                             if (newBalance >= 0L) {
                                 withContext(Dispatchers.IO) {
