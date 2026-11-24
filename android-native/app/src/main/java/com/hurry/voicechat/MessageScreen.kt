@@ -493,8 +493,11 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             } else emptyList()
         }
     }
-    val chats = remember(currentUserId, savedConversations.size) {
-        mutableStateListOf<MessagePreview>().apply {
+    // Keep one stable observable inbox list. Replacing this list when cache hydration
+    // completes detached the live Socket.IO listeners from the UI's current state.
+    val chats = remember(currentUserId) { mutableStateListOf<MessagePreview>() }
+    LaunchedEffect(currentUserId, savedConversations) {
+        val rebuilt = buildList {
             val teamSaved = savedConversations.firstOrNull { it.optString("peerId") == "hurry_team_official" }
             val systemSaved = savedConversations.firstOrNull { it.optString("peerId") == "hurry_system_official" }
             add(MessagePreview("hurry_team_official", "Zyora Team", RAW_MSG + "logo.png",
@@ -509,6 +512,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                 if (peerId.isNotBlank() && none { it.uid == peerId }) add(MessagePreview(peerId, saved.optString("peerName", "User"), saved.optString("peerPhoto", ""), saved.optString("lastMessage", ""), saved.optString("time", ""), unread))
             }
         }
+        chats.clear()
+        chats.addAll(rebuilt)
     }
     // Keep the presence socket stable for the lifetime of this inbox session.
     // Keying it by the whole chat list caused room-status updates (isInRoom/roomId)
@@ -520,17 +525,21 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             reconnection = true
             reconnectionAttempts = Int.MAX_VALUE
         })
+        val mainHandler = Handler(Looper.getMainLooper())
         fun applyRoomStatus(payload: JSONObject?) {
             if (payload == null) return
             val peerId = payload.optString("accountId", payload.optString("userId")).trim()
             if (peerId.isBlank()) return
             val loginId = payload.optString("userId").trim()
-            val index = chats.indexOfFirst { it.uid == peerId || (loginId.isNotBlank() && it.uid == loginId) }
-            if (index >= 0) {
-                val old = chats[index]
-                val inRoom = payload.optBoolean("inRoom", false) && payload.optString("roomId").isNotBlank()
-                val online = payload.optBoolean("online", old.isOnline || inRoom) || inRoom
-                chats[index] = old.copy(isInRoom = inRoom, roomId = if (inRoom) payload.optString("roomId") else "", isOnline = online)
+            val inRoom = payload.optBoolean("inRoom", false) && payload.optString("roomId").isNotBlank()
+            val roomId = if (inRoom) payload.optString("roomId") else ""
+            val online = payload.optBoolean("online", false) || inRoom
+            mainHandler.post {
+                val index = chats.indexOfFirst { it.uid == peerId || (loginId.isNotBlank() && it.uid == loginId) }
+                if (index >= 0) {
+                    val old = chats[index]
+                    chats[index] = old.copy(isInRoom = inRoom, roomId = roomId, isOnline = online)
+                }
             }
         }
         val statusListener = Emitter.Listener { args -> applyRoomStatus(args.firstOrNull() as? JSONObject) }
@@ -539,21 +548,28 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             val payload = args.firstOrNull() as? JSONObject
             val peerId = payload?.optString("accountId").orEmpty().ifBlank { payload?.optString("userId").orEmpty() }
                 .ifBlank { args.firstOrNull()?.toString().orEmpty() }
-            val index = chats.indexOfFirst { it.uid == peerId }
-            if (index >= 0) chats[index] = chats[index].copy(isOnline = true)
+            mainHandler.post {
+                val index = chats.indexOfFirst { it.uid == peerId }
+                if (index >= 0) chats[index] = chats[index].copy(isOnline = true)
+            }
         }
         val offlineListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             val peerId = payload?.optString("accountId").orEmpty().ifBlank { payload?.optString("userId").orEmpty() }
                 .ifBlank { args.firstOrNull()?.toString().orEmpty() }
-            val index = chats.indexOfFirst { it.uid == peerId }
-            if (index >= 0) chats[index] = chats[index].copy(isOnline = false, isInRoom = false, roomId = "")
+            mainHandler.post {
+                val index = chats.indexOfFirst { it.uid == peerId }
+                if (index >= 0) chats[index] = chats[index].copy(isOnline = false, isInRoom = false, roomId = "")
+            }
         }
         val presenceStatusListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val peerId = payload.optString("accountId").ifBlank { payload.optString("userId") }
-            val index = chats.indexOfFirst { it.uid == peerId }
-            if (index >= 0) chats[index] = chats[index].copy(isOnline = payload.optBoolean("online", false))
+            val online = payload.optBoolean("online", false)
+            mainHandler.post {
+                val index = chats.indexOfFirst { it.uid == peerId }
+                if (index >= 0) chats[index] = chats[index].copy(isOnline = online)
+            }
         }
         presenceSocket.on("user_room_status", statusListener)
         presenceSocket.on("user_room_status_updated", updateListener)
