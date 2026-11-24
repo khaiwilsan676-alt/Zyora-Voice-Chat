@@ -443,19 +443,23 @@ fun GiftPicker(
                                             )
                                             if (roleLabel != null) {
                                                 Surface(
-                                                    modifier = Modifier.align(Alignment.CenterHorizontally),
                                                     color = Blue500,
                                                     shape = RoundedCornerShape(50),
                                                     border = BorderStroke(0.75.dp, Color.White),
                                                 ) {
-                                                    Text(
-                                                        text = roleLabel,
-                                                        color = Color.White,
-                                                        fontSize = 7.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                                    Box(
+                                                        contentAlignment = Alignment.Center,
                                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-                                                    )
+                                                    ) {
+                                                        Text(
+                                                            text = roleLabel,
+                                                            color = Color.White,
+                                                            fontSize = 7.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            textAlign = TextAlign.Center,
+                                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
