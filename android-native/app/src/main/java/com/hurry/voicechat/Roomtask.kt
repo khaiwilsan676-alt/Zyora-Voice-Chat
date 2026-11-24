@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
@@ -78,12 +79,49 @@ private object NativeRoomTaskApi {
 
 @Composable
 fun Roomtask(onBack: () -> Unit = {}) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val accountId = remember {
+        context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+            .getString("accountId", "").orEmpty().ifBlank {
+                context.getSharedPreferences("hurry_user", android.content.Context.MODE_PRIVATE)
+                    .getString("accountId", "").orEmpty()
+            }
+    }
+    var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
+    var claimingTask by remember { mutableIntStateOf(0) }
+    var taskError by remember { mutableStateOf("") }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember { mutableStateOf(false) }
     var hour by remember { mutableIntStateOf(0) }
     var minute by remember { mutableIntStateOf(0) }
     var second by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(accountId) {
+        if (accountId.isNotBlank()) {
+            while (true) {
+                runCatching { NativeRoomTaskApi.request(accountId) }
+                    .onSuccess { response ->
+                        val array = response.optJSONArray("tasks")
+                        if (array != null) {
+                            taskStatuses = (0 until array.length()).mapNotNull { index ->
+                                array.optJSONObject(index)?.let { item ->
+                                    item.optInt("taskId") to NativeRoomTaskStatus(
+                                        item.optBoolean("complete"), item.optBoolean("claimed")
+                                    )
+                                }
+                            }.toMap()
+                            taskError = ""
+                        }
+                    }
+                    .onFailure { taskError = it.message ?: "Unable to load Room Tasks." }
+                delay(15000)
+            }
+        } else {
+            taskError = "Room owner account could not be identified."
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
