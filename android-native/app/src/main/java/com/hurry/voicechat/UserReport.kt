@@ -144,7 +144,7 @@ fun UserReport(
                         modifier = Modifier.weight(1f).padding(end = 48.dp),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = Color.Black,
                         textAlign = TextAlign.Center
                     )
                 }
