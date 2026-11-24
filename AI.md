@@ -2182,3 +2182,11 @@ Current documentation does not certify that all historical features are build-, 
 - All three new Hot videos use the existing fade overlay, which fades at the top and bottom.
 - New Gift-tab sends use the regular gift transaction/video path, not the legacy Lucky reward flow.
 - Asset existence and native build/device verification are pending.
+
+
+## 2026-11-24 — Hand-to-hand shared game wallet balance reconciliation
+- Wildparty.kt: when a canonical wallet_balance_updated event or a queued transaction response arrives, the UI now removes only the acknowledged transaction and reapplies the signed deltas of every still-pending bet/win over the latest server balance. Initial wallet refresh also preserves queued deltas. This prevents a delayed response for one bet from overwriting newer taps.
+- DragonBattle.kt: the same pending-delta projection is applied after wallet socket events, successful transaction responses, and initial canonical balance fetches. Existing transaction IDs, atomic server debit/credit endpoint, bet/payout logic, and optimistic game feedback are unchanged.
+- RoomPage.kt: ignores older timestamped wallet broadcasts so a delayed socket event cannot roll the room Gift Picker balance backward.
+- All four surfaces continue to use the canonical server users.coins wallet and existing wallet_balance_updated broadcasts; no UI/layout/animation changes intended.
+- Verification: commits are pushed; APK CI and rapid simultaneous betting/gifting across Wild Party, Dragon Battle, Gift Picker, and Coins Wallet still need to complete before runtime behavior can be marked verified.
