@@ -2161,3 +2161,10 @@ Current documentation does not certify that all historical features are build-, 
 - Selected images upload through the shared `uploadChatImage` helper to the dedicated `private-chat-image` media folder (5 MB limit), then send the hosted URL using the existing Socket.IO `private_message` event with `type=image` and `imageUrl`.
 - The sender gets an immediate local image bubble and conversation preview; the existing receiver image rendering and full-screen preview remain unchanged. Existing text, voice, chat layout, and room chat behavior are untouched.
 - Native APK build and multi-device delivery verification are still pending.
+
+
+## 2026-11-24 — Homepage room-card refresh interval and pull-to-refresh
+- `HomeScreen.kt`: automatic authoritative room-list refresh cadence is 150 seconds.
+- Pulling down at the top of the Home room list requests an immediate refresh, bypassing the automatic-refresh throttle; a circular progress indicator is shown while pulling/refreshing.
+- Existing room snapshot behavior, room ordering/filtering, room-card layout, and server response parsing remain unchanged.
+- Verification pending: native APK build and on-device pull gesture/network refresh test.
