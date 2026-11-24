@@ -1069,7 +1069,7 @@ fun LuckyGiftNotificationSlider(
             visible = notice != null && !notice.isExiting,
             enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
-            modifier = Modifier.wrapContentWidth() 
+            modifier = Modifier.fillMaxWidth()
         ) {
             if (notice == null) return@AnimatedVisibility
             val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
