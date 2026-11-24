@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,13 +78,14 @@ fun LuckyAnimationNotificationSlider(
     floatingWins: List<Pair<String, Long>> = emptyList(),
     targetAvatarOffset: Offset? = null,
 ) {
-    val activeFlyItems = remember { mutableStateListOf<LuckyFlyAnimItem>() }
+    // Sirf ek hi image fly karegi ek time pe
+    var activeFlyItem by remember { mutableStateOf<LuckyFlyAnimItem?>(null) }
     var lastAnimatedNoticeId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(notice?.id) {
         if (notice != null && notice.id != lastAnimatedNoticeId) {
             lastAnimatedNoticeId = notice.id
-            activeFlyItems.add(LuckyFlyAnimItem(id = notice.id, giftImage = notice.giftImage))
+            activeFlyItem = LuckyFlyAnimItem(id = notice.id, giftImage = notice.giftImage)
         }
     }
 
@@ -148,23 +152,30 @@ fun LuckyAnimationNotificationSlider(
 
                         Column(
                             modifier = Modifier.widthIn(max = 110.dp),
-                            verticalArrangement = Arrangement.Center
+                            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)
                         ) {
                             Text(
                                 text = topText,
                                 color = Color.White,
                                 fontSize = 10.sp,
+                                lineHeight = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                ),
                             )
                             Text(
                                 text = bottomText,
                                 color = Color.White.copy(alpha = 0.9f),
                                 fontSize = 9.sp,
+                                lineHeight = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.offset(y = (-3).dp)
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                ),
                             )
                         }
                         Spacer(Modifier.width(6.dp))
@@ -188,9 +199,9 @@ fun LuckyAnimationNotificationSlider(
             }
         }
 
-        // Lucky gift flying animation:
-        // Bottom (30dp) -> Screen center popup (52dp) -> 0.8s stay -> Shrink (30dp) -> User avatar -> Disappear
-        activeFlyItems.forEach { item ->
+        // Lucky gift flying animation (sirf ek image):
+        // Niche se choti (18dp) -> 1 sec mein Center -> Popup (64dp -> 52dp) -> 0.8 sec stay -> Choti (30dp) hoke Seat Avatar -> Disappear
+        activeFlyItem?.let { item ->
             key(item.id) {
                 LuckyGiftFlyOverlayItem(
                     giftImage = item.giftImage,
@@ -198,7 +209,9 @@ fun LuckyAnimationNotificationSlider(
                     screenHeightPx = screenHeightPx,
                     targetAvatarOffset = targetAvatarOffset,
                     onFinished = {
-                        activeFlyItems.removeAll { it.id == item.id }
+                        if (activeFlyItem?.id == item.id) {
+                            activeFlyItem = null
+                        }
                     },
                 )
             }
@@ -224,28 +237,28 @@ private fun LuckyGiftFlyOverlayItem(
 
     val posX = remember { Animatable(startX) }
     val posY = remember { Animatable(startY) }
-    val sizeDp = remember { Animatable(30f) }
+    val sizeDp = remember { Animatable(18f) }
     val itemAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // 1. Niche se 30dp mein nikal ke screen ke center par aana
+        // 1. Niche se choti (18dp) hoke 1 second (1000ms) mein screen ke center par aana
         val fadeInJob = launch {
-            itemAlpha.animateTo(1f, animationSpec = tween(120))
+            itemAlpha.animateTo(1f, animationSpec = tween(150))
         }
         val moveToCenterJob = launch {
-            posY.animateTo(centerY, animationSpec = tween(360, easing = FastOutSlowInEasing))
+            posY.animateTo(centerY, animationSpec = tween(1000, easing = FastOutSlowInEasing))
         }
         fadeInJob.join()
         moveToCenterJob.join()
 
-        // 2. Center par aake popup ke saath 52dp original size
-        sizeDp.animateTo(58f, animationSpec = tween(130, easing = FastOutSlowInEasing))
+        // 2. Center par aake popup animation (18dp -> 64dp bounce -> 52dp original size)
+        sizeDp.animateTo(64f, animationSpec = tween(140, easing = FastOutSlowInEasing))
         sizeDp.animateTo(52f, animationSpec = tween(110, easing = FastOutSlowInEasing))
 
-        // 3. Center mein 0.8 second stay
+        // 3. Center mein 0.8 second (800ms) rukna
         delay(800L)
 
-        // 4. Dobara choti (30dp) hoke user avatar ke paas jaana aur gayab hona
+        // 4. Thodi si choti (30dp) hoke seat avatar par jaana aur gayab hona
         val shrinkJob = launch {
             sizeDp.animateTo(30f, animationSpec = tween(260, easing = FastOutSlowInEasing))
         }
@@ -318,7 +331,7 @@ fun LuckyAnimationComboButton(
     Box(
         Modifier
             .fillMaxSize()
-            .padding(end = 24.dp, bottom = 50.dp), 
+            .padding(end = 24.dp, bottom = 50.dp),
         contentAlignment = Alignment.BottomEnd,
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(84.dp)) {
@@ -340,20 +353,20 @@ fun LuckyAnimationComboButton(
 
             Box(
                 Modifier
-                    .size(76.dp) 
+                    .size(76.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
                             listOf(Color(0xFFFF4D79), Color(0xFFFF1A4D))
                         )
                     )
-                    .clickable { onClick() }, 
+                    .clickable { onClick() },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Combo",
                     color = Color.White,
-                    fontSize = 15.sp, 
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                 )
