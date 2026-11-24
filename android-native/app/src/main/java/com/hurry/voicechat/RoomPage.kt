@@ -1389,7 +1389,6 @@ fun RoomPage(
             if (balance >= 0L) roomWalletEventGeneration++
             mainHandler.post {
                 luckyComboPending = false
-                val balance = payload.optLong("balance", -1L)
                 if (balance >= 0L) roomWalletBalance = balance
                 roomToastText = when (reason) {
                     "insufficient_coins" -> "Insufficient coins"
