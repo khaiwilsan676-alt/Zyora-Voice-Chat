@@ -1334,19 +1334,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       // Server snapshot is canonical; never add unconfirmed device deltas.
       walletStateMutex.withLock {
        val appliedId = payload.optString("transactionId")
-       if (appliedId.isNotBlank()) synchronized(pendingWalletPrefs) {
-        val pending = runCatching { JSONArray(pendingWalletPrefs.getString("queue_$walletAccountId", "[]") ?: "[]") }.getOrDefault(JSONArray())
-        val remaining = JSONArray()
-        for (index in 0 until pending.length()) {
-         val item = pending.optJSONObject(index) ?: continue
-         if (item.optString("id") != appliedId) remaining.put(item)
-        }
-        check(pendingWalletPrefs.edit().putString("queue_$walletAccountId", remaining.toString()).commit())
-       }
-       val remainingDelta = synchronized(pendingWalletPrefs) {
-        val remaining = runCatching { JSONArray(pendingWalletPrefs.getString("queue_$walletAccountId", "[]") ?: "[]") }.getOrDefault(JSONArray())
-        (0 until remaining.length()).sumOf { remaining.optJSONObject(it)?.optLong("delta") ?: 0L }
-       }
+       if (appliedId.isNotBlank()) NativeWalletPending.acknowledge(context, walletAccountId, appliedId)
+       val remainingDelta = NativeWalletPending.delta(context, walletAccountId)
        val visibleBalance = (updatedBalance + remainingDelta).coerceAtLeast(0L)
        balance = visibleBalance
        walletCachePrefs.edit().putLong("balance_$walletAccountId", visibleBalance)
@@ -1400,10 +1389,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      walletStateMutex.withLock {
       // Re-read after HTTP: bets may have been queued while GET was in flight.
       // Render only MongoDB-confirmed coins; queued deltas are not canonical.
-      val pendingDelta = synchronized(pendingWalletPrefs) {
-       val pending = runCatching { JSONArray(pendingWalletPrefs.getString("queue_$walletUserId", "[]") ?: "[]") }.getOrDefault(JSONArray())
-       (0 until pending.length()).sumOf { pending.optJSONObject(it)?.optLong("delta") ?: 0L }
-      }
+      val pendingDelta = NativeWalletPending.delta(context, walletUserId)
       val visible=(serverBalance + pendingDelta).coerceAtLeast(0L)
       balance=visible
       val old=dao.getUserData()?:UserDataEntity(balance=visible)
@@ -1471,8 +1457,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      if(item.optString("id") !in completedIds)remaining.put(item)
     }
     check(pendingWalletPrefs.edit().putString(key,remaining.toString()).commit()){"Could not persist remaining wallet queue"}
+    completedIds.forEach { NativeWalletPending.acknowledge(context, userId, it) }
     if(serverBalance!=null){
-     val remainingDelta=(0 until remaining.length()).sumOf { remaining.optJSONObject(it)?.optLong("delta") ?: 0L }
+     val remainingDelta=NativeWalletPending.delta(context, userId)
      val visible=(serverBalance!! + remainingDelta).coerceAtLeast(0L)
      balance=visible
      balanceToPersist=visible
@@ -1513,6 +1500,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    // Reflect this bet instantly in the game UI; server response will reconcile
    // the display back to the authoritative MongoDB balance.
    balance = (current + delta).coerceAtLeast(0L)
+   walletCachePrefs.edit().putLong("balance_$userId", balance)
+    .putLong("last_sync_$userId", System.currentTimeMillis()).apply()
   }
   scope.launch(Dispatchers.IO) {
    runCatching {
