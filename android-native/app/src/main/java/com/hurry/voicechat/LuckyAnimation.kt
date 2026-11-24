@@ -540,7 +540,7 @@ fun LuckyAnimationComboButton(
         initialValue = 1f,
         targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
-            tween(1800, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
+            tween(900, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
             RepeatMode.Restart,
         ),
         label = "pulse",
@@ -549,7 +549,7 @@ fun LuckyAnimationComboButton(
         initialValue = 0.5f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            tween(1800, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
+            tween(900, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
             RepeatMode.Restart,
         ),
         label = "alpha",
