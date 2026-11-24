@@ -2155,3 +2155,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-24 — App Staff empty-list root-cause fix
 - Fixed the secondary/fallback `/api/users` mapper in `app/owner/page.tsx`: it previously rebuilt each user record without copying the staff tag fields, so App Staff filtered the normalized records and returned an empty list after fallback loading.
 - The fallback mapper now preserves Official Head, Official, Admin, Service, Host/`isHost`, Seller aliases, CS, VIP, Premium, owner image tag, and family reward tag data. App Staff filtering and tag labels include the same aliases.
+
+## 2026-11-24 — Restore direct-chat image sending
+- `MessageScreen.kt`: re-enabled the existing image action and restored the system image picker for direct chats.
+- Selected images upload through the shared `uploadChatImage` helper to the dedicated `private-chat-image` media folder (5 MB limit), then send the hosted URL using the existing Socket.IO `private_message` event with `type=image` and `imageUrl`.
+- The sender gets an immediate local image bubble and conversation preview; the existing receiver image rendering and full-screen preview remain unchanged. Existing text, voice, chat layout, and room chat behavior are untouched.
+- Native APK build and multi-device delivery verification are still pending.
