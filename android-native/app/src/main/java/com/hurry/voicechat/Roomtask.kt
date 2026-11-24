@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -87,12 +89,31 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val taskRoomId = remember(roomId) { roomId.trim() }
     var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
+    var pendingShareTask by remember { mutableIntStateOf(0) }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember { mutableStateOf(false) }
     var hour by remember { mutableIntStateOf(0) }
     var minute by remember { mutableIntStateOf(0) }
     var second by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
+    val shareResultLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        val completedTaskId = pendingShareTask
+        if (completedTaskId != 0) {
+            pendingShareTask = 0
+            scope.launch {
+                runCatching { NativeRoomTaskApi.request(taskRoomId, completedTaskId, shareTask = true) }
+                    .onSuccess {
+                        taskStatuses = taskStatuses + (completedTaskId to NativeRoomTaskStatus(true, false, 1f))
+                    }
+                    .onFailure { error ->
+                        android.widget.Toast.makeText(context, error.message ?: "Share could not be recorded.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                claimingTask = 0
+            }
+        }
+    }
 
     LaunchedEffect(taskRoomId) {
         if (taskRoomId.isNotBlank()) {
@@ -390,23 +411,15 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                         putExtra(Intent.EXTRA_TEXT, "Join me on Zyora Voice Chat! https://zyora-voice-chat.vercel.app")
                                                         setPackage(packageName)
                                                     }
-                                                    runCatching { context.startActivity(shareIntent) }
-                                                        .onSuccess {
-                                                            claimingTask = taskId
-                                                            scope.launch {
-                                                                runCatching { NativeRoomTaskApi.request(taskRoomId, taskId, shareTask = true) }
-                                                                    .onSuccess {
-                                                                        taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, false, 1f))
-                                                                    }
-                                                                    .onFailure { error ->
-                                                                        android.widget.Toast.makeText(context, error.message ?: "Share could not be recorded.", android.widget.Toast.LENGTH_SHORT).show()
-                                                                    }
-                                                                claimingTask = 0
-                                                            }
-                                                        }
-                                                        .onFailure {
-                                                            android.widget.Toast.makeText(context, if (taskId == 3) "WhatsApp is not installed." else "Facebook is not installed.", android.widget.Toast.LENGTH_SHORT).show()
-                                                        }
+                                                    runCatching {
+                                                        claimingTask = taskId
+                                                        pendingShareTask = taskId
+                                                        shareResultLauncher.launch(shareIntent)
+                                                    }.onFailure {
+                                                        pendingShareTask = 0
+                                                        claimingTask = 0
+                                                        android.widget.Toast.makeText(context, if (taskId == 3) "WhatsApp is not installed." else "Facebook is not installed.", android.widget.Toast.LENGTH_SHORT).show()
+                                                    }
                                                 } else if (canClaim) {
                                                     claimingTask = taskId
                                                     scope.launch {
