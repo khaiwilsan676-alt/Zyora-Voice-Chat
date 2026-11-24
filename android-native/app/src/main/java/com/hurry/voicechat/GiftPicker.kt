@@ -1101,7 +1101,7 @@ fun LuckyGiftNotificationSlider(
                         )
                         .padding(start = 4.dp, end = 18.dp, top = 2.dp, bottom = 2.dp)
                         .height(38.dp)
-                        .fillMaxWidth(),
+                        .fillMaxWidth(0.96f),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
