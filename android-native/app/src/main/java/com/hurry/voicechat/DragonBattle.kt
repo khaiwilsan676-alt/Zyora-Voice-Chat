@@ -1853,10 +1853,15 @@ private fun DragonBattleMainOverlay(
         if (dragonWalletUserId.isBlank()) return
         walletSyncMutex.withLock {
             val queueKey = "queue_$dragonWalletUserId"
+            val firstQueue = synchronized(dragonPendingPrefs) {
+                runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+            }
+            if (firstQueue.length() == 0) return@withLock
+            // Coalesce a burst of rapid bets into one server batch.
+            delay(70L)
             val currentQueue = synchronized(dragonPendingPrefs) {
                 runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
             }
-            if (currentQueue.length() == 0) return@withLock
             val transactions = JSONArray()
             for (index in 0 until currentQueue.length()) {
                 val item = currentQueue.optJSONObject(index) ?: continue
@@ -1939,7 +1944,7 @@ private fun DragonBattleMainOverlay(
         synchronized(dragonPendingPrefs) {
             val queue = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
             queue.put(JSONObject().put("id", transactionId).put("delta", delta).put("action", action))
-            check(dragonPendingPrefs.edit().putString(queueKey, queue.toString()).commit())
+            dragonPendingPrefs.edit().putString(queueKey, queue.toString()).apply()
             walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
         }
         balance = (balance + delta).coerceAtLeast(0L)
