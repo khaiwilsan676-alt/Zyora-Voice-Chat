@@ -3762,22 +3762,32 @@ private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Un
     val imageSizePx = with(density) { 58.dp.toPx() }
     val arcHeightPx = with(density) { 14.dp.toPx() }
 
+    // Small from the picker -> large at screen centre -> hold 0.8s -> return
+    // to the recipient avatar at the original small size.
     LaunchedEffect(flight.id) {
-        progress.animateTo(1f, animationSpec = tween(540, easing = CubicBezierEasing(0.22f, 0.72f, 0.24f, 1f)))
+        progress.animateTo(1f, animationSpec = tween(1350, easing = LinearEasing))
         onFinished()
     }
 
     val p = progress.value.coerceIn(0f, 1f)
-    val firstLeg = p < 0.38f
-    val t = if (firstLeg) p / 0.38f else (p - 0.38f) / 0.62f
-    val from = if (firstLeg) flight.start else flight.rootCenter
-    val to = if (firstLeg) flight.rootCenter else flight.target
+    val enterEnd = 0.185f
+    val holdEnd = 0.778f
+    val firstLeg = p < enterEnd
+    val lastLeg = p >= holdEnd
+    val t = when {
+        firstLeg -> p / enterEnd
+        lastLeg -> (p - holdEnd) / (1f - holdEnd)
+        else -> 0f
+    }
+    val from = if (lastLeg) flight.rootCenter else flight.start
+    val to = if (lastLeg) flight.target else flight.rootCenter
     val x = from.x + (to.x - from.x) * t
-    val y = from.y + (to.y - from.y) * t - sin(t * Math.PI).toFloat() * arcHeightPx
+    val y = from.y + (to.y - from.y) * t -
+        if (firstLeg || lastLeg) sin(t * Math.PI).toFloat() * arcHeightPx else 0f
     val scale = when {
-        p < 0.38f -> 0.18f + 0.22f * (p / 0.38f)
-        p < 0.62f -> 0.40f + 0.60f * ((p - 0.38f) / 0.24f)
-        else -> 1f - 0.12f * ((p - 0.62f) / 0.38f)
+        firstLeg -> 0.18f + 0.82f * t
+        !lastLeg -> 1f
+        else -> 1f - 0.82f * t
     }
 
     Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
