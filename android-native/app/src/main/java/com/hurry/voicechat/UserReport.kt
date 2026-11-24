@@ -106,7 +106,7 @@ fun UserReport(
 
         // Submit button wala Blue (0xFF237BEE) mixing into Grey (0xFFF7F8FA)
         val gradientBrush = Brush.verticalGradient(
-            colors = listOf(Color(0xFF237BEE), Color(0xFFF7F8FA)),
+            colors = listOf(Color(0xFF1D65C9), Color(0xFFF7F8FA)),
             startY = 0f,
             endY = 300f 
         )
@@ -137,7 +137,7 @@ fun UserReport(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
                     }
                     Text(
                         "Report",
