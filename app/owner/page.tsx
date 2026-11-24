@@ -1677,6 +1677,11 @@ export default function StaffPanel() {
       (selectedUserStatusFilter === 'Offline' && !isBanned && !isOnline);
     return matchesSearch && matchesRole && matchesStatus;
   }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const staffTagKeys = ['officialHeadTag', 'officialTag', 'adminTag', 'serviceTag', 'csTag', 'hostTag', 'coinSellerTag', 'coinSeller', 'sellerTag', 'vipTag', 'premiumTag', 'ownerImageTag', 'familyRewardTagImage'];
+  const filteredAppStaff = users.filter((u: any) => staffTagKeys.some(key => Boolean(u[key])) && (!searchQuery.trim() || [u.name, u.hurryId, u.id, u.accountId, u.appShortId].some(value => String(value || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))));
+  const appStaffPageCount = Math.max(1, Math.ceil(filteredAppStaff.length / 20));
+  const paginatedAppStaff = filteredAppStaff.slice((usersPage - 1) * 20, usersPage * 20);
+
   const usersPageSize = 20;
   const usersPageCount = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize));
   const paginatedUsers = filteredUsers.slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize);
@@ -1793,7 +1798,7 @@ export default function StaffPanel() {
 
           <SidebarCategory
             icon="👥" title="User Center" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
+            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'host_apps', label: 'App Staff', icon: '📝' }]}
           />
           <SidebarCategory
             icon="🎙️" title="Live Rooms" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
@@ -1816,7 +1821,7 @@ export default function StaffPanel() {
               { id: 'feedback', label: 'User Feedback', icon: '💬' },
               { id: 'ai_chats', label: 'AI Chats', icon: '🤖' },
               { id: 'reports', label: 'Reports', icon: '🚫' },
-              { id: 'bans', label: 'Bans', icon: '⛔' },
+              { id: 'bans', label: 'ID Ban', icon: '⛔' },
               { id: 'tickets', label: 'Private Chat', icon: '🎫' },
               { id: 'official_msg', label: 'Official Msg', icon: '📢' }
             ]}
@@ -1998,6 +2003,38 @@ export default function StaffPanel() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'host_apps' && (
+          <div className="flex flex-col h-full bg-white">
+            <div className="px-8 py-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-slate-800">App Staff</h2>
+                <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">Total App Staff: {filteredAppStaff.length.toLocaleString()}</span>
+              </div>
+              <div className="mt-5 relative w-[140px] md:w-[220px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input type="text" value={searchQuery} onChange={handleSearchQueryChange} placeholder="Search by ID or name..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900" />
+              </div>
+            </div>
+            <div className="p-8 flex-1 overflow-y-auto">
+              {loadingUsers ? <div className="py-12 text-center text-slate-400 font-medium text-sm">Loading real user database...</div> : (
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[620px]">
+                    <thead><tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide"><th className="py-3 pl-4 pr-2 w-14">S.No</th><th className="py-3 px-2">Staff</th><th className="py-3 px-2">App ID</th><th className="py-3 px-2">Tags</th></tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paginatedAppStaff.map((u: any, idx: number) => {
+                        const tagLabels = [{key:'officialHeadTag',label:'Official Head'},{key:'officialTag',label:'Official'},{key:'adminTag',label:'Admin'},{key:'serviceTag',label:'Service'},{key:'csTag',label:'CS'},{key:'hostTag',label:'Host'},{key:'coinSellerTag',label:'Seller'},{key:'coinSeller',label:'Seller'},{key:'sellerTag',label:'Seller'},{key:'vipTag',label:'VIP'},{key:'premiumTag',label:'Premium'},{key:'ownerImageTag',label:'Owner'}].filter(tag => Boolean(u[tag.key]));
+                        return <tr key={u.id} className="hover:bg-slate-50/70 transition-colors"><td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{(usersPage - 1) * 20 + idx + 1}</td><td className="py-3 px-2"><div className="flex items-center gap-2.5 min-w-0">{u.image ? <img src={u.image} alt={u.name} className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0" /> : <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-sm shrink-0">{String(u.name || '?').charAt(0).toUpperCase()}</div>}<span className="text-xs font-medium text-slate-800 truncate">{u.name}</span></div></td><td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{u.appShortId || u.hurryId || u.id || '—'}</td><td className="py-3 px-2"><div className="flex flex-wrap gap-1">{tagLabels.map(tag => <span key={tag.key} className="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">{tag.label}</span>)}</div></td></tr>;
+                      })}
+                      {filteredAppStaff.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-400 font-medium text-sm">No tagged App Staff found</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {!loadingUsers && filteredAppStaff.length > 0 && <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><span className="text-xs font-medium text-slate-500">Showing {(usersPage - 1) * 20 + 1}–{Math.min(usersPage * 20, filteredAppStaff.length)} of {filteredAppStaff.length} staff</span><div className="flex items-center gap-2"><button type="button" disabled={usersPage <= 1} onClick={() => setUsersPage(page => Math.max(1, page - 1))} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Previous</button><span className="min-w-[74px] text-center text-xs font-semibold text-slate-600">Page {usersPage} of {appStaffPageCount}</span><button type="button" disabled={usersPage >= appStaffPageCount} onClick={() => setUsersPage(page => Math.min(appStaffPageCount, page + 1))} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Next</button></div></div>}
             </div>
           </div>
         )}
