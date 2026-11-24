@@ -108,9 +108,9 @@ private val hotGifts = listOf(
     GiftPickerGift(2001, "Mysalo Princess", 499999, "/IMG_20261124_165000.png",
         video = "/alioss_29_2026031617445981861~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2002, "Love Twinkle", 200000, "/IMG_20261124_165025.png",
-        video = "/alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2003, "Castle Night", 170000, "/IMG_20261124_165043.png",
         video = "/alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2003, "Castle Night", 170000, "/IMG_20261124_165043.png",
+        video = "/alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
 private val standardGifts = listOf(
@@ -787,15 +787,6 @@ private fun GiftCard(
                     .size(12.dp),
             )
         }
-        if (activeTab == "Hot" && gift.id == 3) {
-            AsyncImage(
-                model = giftAssetUrl("/IMG_20260928_172516.png"),
-                contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .size(16.dp),
-            )
-        }
 
         Column(
             Modifier.fillMaxWidth(),
@@ -803,6 +794,7 @@ private fun GiftCard(
         ) {
             val size = if (gift.noMask) 60.dp else 64.dp
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
+            val isHotEdgeFade = activeTab == "Hot" && (gift.id == 2001 || gift.id == 2002 || gift.id == 2003)
 
             Box(
                 Modifier
@@ -813,6 +805,34 @@ private fun GiftCard(
                             gift.sideFade -> RoundedCornerShape(12.dp)
                             else -> RoundedCornerShape(0.dp)
                         }
+                    )
+                    .then(
+                        if (isHotEdgeFade) {
+                            Modifier
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawContent()
+                                    val edgeFade = 0.02f
+                                    drawRect(
+                                        brush = Brush.horizontalGradient(
+                                            0f to Color.Transparent,
+                                            edgeFade to Color.White,
+                                            (1f - edgeFade) to Color.White,
+                                            1f to Color.Transparent,
+                                        ),
+                                        blendMode = BlendMode.DstIn,
+                                    )
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            0f to Color.Transparent,
+                                            edgeFade to Color.White,
+                                            (1f - edgeFade) to Color.White,
+                                            1f to Color.Transparent,
+                                        ),
+                                        blendMode = BlendMode.DstIn,
+                                    )
+                                }
+                        } else Modifier
                     ),
             ) {
                 AsyncImage(
@@ -934,7 +954,7 @@ private fun RecipientButton(
                     iconPath.lineTo(11.61f * sx, 21.88f * sy)
                     iconPath.lineTo(13.41f * sx, 21.88f * sy)
                     iconPath.lineTo(13.41f * sx, 18.96f * sy)
-                    iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sy, 11.88f * sy)
+                    iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sx, 11.88f * sy)
                     iconPath.cubicTo(19.81f * sx, 11.39f * sy, 19.4f * sx, 11f * sy, 18.91f * sx, 11f * sy)
                     iconPath.close()
                     drawPath(path = iconPath, color = iconColor)
@@ -1021,6 +1041,8 @@ private fun VideoEffectOverlay(
     if (!show) return
 
     val isKing = src.contains("17e19680~2")
+    val isMysaloPrincess = src.contains("2026031617445981861~2")
+    val isCastleNight = src.contains("2026032620350482882~2")
 
     Box(
         Modifier
@@ -1040,7 +1062,7 @@ private fun VideoEffectOverlay(
                                 mediaPlayer = android.media.MediaPlayer().apply {
                                     setDataSource(ctx, Uri.parse(giftAssetUrl(src)))
                                     setSurface(android.view.Surface(surface))
-                                    setVolume(0f, 0f)
+                                    setVolume(1f, 1f)
                                     setOnVideoSizeChangedListener { _, w, h ->
                                         if (w > 0 && h > 0) {
                                             videoRatio = w.toFloat() / h.toFloat()
@@ -1086,8 +1108,13 @@ private fun VideoEffectOverlay(
                 .drawWithContent {
                     drawContent()
                     if (isFade) {
-                        val topFadeStop = 0.1f 
-                        val bottomFadeStop = if (isKing) 0.85f else 0.9f 
+                        val topFadeStop = if (isCastleNight) 0.13f else 0.1f
+                        val bottomFadeStop = when {
+                            isKing -> 0.85f
+                            isMysaloPrincess -> 0.87f
+                            isCastleNight -> 0.87f
+                            else -> 0.9f
+                        }
                         drawRect(
                             brush = Brush.verticalGradient(
                                 0.0f to Color.White.copy(alpha = 0f), 
