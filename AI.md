@@ -2150,3 +2150,8 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Panel `Host Applications` is now `App Staff`. The panel follows the Manage Users visual structure and lists only real user records carrying staff/special tags (Official Head, Official, Admin, Service/CS, Host, Seller, VIP, Premium, Owner, and related tagged records); it displays the App ID and tag labels.
 - Owner Panel navigation and the ban page heading now use `ID Ban`.
 - No unrelated Manage Users layout or user data behavior was intentionally changed.
+
+
+## 2026-11-24 — App Staff empty-list root-cause fix
+- Fixed the secondary/fallback `/api/users` mapper in `app/owner/page.tsx`: it previously rebuilt each user record without copying the staff tag fields, so App Staff filtered the normalized records and returned an empty list after fallback loading.
+- The fallback mapper now preserves Official Head, Official, Admin, Service, Host/`isHost`, Seller aliases, CS, VIP, Premium, owner image tag, and family reward tag data. App Staff filtering and tag labels include the same aliases.
