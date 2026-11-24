@@ -106,7 +106,7 @@ fun LucidePublicProfileIcon(
     }
 }
 
-private const val PUBLIC_PROFILE_FAMILY_IMAGE_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_203437.png"
+private const val PUBLIC_PROFILE_FAMILY_IMAGE_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000008c708246ba734e7cd0278c4f.png"
 
 // --- DATA CLASSES ---
 
