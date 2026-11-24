@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -599,6 +600,8 @@ fun MedalDetailDialog(
     onSelectTier: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val isRichMedal = displayMedal.tierGroup == "rich"
+
     // Popup animation har baar open hone ya tier switch karne par trigger hogi
     val popupScale = remember { Animatable(0.45f) }
     val popupAlpha = remember { Animatable(0f) }
@@ -661,45 +664,60 @@ fun MedalDetailDialog(
             ) {
                 Spacer(modifier = Modifier.height(64.dp))
 
-                // Medal Image with Golden Sunburst behind + Popup Animation + Golden Sparkle & Shining Bubbles over Image
+                // Medal Image with Golden Sunburst behind + Popup Animation
                 Box(
                     modifier = Modifier.size(310.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     GoldenSunburstEffect(modifier = Modifier.fillMaxSize())
 
-                    Box(
-                        modifier = Modifier
-                            .size(215.dp)
-                            .graphicsLayer {
-                                scaleX = popupScale.value
-                                scaleY = popupScale.value
-                                alpha = popupAlpha.value
-                                translationY = floatOffsetY
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
-                            StoreVideoPreview(
-                                url = displayMedal.previewVideo.fullUrl,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(4.dp)),
-                                mute = true,
-                                loop = true
-                            )
-                        } else {
-                            AsyncImage(
-                                model = displayMedal.video.fullUrl,
-                                contentDescription = displayMedal.name,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                    if (isRichMedal) {
+                        // Rich medal: Real Glass Bubble ke andar image + har 3 second me bubble me shine
+                        RealGlassBubbleMedal(
+                            displayMedal = displayMedal,
+                            modifier = Modifier
+                                .size(240.dp)
+                                .graphicsLayer {
+                                    scaleX = popupScale.value
+                                    scaleY = popupScale.value
+                                    alpha = popupAlpha.value
+                                    translationY = floatOffsetY
+                                }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(215.dp)
+                                .graphicsLayer {
+                                    scaleX = popupScale.value
+                                    scaleY = popupScale.value
+                                    alpha = popupAlpha.value
+                                    translationY = floatOffsetY
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
+                                StoreVideoPreview(
+                                    url = displayMedal.previewVideo.fullUrl,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    mute = true,
+                                    loop = true
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = displayMedal.video.fullUrl,
+                                    contentDescription = displayMedal.name,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
-                    }
 
-                    // Golden Sparkle + Shining Bubble Animation right over the medal image
-                    GoldenSparkleAndBubbleOverlay(modifier = Modifier.size(270.dp))
+                        // Golden Sparkle + Shining Bubble Animation right over the medal image
+                        GoldenSparkleAndBubbleOverlay(modifier = Modifier.size(270.dp))
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -812,6 +830,196 @@ fun MedalDetailDialog(
                     modifier = Modifier.padding(bottom = 26.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun RealGlassBubbleMedal(
+    displayMedal: MedalItem,
+    modifier: Modifier = Modifier
+) {
+    // Har 3 second (3000ms) me ek baar glass bubble ke andar shining sweep aayegi
+    val infiniteTransition = rememberInfiniteTransition(label = "glassBubbleShine")
+    val shineCycle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "glassBubbleShineCycle"
+    )
+
+    Box(
+        modifier = modifier.clip(CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        // 1. Glass Bubble Back Depth (image ke peeche halka translucent glass tint)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val radius = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.White.copy(alpha = 0.03f),
+                        0.68f to Color(0xFFD8F0FF).copy(alpha = 0.06f),
+                        0.88f to Color(0xFFBFE6FF).copy(alpha = 0.16f),
+                        1.0f to Color.White.copy(alpha = 0.28f)
+                    ),
+                    center = center,
+                    radius = radius
+                ),
+                radius = radius,
+                center = center
+            )
+        }
+
+        // 2. Medal Image Bubble ke andar
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
+                StoreVideoPreview(
+                    url = displayMedal.previewVideo.fullUrl,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    mute = true,
+                    loop = true
+                )
+            } else {
+                AsyncImage(
+                    model = displayMedal.video.fullUrl,
+                    contentDescription = displayMedal.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        // 3. Real Glass Bubble Front Reflection + Har 3 Second Shining Sweep
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val radius = size.minDimension / 2f
+            val center = Offset(w / 2f, h / 2f)
+
+            // Spherical Glass Fresnel Edge (center clear, edges glossy glass)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.Transparent,
+                        0.62f to Color.Transparent,
+                        0.82f to Color(0xFFE6F7FF).copy(alpha = 0.12f),
+                        0.93f to Color.White.copy(alpha = 0.30f),
+                        1.0f to Color.White.copy(alpha = 0.52f)
+                    ),
+                    center = center,
+                    radius = radius
+                ),
+                radius = radius,
+                center = center
+            )
+
+            // Har 3 second me bubble ke andar diagonal glass shine sweep (last 0.9s of every 3s cycle)
+            if (shineCycle >= 0.70f) {
+                val t = ((shineCycle - 0.70f) / 0.30f).coerceIn(0f, 1f)
+                val easedT = t * t * (3f - 2f * t)
+                val sweepOffset = -w * 0.85f + (w * 1.70f * easedT)
+                val bandWidth = w * 0.34f
+
+                rotate(degrees = -32f, pivot = center) {
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.28f to Color.White.copy(alpha = 0.18f),
+                                0.50f to Color.White.copy(alpha = 0.68f),
+                                0.72f to Color.White.copy(alpha = 0.18f),
+                                1.0f to Color.Transparent
+                            ),
+                            startX = center.x + sweepOffset - bandWidth / 2f,
+                            endX = center.x + sweepOffset + bandWidth / 2f
+                        ),
+                        topLeft = Offset(center.x + sweepOffset - bandWidth / 2f, -h * 0.5f),
+                        size = Size(bandWidth, h * 2f)
+                    )
+                }
+            }
+
+            // Top-Left Curved Real Glass Specular Highlight
+            rotate(degrees = -35f, pivot = Offset(w * 0.31f, h * 0.24f)) {
+                drawOval(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.72f),
+                            Color.White.copy(alpha = 0.22f),
+                            Color.Transparent
+                        ),
+                        startY = h * 0.16f,
+                        endY = h * 0.32f
+                    ),
+                    topLeft = Offset(w * 0.17f, h * 0.17f),
+                    size = Size(w * 0.28f, h * 0.13f)
+                )
+            }
+
+            // Small secondary specular glint dot (top-left)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.85f),
+                        Color.White.copy(alpha = 0.25f),
+                        Color.Transparent
+                    ),
+                    center = Offset(w * 0.21f, h * 0.36f),
+                    radius = w * 0.045f
+                ),
+                radius = w * 0.045f,
+                center = Offset(w * 0.21f, h * 0.36f)
+            )
+
+            // Bottom-Right Inner Glass Rim Reflection Arc
+            drawArc(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color(0xFFBDE8FF).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.55f),
+                        Color.Transparent
+                    ),
+                    start = Offset(w * 0.45f, h * 0.95f),
+                    end = Offset(w * 0.95f, h * 0.45f)
+                ),
+                startAngle = 15f,
+                sweepAngle = 72f,
+                useCenter = false,
+                topLeft = Offset(w * 0.055f, h * 0.055f),
+                size = Size(w * 0.89f, h * 0.89f),
+                style = Stroke(width = 4.5f, cap = StrokeCap.Round)
+            )
+
+            // Crisp Outer Glass Bubble Border Rim
+            drawCircle(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.82f),
+                        Color(0xFFC4EAFF).copy(alpha = 0.32f),
+                        Color.White.copy(alpha = 0.20f),
+                        Color(0xFFD9F3FF).copy(alpha = 0.65f)
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(w, h)
+                ),
+                radius = radius - 1.5f,
+                center = center,
+                style = Stroke(width = 2.6f)
+            )
         }
     }
 }
