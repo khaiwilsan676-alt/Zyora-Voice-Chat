@@ -2205,3 +2205,8 @@ Current documentation does not certify that all historical features are build-, 
 - All newly added gift videos use the existing `fade` video overlay, including the top-and-bottom fade. Existing picker layout, sending flow, combo controls, and notifications are unchanged.
 - Heart lamp is pending its coin price; it was not made free or added with an invented price.
 - Asset existence and native APK build/device verification remain pending.
+
+
+## 2026-11-25 — Set Heart lamp gift price
+- Added Heart lamp to Hot for 45,000 coins with the supplied image and video assets.
+- Uses the existing top-and-bottom fade video overlay; no other picker behavior or UI changed.
