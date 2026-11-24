@@ -47,8 +47,7 @@ import java.io.File
 import java.net.URL
 
 private const val GITHUB_PUBLIC_BASE =
-    "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-
+    "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 private const val SEAT_BANNER_BASE_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210809.png"
 private const val WELCOME_BANNER_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210639.png"
 private const val THANKS_BANNER_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210722.png"
@@ -116,17 +115,20 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     var activeTab by remember { mutableStateOf("emojis") }
 
     val stickers = listOf(
-        // SABKA EK HI SQUARE SIZE (1.1f)
-        // GIF WALE EMOJI BHI SAME SQUARE SIZE (1.1f)
+        EmojiSticker("gif_512", "Emoji", "${GITHUB_PUBLIC_BASE}512.gif", null, 1.1f),
+        EmojiSticker("gif_1", "Emoji 1", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f),
         EmojiSticker("sad", "Sad", "${GITHUB_PUBLIC_BASE}512%20(6).gif", null, 1.1f),
-        EmojiSticker("party", "Party", "${GITHUB_PUBLIC_BASE}512%20(16).gif", null, 1.1f),
-        EmojiSticker("loving", "Loving", "${GITHUB_PUBLIC_BASE}512%20(15).gif", null, 1.1f),
-        EmojiSticker("smart", "Smart", "${GITHUB_PUBLIC_BASE}512%20(13).gif", null, 1.1f),
-        EmojiSticker("irritating", "Irritating", "${GITHUB_PUBLIC_BASE}512%20(12).gif", null, 1.1f),
+        EmojiSticker("gif_2", "Emoji 2", "${GITHUB_PUBLIC_BASE}512%20(2).gif", null, 1.1f),
+        EmojiSticker("gif_3", "Emoji 3", "${GITHUB_PUBLIC_BASE}512%20(3).gif", null, 1.1f),
+        EmojiSticker("pleading", "Pleading", "${GITHUB_PUBLIC_BASE}512%20(4).gif", null, 1.1f),
+        EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f),
         EmojiSticker("rolling", "Rolling", "${GITHUB_PUBLIC_BASE}512%20(10).gif", null, 1.1f),
         EmojiSticker("unamused", "Unamused", "${GITHUB_PUBLIC_BASE}512%20(11).gif", null, 1.1f),
-        EmojiSticker("pleading", "Pleading", "${GITHUB_PUBLIC_BASE}512%20(4).gif", null, 1.1f),
-        EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f)
+        EmojiSticker("irritating", "Irritating", "${GITHUB_PUBLIC_BASE}512%20(12).gif", null, 1.1f),
+        EmojiSticker("smart", "Smart", "${GITHUB_PUBLIC_BASE}512%20(13).gif", null, 1.1f),
+        EmojiSticker("gif_14", "Emoji 14", "${GITHUB_PUBLIC_BASE}512%20(14).gif", null, 1.1f),
+        EmojiSticker("loving", "Loving", "${GITHUB_PUBLIC_BASE}512%20(15).gif", null, 1.1f),
+        EmojiSticker("party", "Party", "${GITHUB_PUBLIC_BASE}512%20(16).gif", null, 1.1f)
     )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
