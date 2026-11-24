@@ -50,8 +50,9 @@ private object NativeRoomTaskApi {
         val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
         val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token
             ?: error("Authentication token unavailable.")
-        val endpoint = if (claimTaskId == null) "/api/room-owner-tasks/$roomId"
-            else "/api/room-owner-tasks/$roomId/claim"
+        val encodedRoomId = java.net.URLEncoder.encode(roomId, "UTF-8")
+        val endpoint = if (claimTaskId == null) "/api/room-owner-tasks/$encodedRoomId"
+            else "/api/room-owner-tasks/$encodedRoomId/claim"
         val connection = (URL(BASE + endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = if (claimTaskId == null) "GET" else "POST"
             connectTimeout = 12000
@@ -356,7 +357,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         val status = taskStatuses[taskId]
                                         Button(
                                             onClick = {
-                                                if (status?.complete == true && status.claimed != true && claimingTask == 0 && taskRoomId.isNotBlank()) {
+                                                if (status?.complete == true && status?.claimed != true && claimingTask == 0 && taskRoomId.isNotBlank()) {
                                                     claimingTask = taskId
                                                     scope.launch {
                                                         runCatching { NativeRoomTaskApi.request(taskRoomId, taskId) }
