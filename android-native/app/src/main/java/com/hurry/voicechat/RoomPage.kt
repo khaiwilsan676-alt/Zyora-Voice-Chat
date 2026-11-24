@@ -3785,16 +3785,15 @@ private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Un
     val imageSizePx = with(density) { 58.dp.toPx() }
     val arcHeightPx = with(density) { 14.dp.toPx() }
 
-    // Small from the picker -> large at screen centre -> hold 0.8s -> return
-    // to the recipient avatar at the original small size.
+    // Quick flight in/out with the same 0.8s centre hold.
     LaunchedEffect(flight.id) {
-        progress.animateTo(1f, animationSpec = tween(1350, easing = LinearEasing))
+        progress.animateTo(1f, animationSpec = tween(1100, easing = LinearEasing))
         onFinished()
     }
 
     val p = progress.value.coerceIn(0f, 1f)
-    val enterEnd = 0.185f
-    val holdEnd = 0.778f
+    val enterEnd = 0.136f
+    val holdEnd = 0.864f
     val firstLeg = p < enterEnd
     val lastLeg = p >= holdEnd
     val t = when {
