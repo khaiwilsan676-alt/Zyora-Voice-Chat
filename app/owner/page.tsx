@@ -858,8 +858,43 @@ export default function StaffPanel() {
   useEffect(() => {
     let active = true;
     if (activeTab === 'wallet') {
-      loadMasterWalletHistory().then(rows => { if (active) setMasterWalletHistory(rows); });
-      loadLuckyBagHistory().then(rows => { if (active) setLuckyBagHistory(rows); });
+      loadMasterWalletHistory().then(async rows => {
+        if (!active) return;
+        setMasterWalletHistory(rows);
+        // Older transferHistory rows may predate avatar capture. Resolve missing
+        // DPs from the canonical user profile endpoint and persist the result
+        // back into the same Owner Panel IndexedDB history.
+        const missingAvatarRows = rows.filter(item => !String(item.avatar || '').trim() && String(item.accountId || item.userId || '').trim());
+        const uniqueIds = [...new Set(missingAvatarRows.map(item => String(item.accountId || item.userId).trim()))];
+        const profiles = new Map<string, string>();
+        await Promise.all(uniqueIds.map(async accountId => {
+          try {
+            const response = await fetch(apiUrl('/api/users?accountId=' + encodeURIComponent(accountId)), {
+              cache: 'no-store',
+              headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            const user = (Array.isArray(data?.users) ? data.users : data?.user ? [data.user] : [])[0];
+            const avatar = String(user?.image || user?.dp || user?.photo || user?.photoURL || user?.photoUrl || user?.avatar || user?.avatarUrl || user?.profileImage || user?.profileImageUrl || user?.profile_image || user?.imageUrl || user?.picture || '').trim();
+            if (avatar && avatar !== '/default-avatar.png' && avatar !== 'null' && avatar !== 'undefined') profiles.set(accountId, avatar);
+          } catch (error) {
+            console.warn('Master wallet avatar refresh failed for', accountId, error);
+          }
+        }));
+        if (!active || profiles.size === 0) return;
+        const refreshed = await Promise.all(rows.map(async item => {
+          const accountId = String(item.accountId || item.userId || '').trim();
+          const avatar = String(item.avatar || '').trim() || profiles.get(accountId) || '';
+          if (avatar && avatar !== item.avatar) {
+            const updated = { ...item, avatar };
+            await saveMasterWalletHistory(updated);
+            return updated;
+          }
+          return item;
+        }));
+        if (active) setMasterWalletHistory(refreshed);
+      }).catch(error => console.error('Master wallet history load failed:', error));
     }
     return () => { active = false; };
   }, [activeTab]);
@@ -2650,31 +2685,6 @@ export default function StaffPanel() {
                       )) : (
                         <tr><td colSpan={6} className="px-5 py-14 text-center text-sm font-medium text-slate-400">No transfer history yet</td></tr>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-              <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-5 py-5 md:px-6">
-                  <h2 className="text-lg font-black text-slate-900">Lucky Bag Transactions</h2>
-                  <p className="mt-1 text-xs text-slate-500">Saved in this Owner Panel browser IndexedDB</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] border-collapse text-left">
-                    <thead><tr className="border-b border-slate-100 bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
-                      <th className="px-5 py-3">S.No</th><th className="px-4 py-3">User ID</th><th className="px-4 py-3">Type</th><th className="px-4 py-3 text-right">Coins</th><th className="px-4 py-3">Bag ID</th><th className="px-5 py-3 text-right">Date Time</th>
-                    </tr></thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {luckyBagHistory.length > 0 ? luckyBagHistory.map((item, idx) => (
-                        <tr key={item.id} className="transition-colors hover:bg-slate-50">
-                          <td className="px-5 py-3 text-xs font-bold text-slate-500">{idx + 1}</td>
-                          <td className="px-4 py-3 text-xs font-bold text-slate-700">{item.userId}</td>
-                          <td className="px-4 py-3 text-xs font-bold text-slate-800">{String(item.type).replaceAll('_', ' ')}</td>
-                          <td className="px-4 py-3 text-right text-sm font-black tabular-nums">{Number(item.amount || 0).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-xs text-slate-500">{item.bagId || '—'}</td>
-                          <td className="px-5 py-3 text-right text-xs font-semibold text-slate-500">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</td>
-                        </tr>
-                      )) : <tr><td colSpan={6} className="px-5 py-14 text-center text-sm font-medium text-slate-400">No Lucky Bag transactions yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
