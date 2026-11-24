@@ -122,7 +122,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     .onSuccess { response ->
                         val array = response.optJSONArray("tasks")
                         if (array != null) {
-                            taskStatuses = (0 until array.length()).mapNotNull { index ->
+                            val updatedStatuses = (0 until array.length()).mapNotNull { index ->
                                 array.optJSONObject(index)?.let { item ->
                                     item.optInt("taskId") to NativeRoomTaskStatus(
                                         item.optBoolean("complete"), item.optBoolean("claimed"),
@@ -130,6 +130,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                     )
                                 }
                             }.toMap()
+                            if (updatedStatuses != taskStatuses) taskStatuses = updatedStatuses
                         }
                     }
                     .onFailure { /* transient refresh failure; retain last known task state */ }
@@ -300,7 +301,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     modifier = Modifier.fillMaxWidth().offset(y = (-25).dp).zIndex(1f),
                     verticalArrangement = Arrangement.spacedBy((-60).dp)
                 ) {
-                    tasks.forEach { task ->
+                    tasks.forEachIndexed { taskIndex, task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)) {
 
                             AsyncImage(
@@ -346,7 +347,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         contentScale = ContentScale.Fit
                                     )
 
-                                    val taskId = tasks.indexOf(task) + 1
+                                    val taskId = taskIndex + 1
                                     val status = taskStatuses[taskId]
                                     Column(
                                         modifier = Modifier.weight(1f).padding(start = 12.dp),
