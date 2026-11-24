@@ -741,7 +741,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 125.dp),
+                .padding(end = 12.dp, bottom = 110.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(0.2.dp)
         ) {
