@@ -931,7 +931,10 @@ fun RoomListCard(
         else RAW + room.image.trimStart('/')
     }
 
-    Column(modifier.fillMaxWidth().clickable { onRoom(room) }) {
+    Column(modifier.fillMaxWidth().clickable(
+        interactionSource = null,
+        indication = null
+    ) { onRoom(room) }) {
         Box(
             Modifier
                 .fillMaxWidth()
