@@ -1101,8 +1101,7 @@ fun LuckyGiftNotificationSlider(
                         )
                         .padding(start = 4.dp, end = 18.dp, top = 2.dp, bottom = 2.dp)
                         .height(38.dp)
-                        .wrapContentWidth()
-                        .widthIn(max = 400.dp),
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
@@ -1116,7 +1115,7 @@ fun LuckyGiftNotificationSlider(
                     Spacer(Modifier.width(6.dp))
                     
                     // HIGHLIGHT: fill = false so name doesn't take extra space
-                    Column(Modifier.weight(1f, fill = false).widthIn(max = 150.dp), verticalArrangement = Arrangement.Center) {
+                    Column(Modifier.weight(1f).widthIn(min = 0.dp), verticalArrangement = Arrangement.Center) {
                         Text(
                             text = topText,
                             color = Color.White,
