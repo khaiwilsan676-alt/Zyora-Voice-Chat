@@ -259,7 +259,7 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                         IconButton(onClick = { showRules = false }, modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
-                        Text("Lucky Packet", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Rules", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp)) {
                         Text("- Rule -", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
