@@ -529,28 +529,23 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Restore the original bottom decorative image position (80dp upward).
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .zIndex(10f)
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            val shiftUp = 80.dp.roundToPx()
-                            layout(placeable.width, (placeable.height - shiftUp).coerceAtLeast(0)) {
-                                placeable.placeRelative(0, -shiftUp)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = raw + "file_0000000066c88211aa777b1f6da8683f.png",
-                        contentDescription = "Frame Bottom Border",
-                        modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
-                        contentScale = ContentScale.FillWidth
-                    )
-                }
             }
+        }
+
+        // Pin the decorative frame to the actual screen bottom, outside the scrolling content.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .zIndex(10f),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            AsyncImage(
+                model = raw + "file_0000000066c88211aa777b1f6da8683f.png",
+                contentDescription = "Frame Bottom Border",
+                modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
+                contentScale = ContentScale.FillWidth
+            )
         }
 
         if (rules) Box(
