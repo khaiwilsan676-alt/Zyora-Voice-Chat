@@ -41,6 +41,10 @@ import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.resume
+import com.google.firebase.auth.FirebaseUser
 import java.util.Calendar
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
@@ -49,9 +53,37 @@ private data class NativeRoomTaskStatus(val complete: Boolean, val claimed: Bool
 private object NativeRoomTaskApi {
     private const val BASE = "https://zyora-server.onrender.com"
 
+    // MainActivity restores its local session before Firebase may finish restoring
+    // its persisted user. Wait for Firebase's auth-state callback during that window.
+    private suspend fun awaitSignedInUser(): FirebaseUser {
+        val auth = FirebaseAuth.getInstance()
+        auth.currentUser?.let { return it }
+        return withTimeout(15000L) {
+            suspendCancellableCoroutine { continuation ->
+                lateinit var listener: FirebaseAuth.AuthStateListener
+                listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                    val restoredUser = firebaseAuth.currentUser
+                    if (restoredUser != null && continuation.isActive) {
+                        firebaseAuth.removeAuthStateListener(listener)
+                        continuation.resume(restoredUser)
+                    }
+                }
+                auth.addAuthStateListener(listener)
+                continuation.invokeOnCancellation { auth.removeAuthStateListener(listener) }
+                auth.currentUser?.let { restoredUser ->
+                    if (continuation.isActive) {
+                        auth.removeAuthStateListener(listener)
+                        continuation.resume(restoredUser)
+                    }
+                }
+            }
+        }
+    }
+
     suspend fun request(roomId: String, claimTaskId: Int? = null, shareTask: Boolean = false): JSONObject = withContext(Dispatchers.IO) {
-        val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
-        val token = Tasks.await(user.getIdToken(true), 30, TimeUnit.SECONDS).token
+        val user = awaitSignedInUser()
+        // Firebase refreshes expired ID tokens automatically when needed.
+        val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token
             ?: error("Authentication token unavailable.")
         val encodedRoomId = java.net.URLEncoder.encode(roomId, "UTF-8")
         val endpoint = if (claimTaskId == null) "/api/room-owner-tasks/$encodedRoomId"
@@ -529,20 +561,14 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     }
                 }
 
+                // Original bottom frame stays after the task list in scroll content.
+                AsyncImage(
+                    model = raw + "file_0000000066c88211aa777b1f6da8683f.png",
+                    contentDescription = "Frame Bottom Border",
+                    modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
+                    contentScale = ContentScale.FillWidth
+                )
             }
-        }
-
-        // Pin the decorative frame to the actual screen bottom, outside the scrolling content.
-        Box(
-            modifier = Modifier.fillMaxSize().zIndex(10f),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            AsyncImage(
-                model = raw + "file_0000000066c88211aa777b1f6da8683f.png",
-                contentDescription = "Frame Bottom Border",
-                modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
-                contentScale = ContentScale.FillWidth
-            )
         }
 
         if (rules) Box(
