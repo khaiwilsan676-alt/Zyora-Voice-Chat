@@ -213,9 +213,6 @@ fun HomeScreen(
     mineCreatedRoom: HurryRoom? = null,
     mineSelected: Boolean = false,
     languageCode: String = "en",
-    keptRoom: HurryRoom? = null,
-    onOpenKeptRoom: () -> Unit = {},
-    onExitKeptRoom: () -> Unit = {},
     selectedTab: HurryTab = HurryTab.HOME,
     onTabSelected: (HurryTab) -> Unit = {},
     unreadMessageCount: Int = 0
