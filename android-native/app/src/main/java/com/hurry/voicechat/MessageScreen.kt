@@ -292,9 +292,9 @@ fun rememberKeyboardIcon(): ImageVector {
 @Composable
 fun SmallMusicEqualizer() {
     val infiniteTransition = rememberInfiniteTransition(label = "small_eq")
-    val bar1 by infiniteTransition.animateFloat(initialValue = 3f, targetValue = 7f, animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse), label = "b1")
-    val bar2 by infiniteTransition.animateFloat(initialValue = 7f, targetValue = 3f, animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "b2")
-    val bar3 by infiniteTransition.animateFloat(initialValue = 4f, targetValue = 6f, animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "b3")
+    val bar1 by infiniteTransition.animateFloat(initialValue = 3f, targetValue = 7f, animationSpec = infiniteRepeatable(tween(150), RepeatMode.Reverse), label = "b1")
+    val bar2 by infiniteTransition.animateFloat(initialValue = 7f, targetValue = 3f, animationSpec = infiniteRepeatable(tween(180), RepeatMode.Reverse), label = "b2")
+    val bar3 by infiniteTransition.animateFloat(initialValue = 4f, targetValue = 6f, animationSpec = infiniteRepeatable(tween(210), RepeatMode.Reverse), label = "b3")
 
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(1.5.dp)) {
         Box(Modifier.width(1.5.dp).height(bar1.dp).background(Color.White, CircleShape))
@@ -914,7 +914,7 @@ fun NativeChatScreen(
         initialValue = 4f,
         targetValue = 12f,
         animationSpec = infiniteRepeatable(
-            animation = tween(400, easing = LinearEasing),
+            animation = tween(150, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ), label = "bar1"
     )
@@ -922,7 +922,7 @@ fun NativeChatScreen(
         initialValue = 12f,
         targetValue = 4f,
         animationSpec = infiniteRepeatable(
-            animation = tween(500, easing = LinearEasing),
+            animation = tween(180, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ), label = "bar2"
     )
@@ -930,7 +930,7 @@ fun NativeChatScreen(
         initialValue = 6f,
         targetValue = 10f,
         animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = LinearEasing),
+            animation = tween(210, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ), label = "bar3"
     )
