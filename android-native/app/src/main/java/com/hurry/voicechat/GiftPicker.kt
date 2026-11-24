@@ -111,6 +111,23 @@ private val hotGifts = listOf(
         video = "/alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2003, "Castle Night", 170000, "/IMG_20261124_165043.png",
         video = "/alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2004, "Christmas Deer", 24900, "/IMG_20261125_014144.png",
+        video = "/alioss_4_wm_20261119100204_45937~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2005, "Liffy lipstick", 12900, "/IMG_20261125_014203.png",
+        video = "/alioss_29_2025112718560649595~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2006, " ", 9999, "/IMG_20261125_014233.png",
+        video = "/alioss_28_2026032011584793951~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2007, "Heart lamp", 0, "/IMG_20261125_014348.png",
+        video = "/alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2008, "Heartbeat", 120999, "/IMG_20261125_014410.png",
+        video = "/alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2009, "Desert Aura", 55000, "/IMG_20261125_014422.png",
+        video = "/alioss_20_2026111817155739325~2.mp4", videoStyle = "fade", sideFade = true),
+)
+
+private val luxuryGifts = listOf(
+    GiftPickerGift(3001, "Golden tiger", 1_000_000, "/file_000000008a8c821186f5941d97193ee7.png",
+        video = "/alioss_28_2025121214091492750~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
 private val standardGifts = listOf(
@@ -192,6 +209,7 @@ fun GiftPicker(
     val currentGifts = when (activeTab) {
         "Lucky" -> standardGifts
         "Hot" -> hotGifts
+        "Luxury" -> luxuryGifts
         else -> emptyList()
     }
 
@@ -794,7 +812,7 @@ private fun GiftCard(
         ) {
             val size = if (gift.noMask) 48.dp else 64.dp
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
-            val isHotEdgeFade = activeTab == "Hot" && (gift.id == 2001 || gift.id == 2002 || gift.id == 2003)
+            val isHotEdgeFade = activeTab == "Hot" && (gift.id == 2001 || gift.id == 2002 || gift.id == 2003 || gift.id in 2004..2009)
 
             Box(
                 Modifier
