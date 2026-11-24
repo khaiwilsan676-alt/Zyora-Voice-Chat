@@ -1117,11 +1117,11 @@ private fun HurryCategoryCard(
         AsyncImage(model = bg, contentDescription = label, modifier = Modifier.fillMaxSize().offset(y = 1.dp).graphicsLayer { val s = if (label.equals("Honour", true)) 1.08f else 1.02f; scaleX = s; scaleY = s }, contentScale = ContentScale.Fit)
         Text(text = label.uppercase(), modifier = Modifier.fillMaxWidth().padding(top = 16.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 3.dp, end = 3.dp, bottom = 2.dp)) {
-            Row(Modifier.matchParentSize().offset(y = (-1).dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.matchParentSize().offset(x = (-2).dp, y = 0.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 (0..2).forEach { index ->
                     val avatar = topThreeAvatars.getOrNull(index).orEmpty()
                     val avatarModifier = Modifier
-                        .offset(x = if (index == 0) (-4).dp else if (index == 2) 4.dp else 0.dp)
+                        .offset(x = if (index == 0) (-4).dp else if (index == 2) 2.dp else 0.dp, y = 1.dp)
                         .size(if (index == 1) 31.dp else 26.dp)
                         .clip(RoundedCornerShape(50))
                     if (avatar.isBlank()) {
