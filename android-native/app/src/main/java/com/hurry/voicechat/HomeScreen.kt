@@ -132,6 +132,7 @@ private object NativeRoomMemoryCache {
     var rooms by mutableStateOf<List<HurryRoom>?>(null)
     var lastRefreshAt: Long = 0L
     var refreshInFlight: Boolean = false
+    var isRefreshing by mutableStateOf(false)
     val manualRefresh = Channel<Unit>(Channel.CONFLATED)
 }
 
@@ -316,7 +317,7 @@ fun HomeScreen(
         // The refresh remains a full snapshot so deleted rooms are still removed correctly.
         // Keep the cached Room/DB snapshot on screen; refresh the full server snapshot
         // less frequently so background network traffic does not compete with scrolling.
-        val refreshIntervalMs = 300_000L
+        val refreshIntervalMs = 150_000L
         var forceRefresh = false
         while (true) {
             val lastRefreshAt = NativeRoomMemoryCache.lastRefreshAt
@@ -338,6 +339,7 @@ fun HomeScreen(
                 continue
             }
             NativeRoomMemoryCache.refreshInFlight = true
+            NativeRoomMemoryCache.isRefreshing = true
             try {
                 val update = HurryApi.roomsUpdatedSince(0L)
                 if (update != null) {
@@ -370,9 +372,10 @@ fun HomeScreen(
                 // A failed/timeout request never replaces a confirmed snapshot with [].
             } finally {
                 NativeRoomMemoryCache.refreshInFlight = false
+                NativeRoomMemoryCache.isRefreshing = false
             }
-            // Also back off after failed/offline requests instead of retrying every 15 seconds.
-            withTimeoutOrNull(300_000L) {
+            // Wait 150 seconds after each automatic refresh; pull-down bypasses this wait.
+            withTimeoutOrNull(150_000L) {
                 NativeRoomMemoryCache.manualRefresh.receive()
             }
         }
@@ -488,13 +491,29 @@ fun HomeScreen(
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                if (pullDistance >= 72f) NativeRoomMemoryCache.manualRefresh.trySend(Unit)
+                if (pullDistance >= 72f) {
+                    NativeRoomMemoryCache.isRefreshing = true
+                    NativeRoomMemoryCache.manualRefresh.trySend(Unit)
+                }
                 pullDistance = 0f
                 return Velocity.Zero
             }
         }
     }
     Box(Modifier.fillMaxSize()) {
+        if (pullDistance >= 24f || NativeRoomMemoryCache.isRefreshing) {
+            Box(
+                Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
+                    .size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.96f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color(0xFF2563EB),
+                    strokeWidth = 2.dp
+                )
+            }
+        }
         
         Column(
             Modifier.fillMaxSize()
