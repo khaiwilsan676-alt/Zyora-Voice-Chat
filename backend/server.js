@@ -3599,7 +3599,7 @@ io.on("connection", (socket) => {
 
     if (action === "take") {
       // Validate target first. Never release an existing seat for an invalid target.
-      if ((current.isLocked && !current.isOccupied) ||
+      if ((current.isLocked && !canModerateSeats && !current.isOccupied) ||
           (current.isOccupied && String(current.user?.accountId || current.user?.userId || "") !== actorId)) {
         emitRoomSeats(roomId);
         return;
@@ -3617,7 +3617,7 @@ io.on("connection", (socket) => {
       }
 
       seats.set(seatNumber, {
-        ...current, number: seatNumber, isOccupied: true,
+        ...current, number: seatNumber, isOccupied: true, isLocked: false,
         user: {
           name: data.user?.name || "User",
           image: data.user?.image || "/default-avatar.png",
