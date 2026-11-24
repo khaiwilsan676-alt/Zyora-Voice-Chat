@@ -74,22 +74,6 @@ class Collection {
   async mutate(fn) { const run=this.queue.then(async()=>{ for(let n=0;n<4;n++){ const x=await this.load(); const out=await fn(x.docs); try { const saved=await this.save(x.docs,x.sha); return {...out, acknowledged:true, commit:saved.commit&&saved.commit.sha}; } catch(e){if(![409,422].includes(e.status)||n===3) throw e;} } }); this.queue=run.catch(()=>{}); return run; }
   async findOne(q={},opts={}) { const {docs}=await this.load(); const d=docs.find(x=>matches(x,q)); return d?projection(d,opts.projection||opts):null; }
   find(q={}) { const c=this; const cursor={q,sortSpec:null,cap:Infinity,proj:null,sort(s){this.sortSpec=s;return this;},limit(n){this.cap=n;return this;},project(p){this.proj=p;return this;},async toArray(){let {docs}=await c.load(); docs=docs.filter(x=>matches(x,this.q)); if(this.sortSpec){const ent=Object.entries(this.sortSpec);docs.sort((a,b)=>{for(const [k,d] of ent){const av=val(a,k),bv=val(b,k);if(equal(av,bv))continue;return (av>bv?1:-1)*d;}return 0;});} return docs.slice(0,this.cap).map(x=>projection(x,this.proj));}}; return cursor; }
-  async bulkUpsert(records=[]) {
-    return this.mutate(docs=>{
-      const changed=[];
-      for(const incoming of records){
-        if(!incoming || !incoming.key) continue;
-        const index=docs.findIndex(doc=>doc.key===incoming.key);
-        if(index<0){const doc={...incoming,_id:crypto.randomUUID()};docs.push(doc);changed.push(incoming);continue;}
-        if(Number(incoming.updatedAt||0)>=Number(docs[index].updatedAt||0)){
-          const before=JSON.stringify(docs[index]);
-          docs[index]={...docs[index],...incoming};
-          if(before!==JSON.stringify(docs[index])) changed.push(incoming);
-        }
-      }
-      return {changed};
-    });
-  }
   async insertOne(doc) { const d={...doc,_id:doc._id||crypto.randomUUID()}; return this.mutate(docs=>{docs.push(d);return {insertedId:d._id};}); }
   async updateOne(q,update,opts={}) { return this.mutate(docs=>{let i=docs.findIndex(d=>matches(d,q));let inserted=false;if(i<0&&opts.upsert){const base={};for(const [k,v] of Object.entries(q))if(!k.startsWith("$")&&(!v||typeof v!=="object"||v instanceof Date))setPath(base,k,v);base._id=crypto.randomUUID();docs.push(base);i=docs.length-1;inserted=true;}if(i<0)return {matchedCount:0,modifiedCount:0,upsertedId:null};const before=JSON.stringify(docs[i]);docs[i]=apply(docs[i],update,inserted);return {matchedCount:inserted?0:1,modifiedCount:before===JSON.stringify(docs[i])?0:1,upsertedId:inserted?docs[i]._id:null};}); }
   async updateMany(q,update) { return this.mutate(docs=>{let n=0;docs.forEach((d,i)=>{if(matches(d,q)){docs[i]=apply(d,update);n++;}});return {matchedCount:n,modifiedCount:n};}); }
