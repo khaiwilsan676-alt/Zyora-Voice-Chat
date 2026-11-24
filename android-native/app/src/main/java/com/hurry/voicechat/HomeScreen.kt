@@ -1114,7 +1114,7 @@ private fun HurryCategoryCard(
                 (0..2).forEach { index ->
                     val avatar = topThreeAvatars.getOrNull(index).orEmpty()
                     val avatarModifier = Modifier
-                        .offset(x = if (index == 0) (-4).dp else if (index == 2) 2.dp else 0.dp, y = 1.dp)
+                        .offset(x = if (index == 0) (-2).dp else if (index == 2) 4.dp else 0.dp, y = if (index == 1) (-1).dp else 1.dp)
                         .size(if (index == 1) 31.dp else 26.dp)
                         .clip(RoundedCornerShape(50))
                     if (avatar.isBlank()) {
