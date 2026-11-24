@@ -1333,8 +1333,16 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      scope.launch {
       // Server snapshot is canonical; never add unconfirmed device deltas.
       walletStateMutex.withLock {
-       val appliedId = payload.optString("transactionId")
-       if (appliedId.isNotBlank()) NativeWalletPending.acknowledge(context, walletAccountId, appliedId)
+       val appliedIds = payload.optJSONArray("transactionIds")
+       if (appliedIds != null) {
+        for (index in 0 until appliedIds.length()) {
+         appliedIds.optString(index).takeIf { it.isNotBlank() }
+          ?.let { NativeWalletPending.acknowledge(context, walletAccountId, it) }
+        }
+       } else {
+        payload.optString("transactionId").takeIf { it.isNotBlank() }
+         ?.let { NativeWalletPending.acknowledge(context, walletAccountId, it) }
+       }
        val remainingDelta = NativeWalletPending.delta(context, walletAccountId)
        val visibleBalance = (updatedBalance + remainingDelta).coerceAtLeast(0L)
        balance = visibleBalance
