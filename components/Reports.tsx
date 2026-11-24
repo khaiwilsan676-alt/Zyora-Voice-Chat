@@ -82,7 +82,8 @@ const getReason = (report: any) => {
 const getStatus = (report: any) => REPORT_STATUSES.includes(report.status) ? report.status : 'Open';
 
 export default function Reports() {
-  const [reports, setReports] = useState<any[]>([]);\n  const [userProfiles, setUserProfiles] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [userProfiles, setUserProfiles] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
@@ -96,6 +97,10 @@ export default function Reports() {
     void loadLocalReports().then((items) => {
       if (mounted) setReports(items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
     });
+    void fetch(apiUrl('/api/users'), { cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Users API unavailable')))
+      .then(data => { if (mounted) setUserProfiles(Array.isArray(data?.users) ? data.users : []); })
+      .catch(error => console.error('Owner Reports app ID lookup failed:', error));
 
     if (!socket.connected) socket.connect();
     const handleNewReport = (incoming: any) => {
@@ -285,8 +290,8 @@ export default function Reports() {
             <h3 id="report-detail-title" className="mb-5 text-xl font-bold text-slate-800">Report</h3>
             <div className="space-y-4">
               {[
-                ['Reporter ID', getReporterId(selectedReport)],
-                ['Target', getTargetId(selectedReport)],
+                ['Reporter ID', getReporterId(selectedReport, userProfiles)],
+                ['Target', getTargetId(selectedReport, userProfiles)],
                 ['Status', getStatus(selectedReport)],
               ].map(([label, value]) => (
                 <div key={label}>
