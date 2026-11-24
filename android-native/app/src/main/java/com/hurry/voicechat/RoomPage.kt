@@ -274,6 +274,7 @@ fun RoomPage(
     val canonicalWalletUserId = appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
         .getString("uid", null)?.takeIf { it.isNotBlank() }
         ?: accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
+    var roomWalletEventAt by remember(canonicalWalletUserId) { mutableLongStateOf(0L) }
 
     LaunchedEffect(canonicalWalletUserId) {
         if (canonicalWalletUserId.isBlank() || canonicalWalletUserId == "guest") return@LaunchedEffect
@@ -1325,7 +1326,13 @@ fun RoomPage(
             // while the initial wallet read uses Firebase UID. Accept both aliases.
             if (eventUserId in ownWalletIds) {
                 val updated = payload.optLong("balance", -1L)
-                if (updated >= 0L) mainHandler.post { roomWalletBalance = updated }
+                val eventAt = payload.optLong("updatedAt", System.currentTimeMillis())
+                if (updated >= 0L && eventAt >= roomWalletEventAt) mainHandler.post {
+                    if (eventAt >= roomWalletEventAt) {
+                        roomWalletEventAt = eventAt
+                        roomWalletBalance = updated
+                    }
+                }
             }
         }
         val luckyBagTransactionListener = Emitter.Listener { args ->
