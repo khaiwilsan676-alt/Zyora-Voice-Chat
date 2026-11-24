@@ -443,6 +443,7 @@ fun GiftPicker(
                                             )
                                             if (roleLabel != null) {
                                                 Surface(
+                                                    modifier = Modifier.align(Alignment.CenterHorizontally),
                                                     color = Blue500,
                                                     shape = RoundedCornerShape(50),
                                                     border = BorderStroke(0.75.dp, Color.White),
