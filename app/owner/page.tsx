@@ -71,6 +71,7 @@ const saveFeedbackToIndexedDB = async (feedbackData: any) => {
     const transaction = db.transaction(["userFeedbacks"], "readwrite");
     const store = transaction.objectStore("userFeedbacks");
     store.put(feedbackData);
+    publishOwnerSharedRecord("userFeedbacks", feedbackData);
     db.close();
   } catch (err) {
     console.error("Error saving user feedback to IndexedDB:", err);
@@ -131,6 +132,7 @@ const saveSupportChatToIndexedDB = async (chatData: any) => {
     const transaction = db.transaction(["supportChats"], "readwrite");
     const store = transaction.objectStore("supportChats");
     store.put(chatData);
+    publishOwnerSharedRecord("supportChats", chatData);
     db.close();
   } catch (err) {
     console.error("Error saving support chat to IndexedDB:", err);
@@ -174,7 +176,9 @@ const saveOwnerPrivateMessagesToIndexedDB = async (messages: any[]): Promise<voi
       messages.forEach((message) => {
         if (!message) return;
         const id = String(message.id || `${message.senderId || ""}_${message.timestamp || 0}`);
-        store.put({ ...message, id });
+        const normalized = { ...message, id };
+        store.put(normalized);
+        publishOwnerSharedRecord("privateMessages", normalized);
       });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -215,11 +219,9 @@ const saveLuckyBagHistory = async (record: any): Promise<void> => {
   const db = await openLuckyBagDB();
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(LUCKY_BAG_STORE, "readwrite");
-    transaction.objectStore(LUCKY_BAG_STORE).put({
-      id: String(record.id), userId: String(record.userId), type: String(record.type),
-      amount: Number(record.amount || 0), bagId: String(record.bagId || ""),
-      createdAt: Number(record.createdAt || Date.now())
-    });
+    const normalized = { id: String(record.id), userId: String(record.userId), type: String(record.type), amount: Number(record.amount || 0), bagId: String(record.bagId || ""), createdAt: Number(record.createdAt || Date.now()) };
+    transaction.objectStore(LUCKY_BAG_STORE).put(normalized);
+    publishOwnerSharedRecord("transactions", normalized);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error || new Error("Lucky Bag history save aborted"));
@@ -265,11 +267,9 @@ const saveMasterWalletHistory = async (record: any): Promise<void> => {
   const db = await openMasterWalletDB();
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(MASTER_WALLET_STORE, "readwrite");
-    transaction.objectStore(MASTER_WALLET_STORE).put({
-      id: String(record.id), userId: String(record.userId), accountId: String(record.accountId || ""),
-      name: String(record.name || "User"), avatar: String(record.avatar || ""),
-      amount: Number(record.amount), timestamp: Number(record.timestamp || Date.now()), status: "completed"
-    });
+    const normalized = { id: String(record.id), userId: String(record.userId), accountId: String(record.accountId || ""), name: String(record.name || "User"), avatar: String(record.avatar || ""), amount: Number(record.amount), timestamp: Number(record.timestamp || Date.now()), status: "completed" };
+    transaction.objectStore(MASTER_WALLET_STORE).put(normalized);
+    publishOwnerSharedRecord("transferHistory", normalized);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error || new Error("History save aborted"));
@@ -288,7 +288,7 @@ const saveInviteBindIds = async (rows: any[]) => {
   const db = await openInviteBindDB();
   try { await new Promise<void>((resolve, reject) => {
     const tx = db.transaction("bindUserIds", "readwrite");
-    rows.forEach(row => { if (row?.id && row?.inviterId) tx.objectStore("bindUserIds").put({ id: String(row.id), inviterId: String(row.inviterId), timestamp: Number(row.timestamp || Date.now()) }); });
+    rows.forEach(row => { if (row?.id && row?.inviterId) { const normalized = { id: String(row.id), inviterId: String(row.inviterId), timestamp: Number(row.timestamp || Date.now()) }; tx.objectStore("bindUserIds").put(normalized); publishOwnerSharedRecord("bindUserIds", normalized); } });
     tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
   }); } finally { db.close(); }
 };
@@ -302,6 +302,77 @@ const loadInviteBindIds = async (): Promise<any[]> => {
 };
 
 
+
+
+
+// Shared Owner Panel IndexedDB replication. IndexedDB remains a local cache;
+// the authenticated backend collection is the cross-device source of truth.
+const OWNER_SHARED_DB_STORES = [
+  { db: "HurryFeedbackDB", store: "userFeedbacks", key: "id" },
+  { db: "HurrySupportDB", store: "supportChats", key: "userId" },
+  { db: "ZyoraPrivateMessagesDB", store: "privateMessages", key: "id" },
+  { db: "ZyoraOwnerLuckyBagDB", store: "transactions", key: "id" },
+  { db: "ZyoraMasterWalletDB", store: "transferHistory", key: "id" },
+  { db: "ZyoraOwnerInviteDB", store: "bindUserIds", key: "id" },
+  { db: "ZyoraReportsDB", store: "userReports", key: "id" },
+] as const;
+
+const readOwnerSharedStore = async (config: typeof OWNER_SHARED_DB_STORES[number]): Promise<any[]> => {
+  if (typeof window === "undefined" || !window.indexedDB) return [];
+  return new Promise((resolve) => {
+    const request = window.indexedDB.open(config.db, 1);
+    request.onerror = () => resolve([]);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(config.store)) {
+        request.result.createObjectStore(config.store, { keyPath: config.key });
+      }
+    };
+    request.onsuccess = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(config.store)) { database.close(); resolve([]); return; }
+      const read = database.transaction(config.store, "readonly").objectStore(config.store).getAll();
+      read.onsuccess = () => { const rows = Array.isArray(read.result) ? read.result : []; database.close(); resolve(rows); };
+      read.onerror = () => { database.close(); resolve([]); };
+    };
+  });
+};
+
+const writeOwnerSharedStore = async (config: typeof OWNER_SHARED_DB_STORES[number], rows: any[]): Promise<void> => {
+  if (typeof window === "undefined" || !window.indexedDB || !Array.isArray(rows) || !rows.length) return;
+  await new Promise<void>((resolve) => {
+    const request = window.indexedDB.open(config.db, 1);
+    request.onerror = () => resolve();
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(config.store)) request.result.createObjectStore(config.store, { keyPath: config.key });
+    };
+    request.onsuccess = () => {
+      const database = request.result;
+      const tx = database.transaction(config.store, "readwrite");
+      const store = tx.objectStore(config.store);
+      rows.forEach((row) => {
+        if (!row || row[config.key] == null) return;
+        const lookup = store.get(row[config.key]);
+        lookup.onsuccess = () => {
+          const current = lookup.result;
+          const incomingVersion = Number(row.updatedAt || row.timestamp || row.createdAt || 0);
+          const currentVersion = Number(current?.updatedAt || current?.timestamp || current?.createdAt || 0);
+          if (!current || incomingVersion >= currentVersion) store.put(row);
+        };
+      });
+      tx.oncomplete = () => { database.close(); resolve(); };
+      tx.onerror = () => { database.close(); resolve(); };
+      tx.onabort = () => { database.close(); resolve(); };
+    };
+  });
+};
+
+const publishOwnerSharedRecord = (store: string, record: any) => {
+  if (!record || !socket.connected) return;
+  const updatedAt = Date.now();
+  socket.emit("owner_shared_records_upsert", {
+    records: [{ store, record: { ...record, updatedAt }, updatedAt }]
+  });
+};
 
 // TYPES & DATA
 // ==============================================================
@@ -1076,6 +1147,109 @@ export default function StaffPanel() {
       privateChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [privateMessages, selectedPair]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !ownerSessionToken) return;
+    let active = true;
+    let knownKeys = new Set<string>();
+    let serverVersions = new Map<string, number>();
+    const authenticateAndLoad = () => {
+      socket.emit("owner_panel_authenticate", { token: ownerSessionToken }, (authResult: any) => {
+        if (!active || !authResult?.ok) return;
+        socket.emit("owner_shared_snapshot_request");
+      });
+    };
+    const handleSharedRecords = async (payload: any) => {
+      if (!active || !Array.isArray(payload?.records)) return;
+      const grouped = new Map<string, any[]>();
+      payload.records.forEach((entry: any) => {
+        if (!entry?.store || !entry?.record) return;
+        const list = grouped.get(String(entry.store)) || [];
+        const sharedRecord = { ...entry.record, updatedAt: Number(entry.updatedAt || entry.record.updatedAt || 0) };
+        list.push(sharedRecord);
+        grouped.set(String(entry.store), list);
+        const config = OWNER_SHARED_DB_STORES.find(item => item.store === String(entry.store));
+        const keyField = config?.key || "id";
+        if (entry.record[keyField] != null) {
+          const key = String(entry.store) + ":" + String(entry.record[keyField]);
+          knownKeys.add(key);
+          serverVersions.set(key, Number(entry.updatedAt || entry.record.updatedAt || entry.record.timestamp || entry.record.createdAt || 0));
+        }
+      });
+      for (const config of OWNER_SHARED_DB_STORES) {
+        const rows = grouped.get(config.store) || [];
+        if (rows.length) await writeOwnerSharedStore(config, rows);
+      }
+      const feedbackRows = grouped.get("userFeedbacks") || [];
+      if (feedbackRows.length) setFeedbacks(prev => {
+        const map = new Map<string, any>(prev.map(row => [String(row.id), row]));
+        feedbackRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
+        return Array.from(map.values()).sort((x, y) => Number(y.timestamp || 0) - Number(x.timestamp || 0));
+      });
+      const supportRows = grouped.get("supportChats") || [];
+      if (supportRows.length) setSupportChats(prev => {
+        const map = new Map<string, any>(prev.map(row => [String(row.userId), row]));
+        supportRows.forEach(row => {
+          const id = String(row.userId);
+          const old = map.get(id);
+          if (!old || Number(row.timestamp || 0) >= Number(old.timestamp || 0)) map.set(id, { ...old, ...row });
+        });
+        return Array.from(map.values()).sort((x, y) => Number(y.timestamp || 0) - Number(x.timestamp || 0));
+      });
+      const privateRows = grouped.get("privateMessages") || [];
+      if (privateRows.length) setPrivateMessages(prev => {
+        const map = new Map<string, any>();
+        [...prev, ...privateRows].forEach(row => { const id = String(row.id || row.senderId + "_" + row.timestamp); map.set(id, { ...row, id }); });
+        return Array.from(map.values()).sort((x, y) => Number(x.timestamp || 0) - Number(y.timestamp || 0));
+      });
+      const luckyRows = grouped.get("transactions") || [];
+      if (luckyRows.length) setLuckyBagHistory(prev => {
+        const map = new Map<string, any>(prev.map(row => [String(row.id), row]));
+        luckyRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
+        return Array.from(map.values()).sort((x, y) => Number(y.createdAt || 0) - Number(x.createdAt || 0));
+      });
+      const walletRows = grouped.get("transferHistory") || [];
+      if (walletRows.length) setMasterWalletHistory(prev => {
+        const map = new Map<string, any>(prev.map(row => [String(row.id), row]));
+        walletRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
+        return Array.from(map.values()).sort((x, y) => Number(y.timestamp || 0) - Number(x.timestamp || 0));
+      });
+      const inviteRows = grouped.get("bindUserIds") || [];
+      if (inviteRows.length) setInviteBindRows(prev => {
+        const map = new Map<string, any>(prev.map(row => [String(row.id), row]));
+        inviteRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
+        return Array.from(map.values()).sort((x, y) => Number(y.timestamp || 0) - Number(x.timestamp || 0));
+      });
+      // Migrate local-only rows only after the complete server snapshot arrives.
+      // Live deltas must never be mistaken for a full snapshot.
+      if (payload.snapshot === true && !payload.error) {
+        const missing: any[] = [];
+        for (const config of OWNER_SHARED_DB_STORES) {
+          const rows = await readOwnerSharedStore(config);
+          rows.forEach(record => {
+            const key = String(config.store) + ":" + String(record?.[config.key]);
+            const localVersion = Number(record?.updatedAt || record?.timestamp || record?.createdAt || 0);
+            if (record?.[config.key] != null && (!knownKeys.has(key) || localVersion > Number(serverVersions.get(key) || 0))) {
+              missing.push({ store: config.store, record, updatedAt: Number(record.updatedAt || record.timestamp || record.createdAt || Date.now()) });
+              knownKeys.add(key);
+            }
+          });
+        }
+        for (let offset = 0; offset < missing.length; offset += 100) {
+          socket.emit("owner_shared_records_upsert", { records: missing.slice(offset, offset + 100) });
+        }
+      }
+    };
+    socket.on("owner_shared_records", handleSharedRecords);
+    socket.on("connect", authenticateAndLoad);
+    if (socket.connected) authenticateAndLoad();
+    else socket.connect();
+    return () => {
+      active = false;
+      socket.off("owner_shared_records", handleSharedRecords);
+      socket.off("connect", authenticateAndLoad);
+    };
+  }, [isLoggedIn, ownerSessionToken]);
 
   useEffect(() => {
     if (!isLoggedIn || !ownerSessionToken) return;
