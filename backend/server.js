@@ -4422,6 +4422,26 @@ app.get("/api/daily-checkin", async (req, res) => {
     const userId = String(req.query.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "Missing userId" });
     const record = await db.collection("dailyCheckIns").findOne({ userId });
+    // Repair older daily-check-in inventory rows that were incorrectly stored
+    // as permanent. Expiry is anchored to the original grant time, not this GET.
+    const dailyInventory = db.collection("storeInventory");
+    for (const [rewardDay, reward] of Object.entries(DAILY_CHECKIN_REWARDS)) {
+      for (const item of (reward.items || [])) {
+        const durationDays = Math.max(1, Math.min(30, Number(item.durationDays) || 1));
+        const existingItem = await dailyInventory.findOne({ userId, itemId: item.itemId, source: "daily_checkin" });
+        if (!existingItem) continue;
+        const grantedAt = Number(existingItem.purchasedAt) || Date.now();
+        const expiresAt = grantedAt + durationDays * 24 * 60 * 60 * 1000;
+        await dailyInventory.updateOne(
+          { userId, itemId: item.itemId, source: "daily_checkin" },
+          { $set: {
+            duration: `${durationDays} Days`,
+            expiresAt,
+            ...(expiresAt <= Date.now() ? { equipped: false } : {})
+          } }
+        );
+      }
+    }
     const today = indiaDateKey();
     const claimedToday = String(record?.claimedDate || "") === today;
     res.json({
