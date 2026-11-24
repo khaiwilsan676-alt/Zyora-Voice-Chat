@@ -349,7 +349,16 @@ const writeOwnerSharedStore = async (config: typeof OWNER_SHARED_DB_STORES[numbe
       const database = request.result;
       const tx = database.transaction(config.store, "readwrite");
       const store = tx.objectStore(config.store);
-      rows.forEach((row) => { if (row && row[config.key] != null) store.put(row); });
+      rows.forEach((row) => {
+        if (!row || row[config.key] == null) return;
+        const lookup = store.get(row[config.key]);
+        lookup.onsuccess = () => {
+          const current = lookup.result;
+          const incomingVersion = Number(row.updatedAt || row.timestamp || row.createdAt || 0);
+          const currentVersion = Number(current?.updatedAt || current?.timestamp || current?.createdAt || 0);
+          if (!current || incomingVersion >= currentVersion) store.put(row);
+        };
+      });
       tx.oncomplete = () => { database.close(); resolve(); };
       tx.onerror = () => { database.close(); resolve(); };
       tx.onabort = () => { database.close(); resolve(); };
@@ -359,8 +368,9 @@ const writeOwnerSharedStore = async (config: typeof OWNER_SHARED_DB_STORES[numbe
 
 const publishOwnerSharedRecord = (store: string, record: any) => {
   if (!record || !socket.connected) return;
+  const updatedAt = Date.now();
   socket.emit("owner_shared_records_upsert", {
-    records: [{ store, record, updatedAt: Date.now() }]
+    records: [{ store, record: { ...record, updatedAt }, updatedAt }]
   });
 };
 
@@ -1133,6 +1143,7 @@ export default function StaffPanel() {
     if (!isLoggedIn || !ownerSessionToken) return;
     let active = true;
     let knownKeys = new Set<string>();
+    let serverVersions = new Map<string, number>();
     const authenticateAndLoad = () => {
       socket.emit("owner_panel_authenticate", { token: ownerSessionToken }, (authResult: any) => {
         if (!active || !authResult?.ok) return;
@@ -1145,11 +1156,16 @@ export default function StaffPanel() {
       payload.records.forEach((entry: any) => {
         if (!entry?.store || !entry?.record) return;
         const list = grouped.get(String(entry.store)) || [];
-        list.push(entry.record);
+        const sharedRecord = { ...entry.record, updatedAt: Number(entry.updatedAt || entry.record.updatedAt || 0) };
+        list.push(sharedRecord);
         grouped.set(String(entry.store), list);
         const config = OWNER_SHARED_DB_STORES.find(item => item.store === String(entry.store));
         const keyField = config?.key || "id";
-        if (entry.record[keyField] != null) knownKeys.add(String(entry.store) + ":" + String(entry.record[keyField]));
+        if (entry.record[keyField] != null) {
+          const key = String(entry.store) + ":" + String(entry.record[keyField]);
+          knownKeys.add(key);
+          serverVersions.set(key, Number(entry.updatedAt || entry.record.updatedAt || entry.record.timestamp || entry.record.createdAt || 0));
+        }
       });
       for (const config of OWNER_SHARED_DB_STORES) {
         const rows = grouped.get(config.store) || [];
@@ -1203,7 +1219,8 @@ export default function StaffPanel() {
           const rows = await readOwnerSharedStore(config);
           rows.forEach(record => {
             const key = String(config.store) + ":" + String(record?.[config.key]);
-            if (record?.[config.key] != null && !knownKeys.has(key)) {
+            const localVersion = Number(record?.updatedAt || record?.timestamp || record?.createdAt || 0);
+            if (record?.[config.key] != null && (!knownKeys.has(key) || localVersion > Number(serverVersions.get(key) || 0))) {
               missing.push({ store: config.store, record, updatedAt: Number(record.updatedAt || record.timestamp || record.createdAt || Date.now()) });
               knownKeys.add(key);
             }
