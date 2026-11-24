@@ -45,6 +45,7 @@ import kotlinx.coroutines.delay
 
 private const val LUCKY_BAG_SOCKET_URL = "https://zyora-server.onrender.com"
 private const val LUCKY_BAG_CARD_PNG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_182446.png"
+private const val LUCKY_BAG_COIN_PNG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png"
 
 private data class LuckyBagBannerData(
     val bagId: String,
@@ -62,6 +63,7 @@ private data class LuckyBagBannerData(
 fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, String) -> Unit) {
     var banner by remember { mutableStateOf<LuckyBagBannerData?>(null) }
     var visible by remember { mutableStateOf(false) }
+    var countdownSeconds by remember { mutableIntStateOf(4) }
 
     DisposableEffect(currentUserId) {
         var socket: Socket? = null
@@ -97,7 +99,12 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
     LaunchedEffect(banner?.bagId) {
         if (banner != null) {
             visible = true
-            delay(5000)
+            countdownSeconds = 4
+            for (sec in 4 downTo 1) {
+                countdownSeconds = sec
+                delay(1000)
+            }
+            delay(1000)
             visible = false
             delay(350)
             banner = null
@@ -221,20 +228,42 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
 
                         Spacer(Modifier.width(8.dp))
 
-                        // Name & Short Text (No Countdown, No Scroll)
+                        // Name + 4s Theme Countdown Circle & Short Text
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(
-                                text = item.senderName,
-                                color = Color(0xFFFFD86B),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                lineHeight = 14.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = item.senderName,
+                                    color = Color(0xFFFFD86B),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    lineHeight = 14.sp,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFB72B3E))
+                                        .border(1.dp, Color(0xFFFFD86B), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = countdownSeconds.toString(),
+                                        color = Color(0xFFFFF2EE),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        lineHeight = 9.sp
+                                    )
+                                }
+                            }
                             Text(
                                 text = "sent you a lucky bag",
                                 color = Color(0xFFFFF2EE),
@@ -246,17 +275,17 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                             )
                         }
 
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(4.dp))
 
-                        // Chhoti si Lucky Bag Card PNG (Open button se pehle)
+                        // Thodi badi Lucky Bag Card PNG (Open button se pehle)
                         AsyncImage(
                             model = LUCKY_BAG_CARD_PNG,
                             contentDescription = "Lucky Bag Card",
-                            modifier = Modifier.size(50.dp),
+                            modifier = Modifier.requiredSize(64.dp),
                             contentScale = ContentScale.Fit
                         )
 
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
 
                         // Open Button (Exact image jaisa pill button)
                         Box(
@@ -425,85 +454,209 @@ fun LuckyBagOpenConfirmCards(
         }
         
         if (showLuckyBagClaimedCard) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { }, contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=15.dp, bottomEnd=15.dp)).clickable(enabled=false){}) {
-                    
-                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=15.dp, bottomEnd=15.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
-                    
-                    Column(
-                        modifier = Modifier.align(Alignment.TopCenter).zIndex(2f).offset(y = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable { },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(0.85f)
+                        .aspectRatio(0.59f)
+                        .clickable(enabled = false) {}
+                ) {
+                    // Red/Coral Outer Back Frame
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(top = 34.dp)
+                            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 24.dp, bottomEnd = 24.dp))
+                            .border(2.dp, Color(0xFFFFD88A), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 24.dp, bottomEnd = 24.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037))))
+                    )
+
+                    // Inner Cream/Ivory Card (Exact screenshot style)
+                    Box(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 34.dp)
+                            .fillMaxWidth(0.93f)
+                            .fillMaxHeight(0.75f)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Brush.verticalGradient(listOf(Color(0xFFFFFAF0), Color(0xFFFFF3DF))))
                     ) {
-                        AsyncImage(
-                            model = luckyBagSenderImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
-                            contentDescription = "Lucky Bag sender avatar",
-                            modifier = Modifier.size(62.dp).clip(CircleShape).border(3.dp, Color(0xFFFFD875), CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Text(
-                            text = "Lucky Bag from ${luckyBagSenderName.ifBlank { "User" }}",
-                            color = Color(0xFF8B3B26), fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp)
-                        )
-                        Row(
-                            Modifier.fillMaxWidth(0.88f).padding(top = 8.dp)
-                                .clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF8E9))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 42.dp, start = 16.dp, end = 16.dp, bottom = 36.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Reward: ${"%,d".format(luckyBagClaimAmount)} Coins", color = Color(0xFFD29A72), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Details", color = Color(0xFFD29A72), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFD29A72), modifier = Modifier.size(15.dp))
+                            Text(
+                                text = "Lucky Packet from ${luckyBagSenderName.ifBlank { "User" }}",
+                                color = Color(0xFFC59362),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(Modifier.height(14.dp))
+
+                            // Big Amount + Coin Image
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "%,d".format(luckyBagClaimAmount),
+                                    color = Color(0xFFE74A5A),
+                                    fontSize = 36.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                AsyncImage(
+                                    model = LUCKY_BAG_COIN_PNG,
+                                    contentDescription = "Coin",
+                                    modifier = Modifier.size(30.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+
+                            Text(
+                                text = "Gold Coins have put into your wallet",
+                                color = Color(0xFFC59362),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Normal,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(Color(0xFFF2E5D2))
+                            )
+
+                            Spacer(Modifier.height(10.dp))
+
+                            // Received / Details Header Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Received",
+                                    color = Color(0xFFC59362),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Details",
+                                        color = Color(0xFFC59362),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = Color(0xFFC59362),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            // Claimant Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = claimantImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                                    contentDescription = "Your avatar",
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Text(
+                                    text = claimantName.ifBlank { "User" },
+                                    color = Color(0xFF7B5738),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier
+                                        .padding(start = 10.dp, end = 8.dp)
+                                        .weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "%,d".format(luckyBagClaimAmount),
+                                        color = Color(0xFFE55B65),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    AsyncImage(
+                                        model = LUCKY_BAG_COIN_PNG,
+                                        contentDescription = "Coin",
+                                        modifier = Modifier.size(16.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
                             }
                         }
-                        Row(
-                            Modifier.fillMaxWidth(0.88f).padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(
-                                model = claimantImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
-                                contentDescription = "Your avatar",
-                                modifier = Modifier.size(30.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Text(
-                                claimantName.ifBlank { "User" }, color = Color(0xFF8B3B26),
-                                fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(start = 8.dp).weight(1f), maxLines = 1
-                            )
-                            Text(
-                                "Received: ${"%,d".format(luckyBagClaimAmount)}",
-                                color = Color(0xFFD29A72), fontSize = 12.sp, fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
 
-                    Box(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.9f).fillMaxHeight(0.72f).clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFF7E5), Color(0xFFFFF0D4))))) {
-                        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 66.dp).fillMaxWidth()) {
-                            Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 24.dp).background(Color(0xFFF5EBD8)))
-                        }
-                    }
+                    // Top Overlapping Sender Avatar
+                    AsyncImage(
+                        model = luckyBagSenderImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
+                        contentDescription = "Lucky Bag sender avatar",
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .zIndex(3f)
+                            .size(68.dp)
+                            .clip(CircleShape)
+                            .border(3.dp, Color(0xFFFFE5A5), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
 
-                    Canvas(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)) {
+                    // Bottom Curved Red & Gold Pocket
+                    Canvas(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.32f)
+                            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                    ) {
                         val w = size.width
                         val h = size.height
-                        
+
                         val goldBrush = Brush.verticalGradient(listOf(Color(0xFFFFF8C9), Color(0xFFFFD76D), Color(0xFFFFAD36), Color(0xFFFFF0A9)))
                         val goldPath = Path().apply {
-                            moveTo(0f, h * 0.15f)
-                            quadraticBezierTo(w / 2f, -h * 0.05f, w, h * 0.15f)
-                            lineTo(w, h * 0.28f)
-                            quadraticBezierTo(w / 2f, h * 0.08f, 0f, h * 0.28f)
+                            moveTo(0f, h * 0.06f)
+                            quadraticBezierTo(w / 2f, h * 0.28f, w, h * 0.06f)
+                            lineTo(w, h * 0.17f)
+                            quadraticBezierTo(w / 2f, h * 0.39f, 0f, h * 0.17f)
                             close()
                         }
                         drawPath(goldPath, goldBrush)
-                        
-                        val redBrush = Brush.verticalGradient(listOf(Color(0xFFFF6449), Color(0xFFE90037)))
+
+                        val redBrush = Brush.verticalGradient(listOf(Color(0xFFFF5A4E), Color(0xFFE91B3A)))
                         val redPath = Path().apply {
-                            moveTo(0f, h * 0.26f)
-                            quadraticBezierTo(w / 2f, h * 0.06f, w, h * 0.26f)
+                            moveTo(0f, h * 0.15f)
+                            quadraticBezierTo(w / 2f, h * 0.37f, w, h * 0.15f)
                             lineTo(w, h)
                             lineTo(0f, h)
                             close()
@@ -517,14 +670,19 @@ fun LuckyBagOpenConfirmCards(
                             color = Color(0xFF8B1E1E),
                             fontSize = 11.sp,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp, start = 16.dp, end = 16.dp)
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 92.dp, start = 16.dp, end = 16.dp)
                         )
                     }
+
+                    // Bottom Golden Confirm Button
                     Box(
-                        Modifier.align(Alignment.BottomCenter)
-                            .padding(bottom = 24.dp)
-                            .fillMaxWidth(0.85f)
-                            .height(62.dp)
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 22.dp)
+                            .fillMaxWidth(0.84f)
+                            .height(60.dp)
                             .clip(RoundedCornerShape(50))
                             .background(Color(0xFFFF304D))
                             .border(3.dp, Color(0xFFFFDC73), RoundedCornerShape(50))
@@ -539,7 +697,7 @@ fun LuckyBagOpenConfirmCards(
                                     onShowLuckyBagClaimedCardChange(false)
                                     onShowFloatingLuckyBagChange(true)
                                     onLuckyBagClaimErrorChange(null)
-                                    
+
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val result = runCatching {
                                             val payload = JSONObject()
