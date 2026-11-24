@@ -425,7 +425,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                                         dao.saveUserData(current.copy(balance = newBalance))
                                                                         dao.insertTransaction(TransactionEntity(
                                                                             title = "Room Task Reward",
-                                                                            amount = newBalance - current.balance,
+                                                                            amount = response.optLong("reward", (newBalance - current.balance).coerceAtLeast(0L)),
                                                                             date = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
                                                                             timestamp = System.currentTimeMillis(),
                                                                             type = "coin"
