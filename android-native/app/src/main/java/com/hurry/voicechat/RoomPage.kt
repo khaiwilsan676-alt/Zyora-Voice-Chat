@@ -291,7 +291,11 @@ fun RoomPage(
                 } finally { conn.disconnect() }
             }.getOrNull()
         }
-        if (serverBalance != null) roomWalletBalance = serverBalance
+        if (serverBalance != null) {
+            roomWalletBalance = (serverBalance + NativeWalletPending.delta(appContext, canonicalWalletUserId)).coerceAtLeast(0L)
+            appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE).edit()
+                .putLong("balance_$canonicalWalletUserId", roomWalletBalance).apply()
+        }
     }
     val currentProfileKeys = listOf(currentUser.uid, currentUser.id, currentUser.accountId, accountId).filter { it.isNotBlank() }.distinct()
     var cachedCurrentProfile by remember(currentProfileKeys) { mutableStateOf<JSONObject?>(null) }
@@ -1327,10 +1331,15 @@ fun RoomPage(
             if (eventUserId in ownWalletIds) {
                 val updated = payload.optLong("balance", -1L)
                 val eventAt = payload.optLong("updatedAt", System.currentTimeMillis())
+                val transactionId = payload.optString("transactionId")
+                if (transactionId.isNotBlank()) NativeWalletPending.acknowledge(appContext, canonicalWalletUserId, transactionId)
+                val visibleBalance = (updated + NativeWalletPending.delta(appContext, canonicalWalletUserId)).coerceAtLeast(0L)
                 if (updated >= 0L && eventAt >= roomWalletEventAt) mainHandler.post {
                     if (eventAt >= roomWalletEventAt) {
                         roomWalletEventAt = eventAt
-                        roomWalletBalance = updated
+                        roomWalletBalance = visibleBalance
+                        appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE).edit()
+                            .putLong("balance_$canonicalWalletUserId", visibleBalance).apply()
                     }
                 }
             }
@@ -3011,7 +3020,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             walletBalance = roomWalletBalance,
             onDebitWallet = { requested ->
                 if (requested >= 0L && requested <= roomWalletBalance) {
-                    (roomWalletBalance - requested).also { roomWalletBalance = it }
+                    (roomWalletBalance - requested).also {
+                        roomWalletBalance = it
+                        appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE).edit()
+                            .putLong("balance_$canonicalWalletUserId", it).apply()
+                    }
                 } else null
             },
             onSendCoinTransfer = { transfer ->
