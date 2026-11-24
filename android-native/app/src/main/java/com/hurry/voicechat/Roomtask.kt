@@ -105,7 +105,20 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
             scope.launch {
                 runCatching { NativeRoomTaskApi.request(taskRoomId, completedTaskId, shareTask = true) }
                     .onSuccess {
-                        taskStatuses = taskStatuses + (completedTaskId to NativeRoomTaskStatus(true, false, 1f))
+                        val refreshed = NativeRoomTaskApi.request(taskRoomId)
+                        val array = refreshed.optJSONArray("tasks")
+                        if (array != null) {
+                            taskStatuses = (0 until array.length()).mapNotNull { index ->
+                                array.optJSONObject(index)?.let { item ->
+                                    item.optInt("taskId") to NativeRoomTaskStatus(
+                                        item.optBoolean("complete"), item.optBoolean("claimed"),
+                                        (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+                                    )
+                                }
+                            }.toMap()
+                        } else {
+                            taskStatuses = taskStatuses + (completedTaskId to NativeRoomTaskStatus(true, false, 1f))
+                        }
                     }
                     .onFailure { error ->
                         android.widget.Toast.makeText(context, error.message ?: "Share could not be recorded.", android.widget.Toast.LENGTH_SHORT).show()
@@ -117,25 +130,21 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
 
     LaunchedEffect(taskRoomId) {
         if (taskRoomId.isNotBlank()) {
-            while (true) {
-                runCatching { NativeRoomTaskApi.request(taskRoomId) }
-                    .onSuccess { response ->
-                        val array = response.optJSONArray("tasks")
-                        if (array != null) {
-                            taskStatuses = (0 until array.length()).mapNotNull { index ->
-                                array.optJSONObject(index)?.let { item ->
-                                    item.optInt("taskId") to NativeRoomTaskStatus(
-                                        item.optBoolean("complete"), item.optBoolean("claimed"),
-                                        (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
-                                    )
-                                }
-                            }.toMap()
-                        }
+            runCatching { NativeRoomTaskApi.request(taskRoomId) }
+                .onSuccess { response ->
+                    val array = response.optJSONArray("tasks")
+                    if (array != null) {
+                        taskStatuses = (0 until array.length()).mapNotNull { index ->
+                            array.optJSONObject(index)?.let { item ->
+                                item.optInt("taskId") to NativeRoomTaskStatus(
+                                    item.optBoolean("complete"), item.optBoolean("claimed"),
+                                    (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+                                )
+                            }
+                        }.toMap()
                     }
-                    .onFailure { /* transient refresh failure; retain last known task state */ }
-                delay(15000)
-            }
-        } else {
+                }
+                .onFailure { /* retain last known state if the initial refresh fails */ }
         }
     }
 
@@ -450,6 +459,20 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                                     }
                                                                 }
                                                                 taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, true, 1f))
+                                                                runCatching { NativeRoomTaskApi.request(taskRoomId) }
+                                                                    .onSuccess { refreshed ->
+                                                                        val array = refreshed.optJSONArray("tasks")
+                                                                        if (array != null) {
+                                                                            taskStatuses = (0 until array.length()).mapNotNull { index ->
+                                                                                array.optJSONObject(index)?.let { item ->
+                                                                                    item.optInt("taskId") to NativeRoomTaskStatus(
+                                                                                        item.optBoolean("complete"), item.optBoolean("claimed"),
+                                                                                        (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+                                                                                    )
+                                                                                }
+                                                                            }.toMap()
+                                                                        }
+                                                                    }
                                                             }
                                                             .onFailure { error ->
                                                                 android.widget.Toast.makeText(context, error.message ?: "Unable to claim reward.", android.widget.Toast.LENGTH_SHORT).show()
