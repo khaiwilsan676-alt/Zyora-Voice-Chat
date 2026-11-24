@@ -2999,6 +2999,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             currentUserName = roomDisplayName,
             currentUserImage = roomDisplayImage,
             roomUsers = activeRoomUsers,
+            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } },
+            roomAdminIds = roomAdminIds,
             walletBalance = roomWalletBalance,
             onDebitWallet = { requested ->
                 if (requested >= 0L && requested <= roomWalletBalance) {
