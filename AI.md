@@ -2105,3 +2105,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-24 — Homepage cold-start scroll responsiveness
 - `HomeScreen.kt`: prioritize the first homepage frame and initial scroll window by deferring the room-list network refresh briefly after the Room/memory cache warm-up, delaying non-critical leaderboard avatar requests, and delaying daily check-in status I/O.
 - No UI, card layout, colors, room data model, or scroll behavior changed; only background startup task timing changed.
+
+## 2026-11-24 — Room Profile actions opened from room chat
+- Fixed the chat-message Room Profile model to include the occupied seat's current `selfMuted` state, so its Mute/Unmute label and icon reflect the real microphone state.
+- Fixed the chat-profile mute callback so a seated user can toggle their own microphone through the existing `self_mute` Socket.IO action without needing owner/admin privileges. Muting another user's seat remains restricted to the existing owner/admin authorization check and continues using `owner_mute`.
+- No Room Profile layout, seat layout, voice transport, or wallet behavior changed. Leave-seat continues to use the existing room-seat action and seat removal flow.
+- Status: source change committed; native APK build and two-account/device mute/leave verification remain pending.
