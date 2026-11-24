@@ -2168,3 +2168,9 @@ Current documentation does not certify that all historical features are build-, 
 - Pulling down at the top of the Home room list requests an immediate refresh, bypassing the automatic-refresh throttle; a circular progress indicator is shown while pulling/refreshing.
 - Existing room snapshot behavior, room ordering/filtering, room-card layout, and server response parsing remain unchanged.
 - Verification pending: native APK build and on-device pull gesture/network refresh test.
+
+
+## 2026-11-24 — Prevent stale wallet HTTP snapshots from overwriting live balance
+- `CoinsNativePage.kt`: a wallet refresh now records the current live-event generation before requesting the canonical MongoDB balance. If a newer `wallet_balance_updated` Socket.IO event arrives before the HTTP response, the older in-flight response is discarded instead of replacing the newly confirmed coins/diamonds in Compose, SharedPreferences, or index.db.
+- The same generation guard protects Diamond Exchange and recharge responses from racing with a newer wallet event. Server-side wallet arithmetic, transaction IDs, endpoint contracts, and UI are unchanged.
+- Verification pending: native APK build plus concurrent gift/game/recharge and page-open balance tests on two accounts. No runtime pass is claimed yet.
