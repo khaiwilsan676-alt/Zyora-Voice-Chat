@@ -320,8 +320,22 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                                 fontWeight = FontWeight.ExtraBold
                                             )
                                         }
+                                        val taskId = tasks.indexOf(task) + 1
+                                        val status = taskStatuses[taskId]
                                         Button(
-                                            onClick = {},
+                                            onClick = {
+                                                if (status?.complete == true && status.claimed != true && claimingTask == 0 && accountId.isNotBlank()) {
+                                                    claimingTask = taskId
+                                                    scope.launch {
+                                                        runCatching { NativeRoomTaskApi.request(accountId, taskId) }
+                                                            .onSuccess {
+                                                                taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, true))
+                                                            }
+                                                            .onFailure { taskError = it.message ?: "Unable to claim reward." }
+                                                        claimingTask = 0
+                                                    }
+                                                }
+                                            },
                                             modifier = Modifier.padding(top = 6.dp).width(85.dp).height(28.dp),
                                             contentPadding = PaddingValues(0.dp),
                                             shape = RoundedCornerShape(18.dp),
