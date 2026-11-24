@@ -4402,13 +4402,13 @@ app.post("/api/check-ban", async (req, res) => {
 const DAILY_CHECKIN_REWARDS = {
   1: { coins: 5000 },
   2: { coins: 5000 },
-  3: { items: [{ itemId: "daily-frame-day3", name: "Daily Reward Frame", tab: "Avatar Frame", image: "file_00000000882882088d745d793bd43e06.png" }] },
+  3: { items: [{ itemId: "daily-frame-day3", name: "Daily Reward Frame", tab: "Avatar Frame", image: "file_00000000882882088d745d793bd43e06.png", durationDays: 2 }] },
   4: { coins: 10000 },
-  5: { coins: 10000, items: [{ itemId: "daily-frame-day5", name: "Daily Reward Frame", tab: "Avatar Frame", image: "IMG_20260903_141944.png" }] },
-  6: { coins: 10000, items: [{ itemId: "daily-theme-day6", name: "Daily Reward Theme", tab: "Theme", image: "IMG-20260903-WA0076.jpg" }] },
+  5: { coins: 10000, items: [{ itemId: "daily-frame-day5", name: "Daily Reward Frame", tab: "Avatar Frame", image: "IMG_20260903_141944.png", durationDays: 1 }] },
+  6: { coins: 10000, items: [{ itemId: "daily-theme-day6", name: "Daily Reward Theme", tab: "Theme", image: "IMG-20260903-WA0076.jpg", durationDays: 2 }] },
   7: { coins: 15000, items: [
-    { itemId: "daily-frame-day7", name: "Big Reward Frame", tab: "Avatar Frame", image: "file_0000000044388211996656afc9ce9c03.png" },
-    { itemId: "daily-room-theme-day7", name: "Big Reward Room Theme", tab: "Room Theme", image: "IMG-20260903-WA0077.jpg" }
+    { itemId: "daily-frame-day7", name: "Big Reward Frame", tab: "Avatar Frame", image: "file_0000000044388211996656afc9ce9c03.png", durationDays: 3 },
+    { itemId: "daily-room-theme-day7", name: "Big Reward Room Theme", tab: "Room Theme", image: "IMG-20260903-WA0077.jpg", durationDays: 3 }
   ] }
 };
 function indiaDateKey() {
@@ -4504,13 +4504,29 @@ app.post("/api/daily-checkin", async (req, res) => {
     if (Array.isArray(reward.items)) {
       const inventory = db.collection("storeInventory");
       for (const item of reward.items) {
+        // Daily reward labels are the source of truth: never convert these
+        // temporary frames/themes into permanent inventory items.
+        const durationDays = Math.max(1, Math.min(30, Number(item.durationDays) || 1));
+        const grantedAt = Date.now();
+        const expiresAt = grantedAt + durationDays * 24 * 60 * 60 * 1000;
+        const { durationDays: _durationDays, ...inventoryItem } = item;
         await inventory.updateOne(
           { userId, itemId: item.itemId },
-          { $setOnInsert: {
-            userId, ...item, duration: "PERMANENT", price: 0,
-            purchasedAt: Date.now(), expiresAt: 4102444800000,
-            equipped: false, source: "daily_checkin", rewardDay: day
-          } },
+          {
+            $set: {
+              ...inventoryItem,
+              duration: `${durationDays} Days`,
+              purchasedAt: grantedAt,
+              expiresAt,
+              source: "daily_checkin",
+              rewardDay: day
+            },
+            $setOnInsert: {
+              userId,
+              price: 0,
+              equipped: false
+            }
+          },
           { upsert: true }
         );
       }
