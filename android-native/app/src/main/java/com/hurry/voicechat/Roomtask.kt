@@ -248,7 +248,11 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                         contentScale = ContentScale.Fit
                     )
                     Text(
-                        text = "0",
+                        text = java.text.NumberFormat.getIntegerInstance(java.util.Locale.US).format(
+                            tasks.mapIndexedNotNull { index, task ->
+                                if (taskStatuses[index + 1]?.claimed == true) task.reward.replace(",", "").toLongOrNull() else null
+                            }.sum()
+                        ),
                         color = Color(0xFFFFD700),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold
