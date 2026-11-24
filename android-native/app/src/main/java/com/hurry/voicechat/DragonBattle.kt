@@ -1888,7 +1888,10 @@ private fun DragonBattleMainOverlay(
                         .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
                 } else {
                     val latest = fetchDragonWallet(dragonWalletUserId)
-                    if (latest != null) balance = latest
+                    if (latest != null) {
+                        walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
+                        balance = (latest + walletPendingDelta).coerceAtLeast(0L)
+                    }
                     walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
                     dragonRejectedCallbacks.remove(txId)?.invoke()
                     showBanner("Wallet rejected bet - coins restored")
