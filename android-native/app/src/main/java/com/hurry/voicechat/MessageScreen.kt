@@ -863,6 +863,62 @@ fun NativeChatScreen(
     var voicePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    var imageUploadInProgress by remember(receiverId) { mutableStateOf(false) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null && !imageUploadInProgress) {
+            if (isOfficial) {
+                android.widget.Toast.makeText(context, "Image sending is unavailable here.", android.widget.Toast.LENGTH_SHORT).show()
+            } else if (blockStateReady && (isUserBlocked || blockedByPeer)) {
+                blockPopupText = if (isUserBlocked) "You blocked this person" else "You are blocked"
+            } else if (blockStateReady && receiverId.isNotBlank()) {
+                chatScope.launch {
+                    imageUploadInProgress = true
+                    try {
+                        val socket = directSocket
+                        if (!chatRegistered || socket == null || !socket.connected()) {
+                            socket?.connect()
+                            android.widget.Toast.makeText(context, "Chat is reconnecting. Please try again.", android.widget.Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        val messageId = "${currentAccountId}_${java.util.UUID.randomUUID()}"
+                        val hostedImageUrl = withContext(Dispatchers.IO) {
+                            uploadChatImage(context, uri, messageId, "private-chat-image")
+                        }
+                        if (hostedImageUrl.isNullOrBlank()) {
+                            android.widget.Toast.makeText(context, "Image upload failed. Choose an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
+                            return@launch
+                        }
+                        val sentAt = System.currentTimeMillis()
+                        val imageMessage = "IMAGE::" + hostedImageUrl
+                        messages.add(true to imageMessage)
+                        messageTimestamps.add(sentAt)
+                        messageIds.add(messageId)
+                        saveConversationPreview(receiverId, name, image, "📷 Image", sentAt)
+                        socket.emit("private_message", JSONObject()
+                            .put("id", messageId)
+                            .put("senderId", currentUserId)
+                            .put("senderAccountId", currentAccountId)
+                            .put("receiverId", receiverId)
+                            .put("receiverAccountId", receiverId)
+                            .put("senderName", currentName)
+                            .put("senderPhoto", currentPhoto)
+                            .put("receiverName", name)
+                            .put("receiverPhoto", image)
+                            .put("text", "📷 Image")
+                            .put("type", "image")
+                            .put("imageUrl", hostedImageUrl)
+                            .put("timestamp", sentAt))
+                    } catch (error: Exception) {
+                        android.util.Log.e("ZyoraChat", "Image message send failed", error)
+                        android.widget.Toast.makeText(context, error.message ?: "Image could not be sent.", android.widget.Toast.LENGTH_LONG).show()
+                    } finally {
+                        imageUploadInProgress = false
+                    }
+                }
+            }
+        }
+    }
+
     // Equalizer Animation State
     val infiniteTransition = rememberInfiniteTransition(label = "equalizer")
     val bar1Height by infiniteTransition.animateFloat(
@@ -1856,8 +1912,8 @@ fun NativeChatScreen(
 
                         // Keep the existing image action visible; only the direct-chat Gift Picker was requested to be removed.
                         IconButton(
-                            onClick = { },
-                            enabled = false,
+                            onClick = { if (!imageUploadInProgress) imagePickerLauncher.launch("image/*") },
+                            enabled = !imageUploadInProgress && !isVoiceMode,
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(Icons.Outlined.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
