@@ -776,10 +776,8 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
             if (showOnlineDot) {
                 Box(
                     Modifier.align(Alignment.BottomEnd)
-                        .offset(x = 1.dp, y = 1.dp)
-                        .size(10.dp)
+                        .size(9.dp)
                         .background(Color(0xFF22C55E), CircleShape)
-                        .border(1.5.dp, Color.White, CircleShape)
                 )
             }
 
