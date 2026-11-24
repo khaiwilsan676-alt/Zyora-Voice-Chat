@@ -113,20 +113,22 @@ private val hotGifts = listOf(
         video = "/alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
-private val luckyGifts = listOf(
-    GiftPickerGift(103, "Hi", 999, "/IMG_20260927_213946.png", noMask = true),
-    GiftPickerGift(102, "Lucky Clover", 1499, "/IMG_20260927_213917.png", noMask = true),
-    GiftPickerGift(105, "Kiss", 1600, "/IMG_20260927_214139.png", noMask = true),
-    GiftPickerGift(104, "Rose", 3999, "/IMG_20260927_214121.png", noMask = true),
-    GiftPickerGift(111, "Love lock", 5000, "/IMG_20260927_221637.png", noMask = true),
-    GiftPickerGift(113, "Ring", 5999, "/IMG_20260927_221707.png", noMask = true),
-    GiftPickerGift(112, "Lantern", 6500, "/IMG_20260927_221654.png", noMask = true),
-    GiftPickerGift(107, "Dragon", 7000, "/IMG_20260927_221521.png", noMask = true),
-    GiftPickerGift(115, "Whale", 7899, "/IMG_20260927_221742.png", noMask = true),
-    GiftPickerGift(109, "Coffin", 8999, "/IMG_20260927_221559.png", noMask = true),
-    GiftPickerGift(116, "Star", 9800, "/file_0000000066f482118f772ed6fab4ad1f.png", noMask = true),
-    GiftPickerGift(110, "Sword", 9999, "/IMG_20260927_221615.png", noMask = true),
-    GiftPickerGift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
+private val standardGifts = listOf(
+    GiftPickerGift(2101, "Apple", 999, "/IMG_20261124_162823.png", noMask = true),
+    GiftPickerGift(2102, "Cherry", 1299, "/IMG_20261124_162846.png", noMask = true),
+    GiftPickerGift(2103, "Strawberry", 1500, "/IMG_20261124_162906.png", noMask = true),
+    GiftPickerGift(2104, "Banana", 1599, "/IMG_20261124_162922.png", noMask = true),
+    GiftPickerGift(2105, "Avocado", 2500, "/IMG_20261124_162944.png", noMask = true),
+    GiftPickerGift(2106, "Mango", 2599, "/IMG_20261124_163008.png", noMask = true),
+    GiftPickerGift(2107, "Papaya", 1400, "/IMG_20261124_163037.png", noMask = true),
+    GiftPickerGift(2108, "Watermelon", 3000, "/IMG_20261124_163056.png", noMask = true),
+    GiftPickerGift(2109, "Lucky Star", 1250, "/IMG_20261124_163119.png", noMask = true),
+    GiftPickerGift(2110, "Bell", 4999, "/IMG_20261124_163139.png", noMask = true),
+    GiftPickerGift(2111, "Love Lock", 3000, "/IMG_20261124_163202.png", noMask = true),
+    GiftPickerGift(2112, "Crystal", 5999, "/IMG_20261124_163228.png", noMask = true),
+    GiftPickerGift(2113, "Tea Pot", 2000, "/IMG_20261124_163256.png", noMask = true),
+    GiftPickerGift(2114, "Shisha", 7000, "/IMG_20261124_163315.png", noMask = true),
+    GiftPickerGift(2115, "Sword", 7250, "/IMG_20261124_163337.png", noMask = true),
 )
 
 
