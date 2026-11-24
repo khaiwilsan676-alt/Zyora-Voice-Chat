@@ -1779,9 +1779,16 @@ private fun DragonBattleMainOverlay(
             val eventUserId = payload.optString("userId")
             val updatedBalance = payload.optLong("balance", -1L)
             if (eventUserId in setOf(dragonWalletUserId, dragonAccountId) && updatedBalance >= 0L) {
-                val appliedId = payload.optString("transactionId")
-                val queueKey = "queue_$dragonWalletUserId"
-                if (appliedId.isNotBlank()) NativeWalletPending.acknowledge(context, dragonWalletUserId, appliedId)
+                val appliedIds = payload.optJSONArray("transactionIds")
+                if (appliedIds != null) {
+                    for (index in 0 until appliedIds.length()) {
+                        appliedIds.optString(index).takeIf { it.isNotBlank() }
+                            ?.let { NativeWalletPending.acknowledge(context, dragonWalletUserId, it) }
+                    }
+                } else {
+                    payload.optString("transactionId").takeIf { it.isNotBlank() }
+                        ?.let { NativeWalletPending.acknowledge(context, dragonWalletUserId, it) }
+                }
                 walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
                 // A balance event confirms one transaction, not every other bet still queued locally.
                 // Keep the pending deltas projected over the newest server snapshot.
@@ -1846,60 +1853,78 @@ private fun DragonBattleMainOverlay(
         if (dragonWalletUserId.isBlank()) return
         walletSyncMutex.withLock {
             val queueKey = "queue_$dragonWalletUserId"
-            while (true) {
-                val currentQueue = synchronized(dragonPendingPrefs) {
-                    runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
-                }
-                if (currentQueue.length() == 0) break
-                val item = currentQueue.optJSONObject(0) ?: break
-                val txId = item.optString("id")
+            val currentQueue = synchronized(dragonPendingPrefs) {
+                runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+            }
+            if (currentQueue.length() == 0) return@withLock
+            val transactions = JSONArray()
+            for (index in 0 until currentQueue.length()) {
+                val item = currentQueue.optJSONObject(index) ?: continue
+                val transactionId = item.optString("id")
                 val delta = item.optLong("delta")
-                if (txId.isBlank() || delta == 0L) {
-                    synchronized(dragonPendingPrefs) {
-                        val latest = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
-                        val cleaned = JSONArray()
-                        for (i in 1 until latest.length()) latest.optJSONObject(i)?.let { cleaned.put(it) }
-                        dragonPendingPrefs.edit().putString(queueKey, cleaned.toString()).commit()
+                if (transactionId.isBlank() || delta == 0L) continue
+                transactions.put(JSONObject().put("id", transactionId)
+                    .put("amount", kotlin.math.abs(delta))
+                    .put("action", if (delta < 0L) "bet" else "win"))
+            }
+            if (transactions.length() == 0) return@withLock
+            val response = withContext(Dispatchers.IO) {
+                val connection = (URL("https://zyora-server.onrender.com/api/wallet/game-batch").openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 12000
+                    readTimeout = 20000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    setRequestProperty("Cache-Control", "no-cache")
+                    setRequestProperty("Accept", "application/json")
+                }
+                try {
+                    val payload = JSONObject().put("userId", dragonWalletUserId)
+                        .put("game", "dragon-battle").put("transactions", transactions)
+                    connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+                    val code = connection.responseCode
+                    val body = (if (code in 200..299) connection.inputStream else connection.errorStream)
+                        ?.bufferedReader()?.use { it.readText() }.orEmpty()
+                    val json = JSONObject(body)
+                    if (code !in 200..299 || !json.optBoolean("success")) {
+                        error(json.optString("error", "Dragon Battle wallet batch failed"))
                     }
-                    continue
+                    json
+                } finally { connection.disconnect() }
+            }
+            val processedIds = response.optJSONArray("processedIds") ?: JSONArray()
+            val rejectedIds = response.optJSONArray("rejectedIds") ?: JSONArray()
+            val completedIds = mutableSetOf<String>()
+            for (index in 0 until processedIds.length()) {
+                processedIds.optString(index).takeIf { it.isNotBlank() }?.let { completedIds.add(it) }
+            }
+            for (index in 0 until rejectedIds.length()) {
+                rejectedIds.optString(index).takeIf { it.isNotBlank() }?.let { completedIds.add(it) }
+            }
+            if (completedIds.isEmpty()) error("Dragon Battle wallet batch returned no completed transactions")
+            val canonical = response.optLong("balance", -1L)
+            check(canonical >= 0L) { "Dragon Battle wallet batch returned invalid balance" }
+            val visible = synchronized(dragonPendingPrefs) {
+                val latest = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }
+                    .getOrDefault(JSONArray())
+                val remaining = JSONArray()
+                for (index in 0 until latest.length()) {
+                    val queued = latest.optJSONObject(index) ?: continue
+                    if (queued.optString("id") !in completedIds) remaining.put(queued)
                 }
-                val action = if (delta < 0L) "bet" else "win"
-                val result = dragonWalletRequest(dragonWalletUserId, txId, kotlin.math.abs(delta), action)
-                if (!result.success && result.statusCode != 409) {
-                    android.util.Log.w("DragonBattle", "Wallet transaction retained for retry: ${result.error}")
-                    break
-                }
-                val latestQueue = synchronized(dragonPendingPrefs) {
-                    val latest = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
-                    val remaining = JSONArray()
-                    for (i in 0 until latest.length()) {
-                        val queued = latest.optJSONObject(i) ?: continue
-                        if (queued.optString("id") != txId) remaining.put(queued)
-                    }
-                    check(dragonPendingPrefs.edit().putString(queueKey, remaining.toString()).commit())
-                    remaining
-                }
-                NativeWalletPending.acknowledge(context, dragonWalletUserId, txId)
+                check(dragonPendingPrefs.edit().putString(queueKey, remaining.toString()).commit())
+                completedIds.forEach { NativeWalletPending.acknowledge(context, dragonWalletUserId, it) }
                 walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
-                if (result.success && result.balance >= 0L) {
-                    balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
-                    walletReady = true
-                    walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
-                        .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
-                } else {
-                    val latest = fetchDragonWallet(dragonWalletUserId)
-                    if (latest != null) {
-                        walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
-                        balance = (latest + walletPendingDelta).coerceAtLeast(0L)
-                    }
-                    walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
-                    dragonRejectedCallbacks.remove(txId)?.invoke()
-                    showBanner("Wallet rejected bet - coins restored")
-                    android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
-                }
-                // Keep draining the durable queue in this same sync pass.
-                // A break here processed only one bet per invocation, so rapid bets
-                // accumulated behind separate HTTP round-trips and appeared to debit slowly.
+                (canonical + walletPendingDelta).coerceAtLeast(0L)
+            }
+            balance = visible
+            walletReady = true
+            walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", visible)
+                .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
+            for (index in 0 until rejectedIds.length()) {
+                val rejectedId = rejectedIds.optString(index)
+                dragonRejectedCallbacks.remove(rejectedId)?.invoke()
+                showBanner("Wallet rejected bet - coins restored")
             }
         }
     }
