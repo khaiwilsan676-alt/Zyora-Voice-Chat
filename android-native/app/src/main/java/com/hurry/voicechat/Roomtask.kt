@@ -469,7 +469,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                             )
                                         ) {
                                             if (isClaimed) {
-                                                Text("CLAIMED", color = Color(0xFF4A1F00), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                                Text("CLAIMED", color = Color.Unspecified, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                             } else {
                                                 Box(
                                                     Modifier.fillMaxSize().background(
