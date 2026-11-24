@@ -494,9 +494,6 @@ fun HomeScreen(
     }
     Box(Modifier.fillMaxSize()) {
         
-        // Dono states yahan outermost Box me declare kiye hain taaki Red Zone aur Draggable DP dono sync rahe
-        var keptRoomDragging by remember(keptRoom?.id) { mutableStateOf(false) }
-
         Column(
             Modifier.fillMaxSize()
                 .background(Color(0xFFF5F5F5))
@@ -719,42 +716,12 @@ fun HomeScreen(
             HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected)
         }
 
-        // 🔴 RED DROP ZONE - EXACTLY AT THE BOTTOM-RIGHT CORNER (Overlapping the Bottom Bar perfectly)
-        if (keptRoom != null && keptRoomDragging) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(190.dp) // Perfect circular corner 
-                    .offset(x = 95.dp, y = 95.dp) // Half of size ensures it creates exactly a Quarter-Circle at the corner
-                    .background(Color(0xFFE53935), CircleShape),
-                contentAlignment = Alignment.TopStart
-            ) {
-                // Target icon properly positioned within the visible quadrant
-                Canvas(Modifier.padding(start = 38.dp, top = 38.dp).size(42.dp)) {
-                    drawCircle(Color.White, radius = size.width * 0.18f)
-                    drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
-                }
-            }
-        }
-
-        // Keep room dp & Bottom Image UI (Ise bhi yahan rakha hai taaki drag karte time yeh upar hi rahe)
-        Column(
+        // Daily Sign-in decoration remains on Home; Keep Room DP is rendered globally by MainActivity.
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 110.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(0.2.dp)
+                .padding(end = 12.dp, bottom = 110.dp)
         ) {
-            if (keptRoom != null) {
-                KeptRoomFloatingButton(
-                    room = keptRoom,
-                    dragging = keptRoomDragging,
-                    onDraggingChange = { keptRoomDragging = it },
-                    onOpen = onOpenKeptRoom,
-                    onExit = onExitKeptRoom
-                )
-            }
-
             AsyncImage(
                 model = RAW + "IMG_20260916_002115.png",
                 contentDescription = "Right Corner Decoration",
