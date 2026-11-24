@@ -1426,7 +1426,11 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   suspend fun syncPendingWalletChanges(): Unit = walletSyncMutex.withLock {
    val userId=walletAccountId.takeIf{it.isNotBlank()}?:return@withLock
    val key=pendingWalletKey()
-   val queued=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrNull() ?: return@withLock
+   val firstQueue=synchronized(pendingWalletPrefs){runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())}
+   if(firstQueue.length()==0)return@withLock
+   // Coalesce rapid taps into one request instead of sending one request per bet.
+   delay(70L)
+   val queued=synchronized(pendingWalletPrefs){runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())}
    val transactions=JSONArray()
    for(i in 0 until queued.length()){
     val item=queued.optJSONObject(i)?:continue
@@ -1503,7 +1507,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     val key=pendingWalletKey()
     val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
     queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
-    check(pendingWalletPrefs.edit().putString(key,queue.toString()).commit()){"Could not save pending Wallet transaction"}
+    pendingWalletPrefs.edit().putString(key,queue.toString()).apply()
    }
    // Reflect this bet instantly in the game UI; server response will reconcile
    // the display back to the authoritative MongoDB balance.
