@@ -2132,3 +2132,9 @@ Current documentation does not certify that all historical features are build-, 
 - No Owner Panel visual/UI redesign and no native user-to-user chat history is copied from users' private `index.db`; only the Owner Panel's own monitor cache is shared.
 
 - Shared Owner Panel writes are batched through MongoDB `bulkWrite`; snapshot responses are explicitly marked so live deltas do not trigger repeated legacy-data migrations.
+
+
+## 2026-11-24 — Master Wallet table and avatar repair
+- Owner Panel → Master Wallet: removed only the Lucky Bag Transactions table; the User Transfer History table, transfer controls, wallet totals, and existing IndexedDB transaction storage remain unchanged.
+- Master Wallet now backfills missing historical transfer avatars from the canonical `/api/users?accountId=` profile response and persists recovered image URLs in the existing `ZyoraMasterWalletDB` / `transferHistory` store. No wallet balance, transfer, or payout logic changed.
+- Verification: source committed; browser runtime and live avatar rendering remain pending.
