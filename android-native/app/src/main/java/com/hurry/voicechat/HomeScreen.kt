@@ -453,20 +453,25 @@ fun HomeScreen(
 
     // Official room owned by ID 100002 is permanently pinned above every other room.
     // Match both room ID and owner account ID because server payloads may use either.
-    val filteredRooms = remember(rooms, selectedCountry) {
-        val allRooms = rooms ?: emptyList()
-        val officialRoom = allRooms.firstOrNull {
-            it.id.trim() == "100002" || it.accountId.trim() == "100002"
+    // Filtering a large room snapshot and splitting it into rows on the main
+    // thread caused a short scroll hitch when the server snapshot arrived.
+    // Keep the exact same ordering/UI, but prepare the visible list off the UI thread.
+    var filteredRooms by remember { mutableStateOf<List<HurryRoom>>(emptyList()) }
+    LaunchedEffect(rooms, selectedCountry) {
+        val sourceRooms = rooms.orEmpty()
+        val country = selectedCountry
+        filteredRooms = withContext(Dispatchers.Default) {
+            val officialRoom = sourceRooms.firstOrNull {
+                it.id.trim() == "100002" || it.accountId.trim() == "100002"
+            }
+            val otherRooms = sourceRooms.filterNot {
+                it.id.trim() == "100002" || it.accountId.trim() == "100002"
+            }
+            val visibleOthers = if (country == "all") otherRooms
+                else otherRooms.filter { countryMatches(it.country, country) }
+            if (officialRoom != null) listOf(officialRoom) + visibleOthers else visibleOthers
         }
-        val otherRooms = allRooms.filterNot {
-            it.id.trim() == "100002" || it.accountId.trim() == "100002"
-        }
-        val visibleOthers = if (selectedCountry == "all") otherRooms
-            else otherRooms.filter { countryMatches(it.country, selectedCountry) }
-        if (officialRoom != null) listOf(officialRoom) + visibleOthers else visibleOthers
     }
-
-    val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
     // 🔥 Outermost Box
     var pullDistance by remember { mutableFloatStateOf(0f) }
@@ -670,20 +675,25 @@ fun HomeScreen(
                             }
                         } else {
                             items(
-                                items = roomRows,
-                                key = { row -> row.first().id },
+                                count = (filteredRooms.size + 1) / 2,
+                                key = { index -> filteredRooms[index * 2].id },
                                 contentType = { "room_card_row" }
-                            ) { row ->
+                            ) { index ->
+                                val firstIndex = index * 2
+                                val firstRoom = filteredRooms[firstIndex]
+                                val secondRoom = filteredRooms.getOrNull(firstIndex + 1)
                                 Row(
                                     Modifier
                                         .fillMaxWidth()
                                         .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    row.forEach { room ->
-                                        RoomListCard(room, onRoom, Modifier.weight(1f))
+                                    RoomListCard(firstRoom, onRoom, Modifier.weight(1f))
+                                    if (secondRoom != null) {
+                                        RoomListCard(secondRoom, onRoom, Modifier.weight(1f))
+                                    } else {
+                                        Spacer(Modifier.weight(1f))
                                     }
-                                    if (row.size == 1) Spacer(Modifier.weight(1f))
                                 }
                             }
                         }
