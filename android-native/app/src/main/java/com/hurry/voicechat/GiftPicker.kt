@@ -117,6 +117,8 @@ private val hotGifts = listOf(
         video = "/alioss_29_2025112718560649595~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2006, "Gift", 9999, "/IMG_20261125_014233.png",
         video = "/alioss_28_2026032011584793951~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2007, "Heart lamp", 45000, "/IMG_20261125_014348.png",
+        video = "/alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2008, "Heartbeat", 120999, "/IMG_20261125_014410.png",
         video = "/alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2009, "Desert Aura", 55000, "/IMG_20261125_014422.png",
