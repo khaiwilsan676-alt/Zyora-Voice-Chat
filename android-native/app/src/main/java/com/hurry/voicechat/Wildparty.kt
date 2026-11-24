@@ -1416,69 +1416,65 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  }
  fun pendingWalletKey()="queue_$walletAccountId"
   suspend fun syncPendingWalletChanges(): Unit = walletSyncMutex.withLock {
-  val userId=walletAccountId.takeIf{it.isNotBlank()}?:return@withLock
-  val key=pendingWalletKey()
-  val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrNull() ?: return@withLock
-  var serverBalance:Long?=null
-  val completedIds=mutableSetOf<String>()
-  for(i in 0 until queue.length()){
-   val item=queue.optJSONObject(i)?:continue
-   val txId=item.optString("id");val delta=item.optLong("delta")
-   if(txId.isBlank()||delta==0L)continue
-   val result=runCatching{withContext(Dispatchers.IO){
-    val connection=(URL("https://zyora-server.onrender.com/api/wallet/wild-party").openConnection() as HttpURLConnection).apply{
-     requestMethod="POST";connectTimeout=7000;readTimeout=7000;doOutput=true
-     setRequestProperty("Content-Type","application/json; charset=utf-8");setRequestProperty("Cache-Control","no-cache")
+   val userId=walletAccountId.takeIf{it.isNotBlank()}?:return@withLock
+   val key=pendingWalletKey()
+   val queued=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrNull() ?: return@withLock
+   val transactions=JSONArray()
+   for(i in 0 until queued.length()){
+    val item=queued.optJSONObject(i)?:continue
+    val txId=item.optString("id")
+    val delta=item.optLong("delta")
+    if(txId.isBlank()||delta==0L)continue
+    transactions.put(JSONObject().put("id",txId).put("amount",kotlin.math.abs(delta)).put("action",if(delta<0L)"bet" else "win"))
+   }
+   if(transactions.length()==0)return@withLock
+   val response=withContext(Dispatchers.IO){
+    val connection=(URL("https://zyora-server.onrender.com/api/wallet/game-batch").openConnection() as HttpURLConnection).apply{
+     requestMethod="POST";connectTimeout=12000;readTimeout=20000;doOutput=true
+     setRequestProperty("Content-Type","application/json; charset=utf-8")
+     setRequestProperty("Cache-Control","no-cache")
+     setRequestProperty("Accept","application/json")
     }
     try{
-     val payload=JSONObject().put("userId",userId).put("transactionId",txId).put("amount",kotlin.math.abs(delta)).put("action",if(delta<0L)"bet" else "win")
+     val payload=JSONObject().put("userId",userId).put("game","wild-party").put("transactions",transactions)
      connection.outputStream.bufferedWriter().use{it.write(payload.toString())}
      val code=connection.responseCode
      val body=(if(code in 200..299)connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
      val json=JSONObject(body)
-     // HTTP 409 is a definitive rejected bet, not a retryable pending debit.
-     // Use its canonical balance and remove the rejected local delta.
-     if ((code !in 200..299 && code != 409) || (code in 200..299 && !json.optBoolean("success"))) {
-      error(json.optString("error","Wallet sync failed"))
-     }
-     json.optLong("balance",-1L).also{check(it>=0L)}
+     if(code !in 200..299||!json.optBoolean("success"))error(json.optString("error","Wallet batch sync failed"))
+     json
     }finally{connection.disconnect()}
-   }}
-   if(result.isSuccess){
-    serverBalance=result.getOrThrow()
-    completedIds.add(txId)
    }
-  }
-  // Merge against the newest disk queue; never erase bets queued during network sync.
-  walletStateMutex.withLock {
-   var balanceToPersist:Long?=null
-   // Merge server-confirmed transactions with every newer queued mutation.
-   synchronized(pendingWalletPrefs) {
-    val latestQueue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
-    val remaining=JSONArray()
-    for(i in 0 until latestQueue.length()){
-     val item=latestQueue.optJSONObject(i)?:continue
-     if(item.optString("id") !in completedIds)remaining.put(item)
+   val processed=response.optJSONArray("processedIds")?:JSONArray()
+   val rejected=response.optJSONArray("rejectedIds")?:JSONArray()
+   val completedIds=mutableSetOf<String>()
+   for(i in 0 until processed.length())processed.optString(i).takeIf{it.isNotBlank()}?.let{completedIds.add(it)}
+   for(i in 0 until rejected.length())rejected.optString(i).takeIf{it.isNotBlank()}?.let{completedIds.add(it)}
+   if(completedIds.isEmpty())error("Wallet batch returned no completed transactions")
+   walletStateMutex.withLock {
+    var visibleBalance:Long?=null
+    synchronized(pendingWalletPrefs){
+     val latest=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
+     val remaining=JSONArray()
+     for(i in 0 until latest.length()){
+      val item=latest.optJSONObject(i)?:continue
+      if(item.optString("id") !in completedIds)remaining.put(item)
+     }
+     check(pendingWalletPrefs.edit().putString(key,remaining.toString()).commit()){"Could not persist remaining wallet queue"}
+     completedIds.forEach{NativeWalletPending.acknowledge(context,userId,it)}
+     val canonical=response.optLong("balance",-1L)
+     check(canonical>=0L){"Wallet batch returned invalid balance"}
+     visibleBalance=(canonical+NativeWalletPending.delta(context,userId)).coerceAtLeast(0L)
+     balance=visibleBalance!!
     }
-    check(pendingWalletPrefs.edit().putString(key,remaining.toString()).commit()){"Could not persist remaining wallet queue"}
-    completedIds.forEach { NativeWalletPending.acknowledge(context, userId, it) }
-    if(serverBalance!=null){
-     val remainingDelta=NativeWalletPending.delta(context, userId)
-     val visible=(serverBalance!! + remainingDelta).coerceAtLeast(0L)
-     balance=visible
-     balanceToPersist=visible
-    }
-   }
-   // Room/SQLite I/O must run outside the synchronized monitor.
-   balanceToPersist?.let { visible ->
-    withContext(Dispatchers.IO) {
+    val visible=visibleBalance!!
+    withContext(Dispatchers.IO){
      val old=dao.getUserData()?:UserDataEntity(balance=visible)
      dao.saveUserData(old.copy(balance=visible))
     }
     walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
    }
   }
- }
  suspend fun walletChange(delta:Long,title:String){
   require(delta!=0L){"Invalid wallet amount"}
   val userId=walletAccountId.takeIf{it.isNotBlank()}?:error("Wallet account is unavailable")
