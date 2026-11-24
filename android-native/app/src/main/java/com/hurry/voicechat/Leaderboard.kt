@@ -22,6 +22,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
 import coil3.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.verticalScroll
@@ -380,6 +383,31 @@ private fun LeaderboardChromaImage(url: String, contentDescription: String?, mod
     bitmap?.let { Image(bitmap=it, contentDescription=contentDescription, modifier=modifier, contentScale=contentScale) }
 }
 
+private fun leaderboardAvatarUrl(image: String, raw: String): String =
+    image.trim().let { value ->
+        when {
+            value.isBlank() -> ""
+            value.startsWith("http://", true) || value.startsWith("https://", true) -> value
+            else -> raw + value.removePrefix("/")
+        }
+    }
+
+@Composable
+private fun rememberLeaderboardAvatarImageLoader(): ImageLoader {
+    val context = LocalContext.current.applicationContext
+    return remember(context) {
+        ImageLoader.Builder(context)
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.20).build() }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("zyora_leaderboard_avatar_cache"))
+                    .maxSizeBytes(64L * 1024L * 1024L)
+                    .build()
+            }
+            .build()
+    }
+}
+
 private data class ZyoraRank(
     val id: String, val name: String, val image: String, val coins: Long,
     val country: String = "", val gender: String = "", val level: Int = 1
@@ -447,6 +475,7 @@ private fun leaderboardFlag(country: String): String = when (country.trim().lowe
 @Composable
 fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(RoomUser)->Unit = {}) {
     val context = LocalContext.current
+    val avatarImageLoader = rememberLeaderboardAvatarImageLoader()
     val leaderboardPrefs = remember(context) { context.getSharedPreferences("zyora_leaderboard_cache", android.content.Context.MODE_PRIVATE) }
     var tab by remember { mutableStateOf(initialTab) }
     var period by remember { mutableStateOf("daily") }
@@ -660,7 +689,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                 .clickable(enabled = tab != "room" && rank1 != null) { rank1?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) } }, 
                             contentAlignment = Alignment.Center
                         ) {
-                            val rank1Img = rank1?.image?.takeIf { it.isNotBlank() }
+                            val rank1Img = rank1?.image?.let { leaderboardAvatarUrl(it, raw) }?.takeIf { it.isNotBlank() }
                             if (rank1 != null && rank1Img != null) {
                                 AsyncImage(
                                     model = rank1Img,
@@ -669,7 +698,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                         .offset(y = (-9).dp)
                                         .size(100.dp)
                                         .clip(RoundedCornerShape(50)),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.Crop,
+                                    imageLoader = avatarImageLoader
                                 )
                             } else {
                                 DefaultUserAvatarIcon(
@@ -730,7 +760,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
-                                    val rank2Img = rank2?.image?.takeIf { it.isNotBlank() }
+                                    val rank2Img = rank2?.image?.let { leaderboardAvatarUrl(it, raw) }?.takeIf { it.isNotBlank() }
                                     if (rank2 != null && rank2Img != null) {
                                         AsyncImage(
                                             model = rank2Img,
@@ -739,7 +769,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                                 .offset(y = (-6).dp)
                                                 .size(65.dp)
                                                 .clip(RoundedCornerShape(50)),
-                                            contentScale = ContentScale.Crop
+                                            contentScale = ContentScale.Crop,
+                                            imageLoader = avatarImageLoader
                                         )
                                     } else {
                                         DefaultUserAvatarIcon(
@@ -795,7 +826,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
-                                    val rank3Img = rank3?.image?.takeIf { it.isNotBlank() }
+                                    val rank3Img = rank3?.image?.let { leaderboardAvatarUrl(it, raw) }?.takeIf { it.isNotBlank() }
                                     if (rank3 != null && rank3Img != null) {
                                         AsyncImage(
                                             model = rank3Img,
@@ -804,7 +835,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                                 .offset(y = (-6).dp)
                                                 .size(65.dp) 
                                                 .clip(RoundedCornerShape(50)),
-                                            contentScale = ContentScale.Crop
+                                            contentScale = ContentScale.Crop,
+                                            imageLoader = avatarImageLoader
                                         )
                                     } else {
                                         DefaultUserAvatarIcon(
@@ -934,8 +966,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                 // DATA STATE (Normal List)
                                 remainingUsers.forEachIndexed { index, user ->
                                     val i = index
-                                    val resolvedAvatarUrl = user.image.takeIf { it.startsWith("http", ignoreCase = true) }
-                                        ?: (raw + user.image.removePrefix("/").ifBlank { "default_avatar.png" })
+                                    val resolvedAvatarUrl = leaderboardAvatarUrl(user.image, raw)
+                                        .ifBlank { raw + "default_avatar.png" }
 
                                     Row(
                                         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp).clickable(enabled = tab != "room") { onOpenProfile(RoomUser(id = user.id, uid = user.id, accountId = user.id, name = user.name, image = user.image, gender = user.gender, country = user.country)) },
@@ -957,7 +989,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                                                 .size(44.dp)
                                                 .clip(RoundedCornerShape(50))
                                                 .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
-                                            contentScale = ContentScale.Crop
+                                            contentScale = ContentScale.Crop,
+                                            imageLoader = avatarImageLoader
                                         )
                                         Spacer(Modifier.width(12.dp))
                                         Column(Modifier.weight(1f)) {
@@ -1052,7 +1085,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                     modifier = Modifier
                         .size(46.dp)
                         .clip(RoundedCornerShape(50)),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    imageLoader = avatarImageLoader
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
