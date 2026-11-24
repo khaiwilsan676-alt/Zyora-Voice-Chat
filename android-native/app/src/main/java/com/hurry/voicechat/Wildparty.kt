@@ -1224,6 +1224,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var balance by remember(walletAccountId){
   mutableLongStateOf(walletCachePrefs.getLong("balance_$walletAccountId",0L).coerceAtLeast(0L))
  }
+ // Ignore HTTP snapshots that began before a newer canonical wallet socket event.
+ var walletEventGeneration by remember(walletAccountId) { mutableIntStateOf(0) }
  var phase by remember{mutableStateOf(WpPhase.BETTING)}
  var round by remember{mutableIntStateOf(1)}
  var countdown by remember{mutableIntStateOf(30)}
@@ -1330,6 +1332,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     val eventUserId = payload.optString("userId")
     val updatedBalance = payload.optLong("balance", -1L)
     if (eventUserId in setOf(walletAccountId, walletAccountNumber) && updatedBalance >= 0L) {
+     walletEventGeneration++
      scope.launch {
       // Server snapshot is canonical; never add unconfirmed device deltas.
       walletStateMutex.withLock {
@@ -1384,6 +1387,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       walletCachePrefs.edit().putLong("balance_$walletUserId",balance).apply()
      }
     }
+    val requestGeneration = walletEventGeneration
     val encoded=java.net.URLEncoder.encode(walletUserId,"UTF-8")
     val walletConnection=(URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply{
      connectTimeout=12000;readTimeout=12000;setRequestProperty("Cache-Control","no-cache")
@@ -1393,14 +1397,15 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      val wallet=JSONObject(walletConnection.inputStream.bufferedReader().use{it.readText()})
      val serverBalance=wallet.optLong("balance",0L).coerceAtLeast(0L)
      walletStateMutex.withLock {
-      // Re-read after HTTP: bets may have been queued while GET was in flight.
-      // Render only MongoDB-confirmed coins; queued deltas are not canonical.
-      val visible=serverBalance
-      balance=visible
-      val old=dao.getUserData()?:UserDataEntity(balance=visible)
-      dao.saveUserData(old.copy(balance=visible))
-      context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE).edit()
-       .putLong("balance_$walletUserId",visible).putLong("last_sync_$walletUserId",System.currentTimeMillis()).apply()
+      // A socket event received during this GET is newer than this snapshot.
+      if (walletEventGeneration == requestGeneration) {
+       val visible=serverBalance
+       balance=visible
+       val old=dao.getUserData()?:UserDataEntity(balance=visible)
+       dao.saveUserData(old.copy(balance=visible))
+       context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE).edit()
+        .putLong("balance_$walletUserId",visible).putLong("last_sync_$walletUserId",System.currentTimeMillis()).apply()
+      }
      }
     }finally{walletConnection.disconnect()}
    }else{
@@ -1430,6 +1435,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val item=queue.optJSONObject(i)?:continue
    val txId=item.optString("id");val delta=item.optLong("delta")
    if(txId.isBlank()||delta==0L)continue
+   val requestGeneration = walletEventGeneration
    val result=runCatching{withContext(Dispatchers.IO){
     val connection=(URL("https://zyora-server.onrender.com/api/wallet/wild-party").openConnection() as HttpURLConnection).apply{
      requestMethod="POST";connectTimeout=7000;readTimeout=7000;doOutput=true
@@ -1446,7 +1452,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     }finally{connection.disconnect()}
    }}
    if(result.isSuccess){
-    serverBalance=result.getOrThrow()
+    // A newer socket snapshot already includes wallet changes committed in flight.
+    if (walletEventGeneration == requestGeneration) serverBalance=result.getOrThrow()
     completedIds.add(txId)
    }
   }
