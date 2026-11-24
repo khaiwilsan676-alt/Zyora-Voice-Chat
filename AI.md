@@ -2126,9 +2126,9 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-24 — Shared Owner Panel IndexedDB across devices
 - Added authenticated Owner Panel shared-record replication for the existing browser IndexedDB stores: feedback, Daisy support chats, private-message monitor, Lucky Bag transactions, Master Wallet transfers, invite bindings, and user reports.
-- The existing backend document database collection `ownerPanelSharedRecords` is the cross-device source of truth; each Owner Panel keeps IndexedDB as its local cache. Authorized Owner Panel sockets receive shared snapshots and live updates.
+- The production `Zyora-Server/server.js` MongoDB collection `ownerPanelSharedRecords` is the cross-device source of truth; each Owner Panel keeps IndexedDB as its local cache. Authorized Owner Panel sockets receive shared snapshots and live updates.
 - Added one-time migration of locally cached records that are absent from the shared snapshot. Writes and snapshots are restricted to the existing signed Owner Panel session and an explicit store/key allowlist.
 - User feedback, reports, and Lucky Bag transactions are also persisted at the backend event-ingress path so they survive server restarts and reconnects.
 - No Owner Panel visual/UI redesign and no native user-to-user chat history is copied from users' private `index.db`; only the Owner Panel's own monitor cache is shared.
 
-- Shared Owner Panel writes are batched through the document-store adapter's `bulkUpsert` method, avoiding one GitHub document-store commit per IndexedDB row. Snapshot responses are explicitly marked so live deltas do not trigger repeated legacy-data migrations.
+- Shared Owner Panel writes are batched through MongoDB `bulkWrite`; snapshot responses are explicitly marked so live deltas do not trigger repeated legacy-data migrations.
