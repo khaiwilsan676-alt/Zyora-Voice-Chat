@@ -274,9 +274,12 @@ fun RoomPage(
     val canonicalWalletUserId = appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
         .getString("uid", null)?.takeIf { it.isNotBlank() }
         ?: accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
+    // Prevent the initial room wallet GET from replacing a newer live wallet event.
+    var roomWalletEventGeneration by remember(canonicalWalletUserId) { mutableLongStateOf(0L) }
 
     LaunchedEffect(canonicalWalletUserId) {
         if (canonicalWalletUserId.isBlank() || canonicalWalletUserId == "guest") return@LaunchedEffect
+        val requestGeneration = roomWalletEventGeneration
         val serverBalance = withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(canonicalWalletUserId, "UTF-8")
@@ -290,7 +293,7 @@ fun RoomPage(
                 } finally { conn.disconnect() }
             }.getOrNull()
         }
-        if (serverBalance != null) roomWalletBalance = serverBalance
+        if (serverBalance != null && roomWalletEventGeneration == requestGeneration) roomWalletBalance = serverBalance
     }
     val currentProfileKeys = listOf(currentUser.uid, currentUser.id, currentUser.accountId, accountId).filter { it.isNotBlank() }.distinct()
     var cachedCurrentProfile by remember(currentProfileKeys) { mutableStateOf<JSONObject?>(null) }
@@ -1325,7 +1328,10 @@ fun RoomPage(
             // while the initial wallet read uses Firebase UID. Accept both aliases.
             if (eventUserId in ownWalletIds) {
                 val updated = payload.optLong("balance", -1L)
-                if (updated >= 0L) mainHandler.post { roomWalletBalance = updated }
+                if (updated >= 0L) {
+                    roomWalletEventGeneration++
+                    mainHandler.post { roomWalletBalance = updated }
+                }
             }
         }
         val luckyBagTransactionListener = Emitter.Listener { args ->
@@ -1379,6 +1385,8 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
             val reason = payload.optString("reason")
+            val balance = payload.optLong("balance", -1L)
+            if (balance >= 0L) roomWalletEventGeneration++
             mainHandler.post {
                 luckyComboPending = false
                 val balance = payload.optLong("balance", -1L)
