@@ -137,7 +137,7 @@ private fun giftAssetUrl(path: String): String {
     return "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
 }
 
-private val tabs = listOf("Hot", "Gift", "Luxury", "Event")
+private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
 
 private val multipliers = listOf("1", "10", "299", "599", "999")
 
@@ -190,7 +190,7 @@ fun GiftPicker(
     val scope = rememberCoroutineScope()
 
     val currentGifts = when (activeTab) {
-        "Gift" -> standardGifts
+        "Lucky" -> standardGifts
         "Hot" -> hotGifts
         else -> emptyList()
     }
@@ -220,7 +220,7 @@ fun GiftPicker(
     }
     val totalSendCost = totalCost.toLong() * max(1, recipientCount)
     val canAfford = totalCost > 0 && recipientCount > 0 && totalSendCost <= walletBalance
-    val isLuckyGiftTab = false
+    val isLuckyGiftTab = activeTab == "Lucky"
 
     fun triggerInsufficient(message: String = "Insufficient Balance", openWalletAfter: Boolean = true) {
         insufficientText = message
@@ -784,7 +784,7 @@ private fun GiftCard(
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .size(16.dp),
+                    .size(12.dp),
             )
         }
         if (activeTab == "Hot" && gift.id == 3) {
