@@ -308,19 +308,22 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
             val updatedBalance = payload.optLong("balance", -1L)
             val eventAt = payload.optLong("updatedAt", System.currentTimeMillis())
             if (eventUserId in setOf(walletUserId, walletAccountId) && updatedBalance >= 0L && eventAt >= lastWalletEventAt) {
+                val transactionId = payload.optString("transactionId")
+                if (transactionId.isNotBlank()) NativeWalletPending.acknowledge(context, walletUserId, transactionId)
+                val visibleBalance = (updatedBalance + NativeWalletPending.delta(context, walletUserId)).coerceAtLeast(0L)
                 lastWalletEventAt = eventAt
                 walletEventGeneration += 1
                 val updatedDiamonds = payload.optLong("diamonds", diamonds).coerceAtLeast(0L)
                 scope.launch {
-                    coins = updatedBalance
+                    coins = visibleBalance
                     diamonds = updatedDiamonds
                     walletCachePrefs.edit()
-                        .putLong("balance_$walletUserId", updatedBalance)
+                        .putLong("balance_$walletUserId", visibleBalance)
                         .putLong("diamonds_$walletUserId", updatedDiamonds)
                         .putLong("last_sync_$walletUserId", eventAt)
                         .apply()
                     withContext(Dispatchers.IO) {
-                        dao.saveUserData(UserDataEntity(balance = updatedBalance, diamonds = updatedDiamonds))
+                        dao.saveUserData(UserDataEntity(balance = visibleBalance, diamonds = updatedDiamonds))
                     }
                 }
             }
@@ -375,9 +378,8 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         if (walletEventGeneration != refreshGeneration) return@LaunchedEffect
         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
         val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
-        // Only MongoDB-confirmed coins are spendable. Device-only recharge credits
-        // must never inflate the wallet balance or disagree with Store purchases.
-        val displayedBalance = serverBalance
+        // All screens include the same in-flight Wild Party + Dragon Battle deltas.
+        val displayedBalance = (serverBalance + NativeWalletPending.delta(context, walletUserId)).coerceAtLeast(0L)
 
         dao.saveUserData(UserDataEntity(balance = displayedBalance, diamonds = serverDiamonds))
         walletCachePrefs.edit()
