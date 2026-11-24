@@ -426,42 +426,43 @@ fun GiftPicker(
                                             uid.isNotBlank() && uid in roomAdminIds -> "Admin"
                                             else -> null
                                         }
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                                        ) {
-                                            AsyncImage(
-                                                model = seat.userImage,
-                                                contentDescription = seat.userName,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.size(44.dp).clip(CircleShape)
-                                                    .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
-                                                    .clickable {
-                                                        selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
-                                                        recipientMode = RecipientMode.SINGLE
-                                                    },
-                                            )
-                                            if (roleLabel != null) {
-                                                Surface(
-                                                    color = Blue500,
-                                                    shape = RoundedCornerShape(50),
-                                                    border = BorderStroke(0.75.dp, Color.White),
-                                                ) {
-                                                    Box(
-                                                        contentAlignment = Alignment.Center,
-                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Box(modifier = Modifier.size(44.dp)) {
+                                                AsyncImage(
+                                                    model = seat.userImage,
+                                                    contentDescription = seat.userName,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.size(44.dp).clip(CircleShape)
+                                                        .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
+                                                        .clickable {
+                                                            selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
+                                                            recipientMode = RecipientMode.SINGLE
+                                                        },
+                                                )
+                                                if (roleLabel != null) {
+                                                    Surface(
+                                                        modifier = Modifier.align(Alignment.BottomCenter).offset(y = 7.dp),
+                                                        color = Blue500,
+                                                        shape = RoundedCornerShape(50),
+                                                        border = BorderStroke(0.75.dp, Color.White),
                                                     ) {
-                                                        Text(
-                                                            text = roleLabel,
-                                                            color = Color.White,
-                                                            fontSize = 7.sp,
-                                                            fontWeight = FontWeight.Medium,
-                                                            textAlign = TextAlign.Center,
-                                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                                        )
+                                                        Box(
+                                                            contentAlignment = Alignment.Center,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                                        ) {
+                                                            Text(
+                                                                text = roleLabel,
+                                                                color = Color.White,
+                                                                fontSize = 7.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                textAlign = TextAlign.Center,
+                                                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
+                                            if (roleLabel != null) Spacer(Modifier.height(7.dp))
                                         }
                                     }
                                 }
