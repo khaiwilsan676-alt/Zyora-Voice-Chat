@@ -665,19 +665,6 @@ fun GiftPicker(
                     }
                 }
 
-                // Lucky banner is intentionally outside the sheet, with a 3dp overlap.
-                if (activeTab == "Lucky") {
-                    AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_193201.png",
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(y = -giftSheetHeight + 3.dp)
-                            .fillMaxWidth()
-                            .height(100.dp),
-                    )
-                }
             }
 
             if (showInsufficient) {
@@ -1248,66 +1235,3 @@ fun LuckyComboButton(
                         color = Color.White.copy(alpha = 0.35f),
                         radius = size.minDimension / 2 - stroke.width / 2,
                         style = stroke,
-                    )
-                    drawArc(
-                        color = Color.White,
-                        startAngle = -90f,
-                        sweepAngle = 360f * progress, // Smooth sweep countdown
-                        useCenter = false,
-                        style = stroke,
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ============================================================
-// NEW: MANAGER COMPOSABLE (Handles exactly 5s timer & combo x count)
-// ============================================================
-@Composable
-fun LuckyComboOverlayManager(
-    initialNotice: LuckyNotice?, // Jab gift bheje to pass kar
-    onDismiss: () -> Unit // 5 sec me timeout call hoga, isme apna initialNotice null kar dena parent me
-) {
-    if (initialNotice == null) return
-    
-    // Combo multiplier tracker
-    var comboCount by remember(initialNotice.id) { mutableStateOf(initialNotice.multiplier) }
-    var clickTrigger by remember { mutableStateOf(0) }
-    
-    // Smooth progress tracker
-    var timerProgress by remember { mutableStateOf(1f) }
-    
-    // 5-Second timer logic
-    LaunchedEffect(clickTrigger, initialNotice.id) {
-        timerProgress = 1f
-        animate(
-            initialValue = 1f,
-            targetValue = 0f,
-            animationSpec = tween(5000, easing = LinearEasing) // Exact 5 seconds
-        ) { value, _ ->
-            timerProgress = value
-        }
-        // Agar 5 sec tak koi click nahi hua to ye line chalegi
-        onDismiss() 
-    }
-    
-    // Notification with updated x number
-    val currentNotice = initialNotice.copy(multiplier = comboCount)
-    
-    Box(Modifier.fillMaxSize()) {
-        // Notification patti (with updated x count)
-        LuckyGiftNotificationSlider(notice = currentNotice)
-        
-        // Combo Button (progress resets smoothly every click)
-        LuckyComboButton(
-            visible = true,
-            progress = timerProgress,
-            onClick = {
-                comboCount += 1 // multiplier +1
-                clickTrigger += 1 // Timer phirse 5 second se shuru (button hide nhi hoga)
-            }
-        )
-    }
-}
