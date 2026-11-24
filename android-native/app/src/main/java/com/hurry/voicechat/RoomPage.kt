@@ -3805,33 +3805,26 @@ private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Un
     val progress = remember(flight.id) { Animatable(0f) }
     val density = LocalDensity.current
     val imageSizePx = with(density) { 58.dp.toPx() }
-    val arcHeightPx = with(density) { 14.dp.toPx() }
+    val arcHeightPx = with(density) { 42.dp.toPx() }
 
-    // Quick flight in/out with the same 0.8s centre hold.
+    // Wafa-style: one continuous, quick curved flight directly onto the recipient seat.
+    // No centre pause; keep the animation short so rapid combo sends feel responsive.
     LaunchedEffect(flight.id) {
-        progress.animateTo(1f, animationSpec = tween(1100, easing = LinearEasing))
+        progress.animateTo(
+            1f,
+            animationSpec = tween(430, easing = FastOutSlowInEasing)
+        )
         onFinished()
     }
 
     val p = progress.value.coerceIn(0f, 1f)
-    val enterEnd = 0.136f
-    val holdEnd = 0.864f
-    val firstLeg = p < enterEnd
-    val lastLeg = p >= holdEnd
-    val t = when {
-        firstLeg -> p / enterEnd
-        lastLeg -> (p - holdEnd) / (1f - holdEnd)
-        else -> 0f
-    }
-    val from = if (lastLeg) flight.rootCenter else flight.start
-    val to = if (lastLeg) flight.target else flight.rootCenter
-    val x = from.x + (to.x - from.x) * t
-    val y = from.y + (to.y - from.y) * t -
-        if (firstLeg || lastLeg) sin(t * Math.PI).toFloat() * arcHeightPx else 0f
+    val x = flight.start.x + (flight.target.x - flight.start.x) * p
+    val y = flight.start.y + (flight.target.y - flight.start.y) * p -
+        sin(p * Math.PI).toFloat() * arcHeightPx
     val scale = when {
-        firstLeg -> 0.18f + 0.82f * t
-        !lastLeg -> 1f
-        else -> 1f - 0.82f * t
+        p < 0.18f -> 0.28f + (0.82f * (p / 0.18f))
+        p > 0.78f -> 1.10f - (0.62f * ((p - 0.78f) / 0.22f))
+        else -> 1.10f
     }
 
     Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
@@ -3845,7 +3838,7 @@ private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Un
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    alpha = if (p < 0.03f) p / 0.03f else 1f
+                    alpha = if (p < 0.04f) p / 0.04f else if (p > 0.94f) (1f - p) / 0.06f else 1f
                 }
         )
     }
