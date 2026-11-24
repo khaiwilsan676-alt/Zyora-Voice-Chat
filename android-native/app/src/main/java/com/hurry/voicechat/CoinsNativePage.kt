@@ -843,7 +843,9 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                 }
             }
             loaded = true
-            kotlinx.coroutines.delay(15_000)
+            // Seller balances do not need a 15-second full API fan-out. Keep cached cards visible
+            // and refresh in the background once per minute to reduce wallet API/socket pressure.
+            kotlinx.coroutines.delay(60_000)
         }
     }
 
