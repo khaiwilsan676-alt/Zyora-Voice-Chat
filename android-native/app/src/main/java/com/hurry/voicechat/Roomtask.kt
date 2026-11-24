@@ -1,6 +1,6 @@
 package com.hurry.voicechat
 
-import androidx.compose.foundation.background
+import android.content.Intent\nimport androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,12 +41,12 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
-private data class NativeRoomTaskStatus(val complete: Boolean, val claimed: Boolean)
+private data class NativeRoomTaskStatus(val complete: Boolean, val claimed: Boolean, val progress: Float = 0f)
 
 private object NativeRoomTaskApi {
     private const val BASE = "https://zyora-server.onrender.com"
 
-    suspend fun request(roomId: String, claimTaskId: Int? = null): JSONObject = withContext(Dispatchers.IO) {
+    suspend fun request(roomId: String, claimTaskId: Int? = null, shareTask: Boolean = false): JSONObject = withContext(Dispatchers.IO) {
         val user = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again.")
         val token = Tasks.await(user.getIdToken(false), 30, TimeUnit.SECONDS).token
             ?: error("Authentication token unavailable.")
@@ -318,22 +318,39 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         contentScale = ContentScale.Fit
                                     )
 
-                                    Text(
-                                        task.title,
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
+                                    val taskId = tasks.indexOf(task) + 1
+                                    val status = taskStatuses[taskId]
+                                    Column(
                                         modifier = Modifier.weight(1f).padding(start = 12.dp),
-                                        maxLines = 3,
-                                        style = TextStyle(
-                                            shadow = Shadow(
-                                                color = Color.Black.copy(alpha = 0.5f),
-                                                blurRadius = 4f,
-                                                offset = Offset(0f, 2f)
+                                        verticalArrangement = Arrangement.spacedBy(5.dp),
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        Text(
+                                            task.title,
+                                            color = Color.White,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            maxLines = 3,
+                                            style = TextStyle(
+                                                shadow = Shadow(
+                                                    color = Color.Black.copy(alpha = 0.5f),
+                                                    blurRadius = 4f,
+                                                    offset = Offset(0f, 2f)
+                                                )
+                                            ),
+                                            lineHeight = 18.sp
+                                        )
+                                        Box(
+                                            Modifier.fillMaxWidth().height(3.dp)
+                                                .background(Color.White.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
+                                        ) {
+                                            Box(
+                                                Modifier.fillMaxWidth(status?.progress ?: 0f).fillMaxHeight()
+                                                    .background(Color(0xFFFFD45A), RoundedCornerShape(8.dp))
                                             )
-                                        ),
-                                        lineHeight = 18.sp
-                                    )
+                                        }
+                                    }
 
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -350,16 +367,69 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                 fontWeight = FontWeight.ExtraBold
                                             )
                                         }
-                                        val taskId = tasks.indexOf(task) + 1
-                                        val status = taskStatuses[taskId]
+                                        val isShareTask = taskId == 3 || taskId == 4
+                                        val isClaimed = status?.claimed == true
+                                        val canClaim = status?.complete == true && !isClaimed
+                                        val buttonLabel = when {
+                                            isClaimed -> "CLAIMED"
+                                            canClaim -> "CLAIM"
+                                            isShareTask -> "SHARE"
+                                            else -> "CLAIM"
+                                        }
                                         Button(
+                                            enabled = !isClaimed && (canClaim || isShareTask) && claimingTask == 0,
                                             onClick = {
-                                                if (status?.complete == true && status?.claimed != true && claimingTask == 0 && taskRoomId.isNotBlank()) {
+                                                if (claimingTask != 0 || taskRoomId.isBlank()) return@Button
+                                                if (isShareTask && status?.complete != true) {
+                                                    val packageName = if (taskId == 3) "com.whatsapp" else "com.facebook.katana"
+                                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                        type = "text/plain"
+                                                        putExtra(Intent.EXTRA_TEXT, "Join me on Zyora Voice Chat! https://zyora-voice-chat.vercel.app")
+                                                        setPackage(packageName)
+                                                    }
+                                                    runCatching { context.startActivity(shareIntent) }
+                                                        .onSuccess {
+                                                            claimingTask = taskId
+                                                            scope.launch {
+                                                                runCatching { NativeRoomTaskApi.request(taskRoomId, taskId, shareTask = true) }
+                                                                    .onSuccess {
+                                                                        taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, false, 1f))
+                                                                    }
+                                                                    .onFailure { error ->
+                                                                        android.widget.Toast.makeText(context, error.message ?: "Share could not be recorded.", android.widget.Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                claimingTask = 0
+                                                            }
+                                                        }
+                                                        .onFailure {
+                                                            android.widget.Toast.makeText(context, if (taskId == 3) "WhatsApp is not installed." else "Facebook is not installed.", android.widget.Toast.LENGTH_SHORT).show()
+                                                        }
+                                                } else if (canClaim) {
                                                     claimingTask = taskId
                                                     scope.launch {
                                                         runCatching { NativeRoomTaskApi.request(taskRoomId, taskId) }
-                                                            .onSuccess {
-                                                                taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, true))
+                                                            .onSuccess { response ->
+                                                                val newBalance = response.optLong("balance", -1L)
+                                                                if (newBalance >= 0L) {
+                                                                    val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                                                                    val walletUserId = authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
+                                                                        ?: authPrefs.getString("accountId", "").orEmpty()
+                                                                    context.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE)
+                                                                        .edit().putLong("balance_$walletUserId", newBalance).putLong("last_sync_$walletUserId", System.currentTimeMillis()).apply()
+                                                                    withContext(Dispatchers.IO) {
+                                                                        val dao = WalletDatabase.get(context).walletDao()
+                                                                        val current = dao.getUserData() ?: UserDataEntity()
+                                                                        dao.saveUserData(current.copy(balance = newBalance))
+                                                                        dao.insertTransaction(TransactionEntity(
+                                                                            title = "Room Task Reward",
+                                                                            amount = newBalance - current.balance,
+                                                                            date = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
+                                                                            timestamp = System.currentTimeMillis(),
+                                                                            type = "coin"
+                                                                        ))
+                                                                    }
+                                                                }
+                                                                taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, true, 1f))
                                                             }
                                                             .onFailure { error ->
                                                                 android.widget.Toast.makeText(context, error.message ?: "Unable to claim reward.", android.widget.Toast.LENGTH_SHORT).show()
@@ -371,24 +441,27 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                             modifier = Modifier.padding(top = 6.dp).width(85.dp).height(28.dp),
                                             contentPadding = PaddingValues(0.dp),
                                             shape = RoundedCornerShape(18.dp),
-                                            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFF5E6A8)),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                                            border = if (isClaimed) null else androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFF5E6A8)),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color.Transparent,
+                                                disabledContainerColor = Color.Transparent,
+                                                disabledContentColor = Color(0xFFB8B8B8)
+                                            )
                                         ) {
-                                            Box(
-                                                Modifier.fillMaxSize().background(
-                                                    Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
-                                                    RoundedCornerShape(18.dp)
-                                                ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    if (status?.claimed == true) "CLAIMED" else "CLAIM",
-                                                    color = Color(0xFF4A1F00),
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    letterSpacing = 1.sp
-                                                )
+                                            if (isClaimed) {
+                                                Text("CLAIMED", color = Color(0xFFB8B8B8), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                            } else {
+                                                Box(
+                                                    Modifier.fillMaxSize().background(
+                                                        Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
+                                                        RoundedCornerShape(18.dp)
+                                                    ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(buttonLabel, color = Color(0xFF4A1F00), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                                }
                                             }
+                                        }
                                         }
                                     }
                                 }
