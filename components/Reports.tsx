@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { socket } from '../src/lib/socket';
+import { apiUrl } from '../src/lib/api';
 
 const REPORTS_DB_NAME = 'ZyoraReportsDB';
 const REPORTS_STORE = 'userReports';
@@ -53,8 +54,27 @@ const saveLocalReport = async (report: any, publish = true) => {
   }
 };
 
-const getReporterId = (report: any) => String(report.senderId || report.reporterId || report.reporter || 'N/A');
-const getTargetId = (report: any) => String(report.reportedId || report.targetId || report.target || 'N/A');
+const identityKeys = [
+  'uid', 'firebaseUid', 'firebaseUID', 'userId', 'id', '_id', 'appLongId',
+  'accountId', 'accountNumber', 'displayAccountNumber', 'displayUserNumber',
+  'publicUserId', 'hurryId', 'zyoraId', 'Account ID', 'Account Number'
+];
+const appIdKeys = [
+  'accountNumber', 'displayAccountNumber', 'displayUserNumber',
+  'publicUserId', 'hurryId', 'zyoraId', 'appId', 'userNumber', 'accountId'
+];
+const textValue = (...values: unknown[]) => {
+  const value = values.find(item => item !== undefined && item !== null && String(item).trim() && String(item).trim() !== 'null');
+  return value === undefined ? '' : String(value).trim();
+};
+const resolveAppId = (value: unknown, users: any[]) => {
+  const rawId = textValue(value);
+  if (!rawId) return 'N/A';
+  const matched = users.find(user => identityKeys.some(key => textValue(user?.[key]) === rawId));
+  return matched ? textValue(...appIdKeys.map(key => matched?.[key])) || rawId : rawId;
+};
+const getReporterId = (report: any, users: any[]) => resolveAppId(report.senderId || report.reporterId || report.reporter, users);
+const getTargetId = (report: any, users: any[]) => resolveAppId(report.reportedId || report.targetId || report.target, users);
 const getReason = (report: any) => {
   const category = String(report.category || report.reason || 'Other');
   return ({ violence: 'Violence', abusing: 'Abusing', illegal: 'Illegal', others: "Other's", other: 'Other' } as Record<string, string>)[category.toLowerCase()] || category;
@@ -62,7 +82,7 @@ const getReason = (report: any) => {
 const getStatus = (report: any) => REPORT_STATUSES.includes(report.status) ? report.status : 'Open';
 
 export default function Reports() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);\n  const [userProfiles, setUserProfiles] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
@@ -111,13 +131,13 @@ export default function Reports() {
     const query = appliedSearchQuery.trim().toLowerCase();
     return reports.filter((report) => {
       const matchesSearch = !query || [
-        getReporterId(report), getTargetId(report), getReason(report),
+        getReporterId(report, userProfiles), getTargetId(report, userProfiles),
         report.senderName, report.reportedName, report.description,
       ].some((value) => String(value || '').toLowerCase().includes(query));
       const matchesStatus = appliedStatusFilter === 'All' || getStatus(report) === appliedStatusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [reports, appliedSearchQuery, appliedStatusFilter]);
+  }, [reports, userProfiles, appliedSearchQuery, appliedStatusFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
   const visibleReports = filteredReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -193,8 +213,8 @@ export default function Reports() {
                 {visibleReports.map((report, index) => (
                   <tr key={report.id} className="text-sm text-slate-700 hover:bg-slate-50">
                     <td className="px-4 py-4 font-semibold">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="px-4 py-4 font-semibold">{getReporterId(report)}</td>
-                    <td className="px-4 py-4 font-semibold">{getTargetId(report)}</td>
+                    <td className="px-4 py-4 font-semibold">{getReporterId(report, userProfiles)}</td>
+                    <td className="px-4 py-4 font-semibold">{getTargetId(report, userProfiles)}</td>
                     <td className="px-4 py-4">{getReason(report)}</td>
                     <td className="px-4 py-4">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatus(report) === 'Handled' ? 'bg-emerald-50 text-emerald-700' : getStatus(report) === 'Ignored' ? 'bg-slate-100 text-slate-600' : 'bg-[#197477]/10 text-[#197477]'}`}>
