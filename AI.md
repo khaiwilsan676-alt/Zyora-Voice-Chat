@@ -2197,3 +2197,11 @@ Current documentation does not certify that all historical features are build-, 
 - Added screenshot-matched sections for User Details, Controls, VIP History, Wallet Activity, and Gift Activity, plus Back to Users navigation.
 - Balance/VIP action buttons are intentionally disabled because this repository currently has no verified owner-authorized balance-adjustment or VIP grant/cancel API. Activity sections show an empty-state until real history endpoints are connected; no fake records or balance mutations are created.
 - Commit: `62400cefacd24477feb971f99985d81486d000b7`.
+
+
+## 2026-11-25 — Add requested Hot and Luxury gifts
+- `GiftPicker.kt`: added Christmas Deer (24900), Liffy lipstick (12900), the supplied unnamed 9999 gift (displayed as Gift), Heartbeat (120999), and Desert Aura (55000) to Hot with the supplied image/video assets.
+- Added Golden tiger (1,000,000) to Luxury with its supplied image/video assets.
+- All newly added gift videos use the existing `fade` video overlay, including the top-and-bottom fade. Existing picker layout, sending flow, combo controls, and notifications are unchanged.
+- Heart lamp is pending its coin price; it was not made free or added with an invented price.
+- Asset existence and native APK build/device verification remain pending.
