@@ -2138,3 +2138,9 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Panel → Master Wallet: removed only the Lucky Bag Transactions table; the User Transfer History table, transfer controls, wallet totals, and existing IndexedDB transaction storage remain unchanged.
 - Master Wallet now backfills missing historical transfer avatars from the canonical `/api/users?accountId=` profile response and persists recovered image URLs in the existing `ZyoraMasterWalletDB` / `transferHistory` store. No wallet balance, transfer, or payout logic changed.
 - Verification: source committed; browser runtime and live avatar rendering remain pending.
+
+
+## 2026-11-24 — Public Profile Family tag artwork
+- `PublicProfile.kt`: changed only the image asset used by the Family tag beside `Lv.1` to `public/file_000000008c708246ba734e7cd0278c4f.png`.
+- Kept the existing Family tag visibility, name overlay, dimensions, alignment, and all other profile UI unchanged.
+- Native APK build and device image-loading verification remain pending.
