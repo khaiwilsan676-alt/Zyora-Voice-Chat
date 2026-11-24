@@ -85,7 +85,6 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val taskRoomId = remember(roomId) { roomId.trim() }
     var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
-    var taskError by remember { mutableStateOf("") }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember { mutableStateOf(false) }
     var hour by remember { mutableIntStateOf(0) }
@@ -107,14 +106,12 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                     )
                                 }
                             }.toMap()
-                            taskError = ""
                         }
                     }
-                    .onFailure { taskError = it.message ?: "Unable to load Room Tasks." }
+                    .onFailure { /* transient refresh failure; retain last known task state */ }
                 delay(15000)
             }
         } else {
-            taskError = "Room owner account could not be identified."
         }
     }
 
@@ -364,7 +361,9 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                             .onSuccess {
                                                                 taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, true))
                                                             }
-                                                            .onFailure { taskError = it.message ?: "Unable to claim reward." }
+                                                            .onFailure { error ->
+                                                                android.widget.Toast.makeText(context, error.message ?: "Unable to claim reward.", android.widget.Toast.LENGTH_SHORT).show()
+                                                            }
                                                         claimingTask = 0
                                                     }
                                                 }
@@ -396,10 +395,6 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                             }
                         }
                     }
-                }
-
-                if (taskError.isNotBlank()) {
-                    Text(taskError, color = Color(0xFFFFD0D0), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 }
 
                 // Bottom image thori upar kar di aur bottom scroll space bhi kam kar diya
