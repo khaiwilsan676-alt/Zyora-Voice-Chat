@@ -1189,20 +1189,23 @@ export default function StaffPanel() {
         inviteRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
         return Array.from(map.values()).sort((x, y) => Number(y.timestamp || 0) - Number(x.timestamp || 0));
       });
-      // One-time migration: only send local records absent from the server snapshot.
-      const missing: any[] = [];
-      for (const config of OWNER_SHARED_DB_STORES) {
-        const rows = await readOwnerSharedStore(config);
-        rows.forEach(record => {
-          const key = String(config.store) + ":" + String(record?.[config.key]);
-          if (record?.[config.key] != null && !knownKeys.has(key)) {
-            missing.push({ store: config.store, record, updatedAt: Date.now() });
-            knownKeys.add(key);
-          }
-        });
-      }
-      for (let offset = 0; offset < missing.length; offset += 100) {
-        socket.emit("owner_shared_records_upsert", { records: missing.slice(offset, offset + 100) });
+      // Migrate local-only rows only after the complete server snapshot arrives.
+      // Live deltas must never be mistaken for a full snapshot.
+      if (payload.snapshot === true && !payload.error) {
+        const missing: any[] = [];
+        for (const config of OWNER_SHARED_DB_STORES) {
+          const rows = await readOwnerSharedStore(config);
+          rows.forEach(record => {
+            const key = String(config.store) + ":" + String(record?.[config.key]);
+            if (record?.[config.key] != null && !knownKeys.has(key)) {
+              missing.push({ store: config.store, record, updatedAt: Number(record.updatedAt || record.timestamp || record.createdAt || Date.now()) });
+              knownKeys.add(key);
+            }
+          });
+        }
+        for (let offset = 0; offset < missing.length; offset += 100) {
+          socket.emit("owner_shared_records_upsert", { records: missing.slice(offset, offset + 100) });
+        }
       }
     };
     socket.on("owner_shared_records", handleSharedRecords);
