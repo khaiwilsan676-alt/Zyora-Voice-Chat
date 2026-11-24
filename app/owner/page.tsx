@@ -761,6 +761,7 @@ export default function StaffPanel() {
 
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [selectedTagUserData, setSelectedTagUserData] = useState<UserRecord | null>(null);
+  const [selectedManageUser, setSelectedManageUser] = useState<any | null>(null);
   const [isUserProfileEditOpen, setIsUserProfileEditOpen] = useState(false);
   const [editedUserName, setEditedUserName] = useState('');
   const [editedUserImage, setEditedUserImage] = useState('');
@@ -1863,7 +1864,7 @@ export default function StaffPanel() {
 
       <main className="flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-hidden md:pl-[260px]">
 
-        {activeTab === 'manage_users' && (
+        {activeTab === 'manage_users' && !selectedManageUser && (
           <div className="flex flex-col h-full bg-white">
             <div className="px-8 py-6 pb-4 border-b border-gray-100">
               <div className="flex items-center justify-between gap-4">
@@ -1987,7 +1988,7 @@ export default function StaffPanel() {
                             <td className="py-3 pr-4 text-right">
                               <button
                                 type="button"
-                                onClick={() => { setSelectedTagUserData(u); setIsTagModalOpen(true); }}
+                                onClick={() => setSelectedManageUser(userData)}
                                 className="px-3 py-1.5 rounded-md bg-[#197477] hover:bg-[#17696c] text-white text-[10px] font-semibold transition-colors"
                               >
                                 Open
@@ -2019,6 +2020,63 @@ export default function StaffPanel() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'manage_users' && selectedManageUser && (
+          <div className="flex-1 min-h-0 overflow-y-auto bg-[#f5f6fa] p-4 md:p-6">
+            <div className="mx-auto max-w-5xl space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">User</h2>
+                  <p className="text-xs text-slate-400">User Details</p>
+                </div>
+                <button type="button" onClick={() => setSelectedManageUser(null)} className="rounded-md bg-[#197477] px-4 py-2 text-xs font-semibold text-white hover:bg-[#17696c]">Back to Users</button>
+              </div>
+
+              <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="mb-3 text-sm font-semibold text-slate-800">User Details</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    ["Name", selectedManageUser.name || ""],
+                    ["Username", selectedManageUser.username || ""],
+                    ["Country", selectedManageUser.country || ""],
+                    ["Birthday", selectedManageUser.birthday || selectedManageUser.birthDate || ""],
+                    ["Comment", selectedManageUser.comment || ""],
+                    ["Avatar", selectedManageUser.image || ""],
+                    ["Gender Type", selectedManageUser.genderType ?? selectedManageUser.gender ?? ""],
+                    ["Position", selectedManageUser.position || selectedManageUser.role || "User"],
+                    ["State", selectedManageUser.accountStatus || selectedManageUser.state || "Active"]
+                  ].map(([label, value]) => (
+                    <label key={label} className="block min-w-0 text-[11px] font-medium text-slate-600">
+                      <span className="mb-1 block">{label}</span>
+                      <input readOnly value={String(value ?? "")} className="w-full rounded border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700 outline-none" />
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="mb-3 text-sm font-semibold text-slate-800">Controls</h3>
+                <div className="space-y-3">
+                  <label className="block text-[11px] font-medium text-slate-600">Coins delta<input type="number" defaultValue="0" className="mt-1 w-full rounded border border-slate-200 px-2.5 py-2 text-xs text-slate-700" /></label>
+                  <label className="block text-[11px] font-medium text-slate-600">Diamond delta<input type="number" defaultValue="0" className="mt-1 w-full rounded border border-slate-200 px-2.5 py-2 text-xs text-slate-700" /></label>
+                  <label className="block text-[11px] font-medium text-slate-600">Note<input defaultValue="admin adjustment" className="mt-1 w-full rounded border border-slate-200 px-2.5 py-2 text-xs text-slate-700" /></label>
+                  <button type="button" disabled title="Balance adjustment API is not connected" className="w-full rounded bg-[#197477] px-3 py-2 text-xs font-semibold text-white opacity-60">Adjust balance</button>
+                  <label className="block text-[11px] font-medium text-slate-600">VIP plan<select defaultValue="VIP 1 - 30 days" className="mt-1 w-full rounded border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700"><option>VIP 1 - 30 days</option><option>VIP 2 - 30 days</option><option>VIP 3 - 30 days</option></select></label>
+                  <label className="block text-[11px] font-medium text-slate-600">Days override<input type="number" min="1" className="mt-1 w-full rounded border border-slate-200 px-2.5 py-2 text-xs text-slate-700" /></label>
+                  <button type="button" disabled title="VIP grant API is not connected" className="w-full rounded bg-[#197477] px-3 py-2 text-xs font-semibold text-white opacity-60">Grant VIP</button>
+                  <button type="button" disabled title="VIP cancellation API is not connected" className="rounded bg-[#197477] px-3 py-2 text-xs font-semibold text-white opacity-60">Cancel active VIP</button>
+                </div>
+              </section>
+
+              {(["VIP History", "Wallet Activity", "Gift Activity"] as const).map((heading) => (
+                <section key={heading} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+                  <h3 className="mb-3 text-sm font-semibold text-slate-800">{heading}</h3>
+                  <p className="py-2 text-[11px] text-slate-400">No records loaded.</p>
+                </section>
+              ))}
             </div>
           </div>
         )}
