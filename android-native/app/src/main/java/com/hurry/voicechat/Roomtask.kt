@@ -490,18 +490,9 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Bottom image thori upar kar di aur bottom scroll space bhi kam kar diya
+                // Keep the original decorative frame image at the actual bottom of the task list.
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .zIndex(10f)
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            val shiftUp = 80.dp.roundToPx()
-                            layout(placeable.width, (placeable.height - shiftUp).coerceAtLeast(0)) {
-                                placeable.placeRelative(0, -shiftUp)
-                            }
-                        },
+                    modifier = Modifier.fillMaxWidth().zIndex(10f),
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
