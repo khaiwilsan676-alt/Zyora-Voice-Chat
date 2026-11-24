@@ -839,12 +839,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                 }
             }
-            if (keptRoom != null && tab != HurryTab.HOME && openedRoom == null && openedChat == null && openedPublicProfile == null && !openedRoomSupport && !openedSearch) {
-                KeptRoomTabOverlay(
+            if (keptRoom != null) {
+                KeptRoomGlobalOverlay(
                     room = keptRoom!!,
                     onOpen = {
-                        // Resume the retained live room session directly. Calling tryOpenRoom
-                        // here performs a fresh access/join flow and can create a second entry.
+                        // Resume the retained live room session directly without a second join.
                         keptRoom?.let { room ->
                             if (roomSession?.id != room.id) roomSession = room
                             openedRoom = room
@@ -1084,11 +1083,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 
 
 @Composable
-private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Unit) {
+private fun KeptRoomGlobalOverlay(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Unit) {
     var dragOffset by remember(room.id) { mutableStateOf(Offset.Zero) }
     var isDragging by remember(room.id) { mutableStateOf(false) }
     val density = LocalDensity.current
-    val music = rememberInfiniteTransition(label = "kept-room-tab-music")
+    val music = rememberInfiniteTransition(label = "kept-room-global-music")
     val phase by music.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -1096,16 +1095,30 @@ private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit, onExit: () -
             animation = tween(durationMillis = 900, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "kept-room-tab-wave"
+        label = "kept-room-global-wave"
     )
-    Box(
-        Modifier
-            .fillMaxSize()
-            .padding(end = 12.dp, bottom = 150.dp),
-        contentAlignment = Alignment.BottomEnd
-    ) {
+
+    Box(Modifier.fillMaxSize()) {
+        if (isDragging) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(190.dp)
+                    .offset(x = 95.dp, y = 95.dp)
+                    .background(Color(0xFFE53935), CircleShape),
+                contentAlignment = Alignment.TopStart
+            ) {
+                Canvas(Modifier.padding(start = 38.dp, top = 38.dp).size(42.dp)) {
+                    drawCircle(Color.White, radius = size.width * 0.18f)
+                    drawCircle(Color.White, radius = size.width * 0.42f, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()))
+                }
+            }
+        }
+
         Box(
             Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 180.dp)
                 .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .size(60.dp)
                 .border(2.dp, Color.White, CircleShape)
@@ -1121,7 +1134,10 @@ private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit, onExit: () -
                             dragOffset = Offset.Zero
                             if (shouldExit) onExit()
                         },
-                        onDragCancel = { isDragging = false; dragOffset = Offset.Zero },
+                        onDragCancel = {
+                            isDragging = false
+                            dragOffset = Offset.Zero
+                        },
                         onDrag = { change, amount ->
                             change.consume()
                             dragOffset += amount
@@ -1150,7 +1166,7 @@ private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit, onExit: () -
                         start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
                         end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
                         strokeWidth = 2.6.dp.toPx(),
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        cap = StrokeCap.Round
                     )
                 }
             }
