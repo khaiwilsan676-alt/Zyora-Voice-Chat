@@ -2117,3 +2117,8 @@ Current documentation does not certify that all historical features are build-, 
 - Backend still rejects attempts to take a locked empty seat by a non-moderator, and still rejects taking another user's occupied seat.
 - Removed the default Compose ripple/grey pressed indication from homepage room cards only; click navigation is unchanged.
 - Status: source changes committed; native build and live owner/member verification remain pending.
+
+
+## 2026-11-24 — Homepage Rich/Charm/Room avatar alignment
+- Shifted the three top-user avatars in the Rich (Honour), Charm, and Room homepage cards 2 dp to the left and 1 dp down.
+- Shifted the rightmost avatar an additional 2 dp to the left. Card artwork, avatar sizes, and other homepage layout remain unchanged.
