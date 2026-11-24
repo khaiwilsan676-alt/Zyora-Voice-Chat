@@ -2174,3 +2174,11 @@ Current documentation does not certify that all historical features are build-, 
 - `CoinsNativePage.kt`: a wallet refresh now records the current live-event generation before requesting the canonical MongoDB balance. If a newer `wallet_balance_updated` Socket.IO event arrives before the HTTP response, the older in-flight response is discarded instead of replacing the newly confirmed coins/diamonds in Compose, SharedPreferences, or index.db.
 - The same generation guard protects Diamond Exchange and recharge responses from racing with a newer wallet event. Server-side wallet arithmetic, transaction IDs, endpoint contracts, and UI are unchanged.
 - Verification pending: native APK build plus concurrent gift/game/recharge and page-open balance tests on two accounts. No runtime pass is claimed yet.
+
+
+## 2026-11-24 — Gift picker catalog replacement
+- Replaced the old Lucky gift catalog with the 15 supplied standard gifts and coin prices; the picker tab is now labeled Gift.
+- Added Mysalo Princess (499999), Love Twinkle (200000), and Castle Night (170000) to Hot with their supplied MP4 paths.
+- All three new Hot videos use the existing fade overlay, which fades at the top and bottom.
+- New Gift-tab sends use the regular gift transaction/video path, not the legacy Lucky reward flow.
+- Asset existence and native build/device verification are pending.
