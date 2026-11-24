@@ -771,12 +771,12 @@ private fun GiftCard(
 ) {
     Box(
         Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(6.dp))
             .background(
                 if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
             )
             .clickable { onClick() }
-            .padding(horizontal = 2.dp, vertical = 2.dp),
+            .padding(horizontal = 2.dp, vertical = 1.dp),
     ) {
         if (activeTab == "Lucky") {
             AsyncImage(
@@ -792,7 +792,7 @@ private fun GiftCard(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val size = if (gift.noMask) 60.dp else 64.dp
+            val size = if (gift.noMask) 52.dp else 64.dp
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
             val isHotEdgeFade = activeTab == "Hot" && (gift.id == 2001 || gift.id == 2002 || gift.id == 2003)
 
@@ -812,7 +812,7 @@ private fun GiftCard(
                                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
-                                    val edgeFade = 0.02f
+                                    val edgeFade = 0.05f
                                     drawRect(
                                         brush = Brush.horizontalGradient(
                                             0f to Color.Transparent,
@@ -874,17 +874,21 @@ private fun GiftCard(
                 text = gift.name,
                 color = Color.White,
                 fontSize = 10.sp,
+                lineHeight = 11.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
+                style = TextStyle(
+                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 1.dp),
             )
 
-            Spacer(Modifier.height(0.dp))
-
             Row(
-                modifier = Modifier.offset(y = (-6).dp),
+                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -901,6 +905,10 @@ private fun GiftCard(
                     text = gift.coins.toString(),
                     color = Color(0xFF9CA3AF),
                     fontSize = 9.sp,
+                    lineHeight = 10.sp,
+                    style = TextStyle(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    ),
                 )
             }
         }
@@ -1136,7 +1144,7 @@ fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
 }
 
 // ============================================================
-// LUCKY GIFT NOTIFICATION SLIDER (FIXED: Left space, Full Round, x1 next to name)
+// LUCKY GIFT NOTIFICATION SLIDER + FLY ANIMATION
 // ============================================================
 data class LuckyNotice(
     val id: String,
@@ -1152,106 +1160,225 @@ data class LuckyNotice(
     val isExiting: Boolean = false,
 )
 
+private data class LuckyFlyAnimItem(
+    val id: String,
+    val giftImage: String,
+)
+
 @Composable
 fun LuckyGiftNotificationSlider(
     notice: LuckyNotice?,
     floatingWins: List<Pair<String, Long>> = emptyList(),
+    targetAvatarOffset: Offset? = null,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(start = 12.dp), // HIGHLIGHT: Thodi space edge se
-        contentAlignment = Alignment.CenterStart 
-    ) {
-        AnimatedVisibility(
-            visible = notice != null && !notice.isExiting,
-            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
-            exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (notice == null) return@AnimatedVisibility
-            val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
-                    notice.recipientMode == RecipientMode.ROOM
-            val topText = when (notice.recipientMode) {
-                RecipientMode.MIC -> "Sent to All Mic"
-                RecipientMode.ROOM -> "Sent to All in room"
-                else -> notice.senderName
-            }
-            val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
+    val activeFlyItems = remember { mutableStateListOf<LuckyFlyAnimItem>() }
+    var lastAnimatedNoticeId by remember { mutableStateOf<String?>(null) }
 
-            Box(contentAlignment = Alignment.CenterStart) {
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(50.dp)) // HIGHLIGHT: Full round shape
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFFFFC107),
-                                    Color(0xFFFFC107),
-                                    Color(0xD9FFC107),
-                                    Color(0x73FFC107),
-                                    Color(0x26FFC107),
-                                    Color(0x00FFC107),
-                                ),
-                                startX = 0f,
-                                endX = Float.POSITIVE_INFINITY,
+    LaunchedEffect(notice?.id) {
+        if (notice != null && notice.id != lastAnimatedNoticeId) {
+            lastAnimatedNoticeId = notice.id
+            activeFlyItems.add(LuckyFlyAnimItem(id = notice.id, giftImage = notice.giftImage))
+        }
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val density = LocalDensity.current
+        val screenWidthPx = with(density) { maxWidth.toPx() }
+        val screenHeightPx = with(density) { maxHeight.toPx() }
+
+        // Notification patti (compact width + 69.dp trailing fade + multiplier right next to name)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            AnimatedVisibility(
+                visible = notice != null && !notice.isExiting,
+                enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+                modifier = Modifier.wrapContentWidth()
+            ) {
+                if (notice == null) return@AnimatedVisibility
+                val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
+                        notice.recipientMode == RecipientMode.ROOM
+                val topText = when (notice.recipientMode) {
+                    RecipientMode.MIC -> "Sent to All Mic"
+                    RecipientMode.ROOM -> "Sent to All in room"
+                    else -> notice.senderName
+                }
+                val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
+
+                Box(contentAlignment = Alignment.CenterStart) {
+                    Row(
+                        Modifier
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFFFFC107),
+                                        Color(0xFFFFC107),
+                                        Color(0xD9FFC107),
+                                        Color(0x73FFC107),
+                                        Color(0x26FFC107),
+                                        Color(0x00FFC107),
+                                    ),
+                                    startX = 0f,
+                                    endX = Float.POSITIVE_INFINITY,
+                                )
                             )
+                            .padding(start = 4.dp, end = 69.dp, top = 2.dp, bottom = 2.dp)
+                            .height(38.dp)
+                            .wrapContentWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AsyncImage(
+                            model = notice.senderImage,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape),
                         )
-                        .padding(start = 4.dp, end = 18.dp, top = 2.dp, bottom = 2.dp)
-                        .height(38.dp)
-                        .fillMaxWidth(0.96f),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AsyncImage(
-                        model = notice.senderImage,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(32.dp) 
-                            .clip(CircleShape),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    
-                    // HIGHLIGHT: fill = false so name doesn't take extra space
-                    Column(Modifier.weight(1f).widthIn(min = 0.dp), verticalArrangement = Arrangement.Center) {
+                        Spacer(Modifier.width(6.dp))
+
+                        Column(
+                            modifier = Modifier.widthIn(max = 110.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = topText,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = bottomText,
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 9.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.offset(y = (-3).dp)
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
+
+                        AsyncImage(
+                            model = giftAssetUrl(notice.giftImage),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(26.dp),
+                        )
                         Text(
-                            text = topText,
+                            text = "×${notice.multiplier}",
                             color = Color.White,
-                            fontSize = 10.sp, 
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = bottomText,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 9.sp, 
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.offset(y = (-3).dp) 
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier.padding(start = 4.dp),
                         )
                     }
-                    Spacer(Modifier.width(6.dp))
-                    
-                    // HIGHLIGHT: Gift image + multiplier exactly next to name
-                    AsyncImage(
-                        model = notice.giftImage,
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(26.dp), 
-                    )
-                    Text(
-                        text = "×${notice.multiplier}",
-                        color = Color.White,
-                        fontSize = 16.sp, 
-                        fontWeight = FontWeight.Black,
-                        fontStyle = FontStyle.Italic,
-                        modifier = Modifier.padding(start = 4.dp),
-                    )
                 }
             }
         }
+
+        // Lucky gift flying animation:
+        // Bottom (30dp) -> Screen center popup (52dp) -> 0.8s stay -> Shrink (30dp) -> User avatar -> Disappear
+        activeFlyItems.forEach { item ->
+            key(item.id) {
+                LuckyGiftFlyOverlayItem(
+                    giftImage = item.giftImage,
+                    screenWidthPx = screenWidthPx,
+                    screenHeightPx = screenHeightPx,
+                    targetAvatarOffset = targetAvatarOffset,
+                    onFinished = {
+                        activeFlyItems.removeAll { it.id == item.id }
+                    },
+                )
+            }
+        }
     }
+}
+
+@Composable
+private fun LuckyGiftFlyOverlayItem(
+    giftImage: String,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    targetAvatarOffset: Offset?,
+    onFinished: () -> Unit,
+) {
+    val density = LocalDensity.current
+    val startX = screenWidthPx * 0.5f
+    val startY = screenHeightPx - with(density) { 40.dp.toPx() }
+    val centerX = screenWidthPx * 0.5f
+    val centerY = screenHeightPx * 0.5f
+    val avatarX = targetAvatarOffset?.x ?: with(density) { 32.dp.toPx() }
+    val avatarY = targetAvatarOffset?.y ?: (screenHeightPx * 0.5f)
+
+    val posX = remember { Animatable(startX) }
+    val posY = remember { Animatable(startY) }
+    val sizeDp = remember { Animatable(30f) }
+    val itemAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        // 1. Niche se 30dp mein nikal ke screen ke center par aana
+        val fadeInJob = launch {
+            itemAlpha.animateTo(1f, animationSpec = tween(120))
+        }
+        val moveToCenterJob = launch {
+            posY.animateTo(centerY, animationSpec = tween(360, easing = FastOutSlowInEasing))
+        }
+        fadeInJob.join()
+        moveToCenterJob.join()
+
+        // 2. Center par aake popup ke saath 52dp original size
+        sizeDp.animateTo(58f, animationSpec = tween(130, easing = FastOutSlowInEasing))
+        sizeDp.animateTo(52f, animationSpec = tween(110, easing = FastOutSlowInEasing))
+
+        // 3. Center mein 0.8 second stay
+        delay(800L)
+
+        // 4. Dobara choti (30dp) hoke user avatar ke paas jaana aur gayab hona
+        val shrinkJob = launch {
+            sizeDp.animateTo(30f, animationSpec = tween(260, easing = FastOutSlowInEasing))
+        }
+        val flyXJob = launch {
+            posX.animateTo(avatarX, animationSpec = tween(420, easing = FastOutSlowInEasing))
+        }
+        val flyYJob = launch {
+            posY.animateTo(avatarY, animationSpec = tween(420, easing = FastOutSlowInEasing))
+        }
+        val fadeOutJob = launch {
+            delay(300L)
+            itemAlpha.animateTo(0f, animationSpec = tween(140))
+        }
+        shrinkJob.join()
+        flyXJob.join()
+        flyYJob.join()
+        fadeOutJob.join()
+
+        onFinished()
+    }
+
+    val halfSizePx = with(density) { (sizeDp.value / 2f).dp.toPx() }
+
+    AsyncImage(
+        model = giftAssetUrl(giftImage),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    x = (posX.value - halfSizePx).roundToInt(),
+                    y = (posY.value - halfSizePx).roundToInt(),
+                )
+            }
+            .size(sizeDp.value.dp)
+            .alpha(itemAlpha.value),
+    )
 }
 
 // ============================================================
