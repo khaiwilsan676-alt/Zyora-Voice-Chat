@@ -108,7 +108,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     var registeredDeviceAccountId by remember { mutableStateOf("") }
     var registeredDeviceEmail by remember { mutableStateOf("") }
     var registeredDeviceMethod by remember { mutableStateOf("Google") }
-    var error by remember { mutableStateOf(context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getString("banReason", "").orEmpty()) }
+    var error by remember { mutableStateOf("") }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     val legacyGoogleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -474,6 +474,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                     .putString("uid", user.optString("localId"))
                                     .putString("email", user.optString("email"))
                                     .putString("idToken", user.optString("idToken"))
+                                    .remove("banReason")
                                     .apply()
                                 onLoginSuccess()
                             } catch (t: Throwable) {
@@ -642,7 +643,44 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
             }
         }
 
-        if (error.isNotBlank()) {
+        if (error.isNotBlank() && error.startsWith("Your account has been banned", ignoreCase = true)) {
+            Dialog(onDismissRequest = { error = "" }) {
+                Column(
+                    Modifier
+                        .size(280.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF080808))
+                        .padding(horizontal = 22.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Account Banned",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        error,
+                        color = Color.White.copy(alpha = 0.88f),
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = { error = "" },
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                    ) {
+                        Text("OK", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        } else if (error.isNotBlank()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = error,
