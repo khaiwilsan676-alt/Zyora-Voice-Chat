@@ -1764,6 +1764,8 @@ private fun DragonBattleMainOverlay(
     var balance by remember(dragonWalletUserId) {
         mutableLongStateOf(walletCachePrefs.getLong("balance_$dragonWalletUserId", 0L).coerceAtLeast(0L))
     }
+    // Prevent older in-flight HTTP responses from replacing newer wallet socket snapshots.
+    var walletEventGeneration by remember(dragonWalletUserId) { mutableLongStateOf(0L) }
     DisposableEffect(dragonWinnerSocket, dragonWalletUserId, dragonAccountId) {
         val registerWalletIdentity = {
             if (dragonWalletUserId.isNotBlank()) {
@@ -1779,6 +1781,7 @@ private fun DragonBattleMainOverlay(
             val eventUserId = payload.optString("userId")
             val updatedBalance = payload.optLong("balance", -1L)
             if (eventUserId in setOf(dragonWalletUserId, dragonAccountId) && updatedBalance >= 0L) {
+                walletEventGeneration++
                 val appliedId = payload.optString("transactionId")
                 val queueKey = "queue_$dragonWalletUserId"
                 if (appliedId.isNotBlank()) synchronized(dragonPendingPrefs) {
@@ -1871,6 +1874,7 @@ private fun DragonBattleMainOverlay(
                     continue
                 }
                 val action = if (delta < 0L) "bet" else "win"
+                val requestGeneration = walletEventGeneration
                 val result = dragonWalletRequest(dragonWalletUserId, txId, kotlin.math.abs(delta), action)
                 if (!result.success && result.statusCode != 409) {
                     android.util.Log.w("DragonBattle", "Wallet transaction retained for retry: ${result.error}")
@@ -1888,14 +1892,21 @@ private fun DragonBattleMainOverlay(
                 }
                 walletPendingDelta = (0 until latestQueue.length()).sumOf { latestQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
                 if (result.success && result.balance >= 0L) {
-                    balance = result.balance
-                    walletReady = true
-                    walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
-                        .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
+                    // If a newer wallet event arrived during the POST, it already carries
+                    // the latest canonical balance; discard this older HTTP snapshot.
+                    if (walletEventGeneration == requestGeneration) {
+                        balance = result.balance
+                        walletReady = true
+                        walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
+                            .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
+                    }
                 } else {
+                    val refreshGeneration = walletEventGeneration
                     val latest = fetchDragonWallet(dragonWalletUserId)
-                    if (latest != null) balance = latest
-                    walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
+                    if (latest != null && walletEventGeneration == refreshGeneration) {
+                        balance = latest
+                        walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
+                    }
                     dragonRejectedCallbacks.remove(txId)?.invoke()
                     showBanner("Wallet rejected bet - coins restored")
                     android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
@@ -1932,14 +1943,15 @@ private fun DragonBattleMainOverlay(
             balance = 0L
             walletReady = false
         } else {
+            val requestGeneration = walletEventGeneration
             var canonical: Long? = null
             repeat(2) { attempt ->
-                if (canonical == null) {
+                if (canonical == null && walletEventGeneration == requestGeneration) {
                     canonical = fetchDragonWallet(dragonWalletUserId)
                     if (canonical == null && attempt == 0) delay(600L)
                 }
             }
-            if (canonical != null) {
+            if (canonical != null && walletEventGeneration == requestGeneration) {
                 val savedQueue = runCatching { JSONArray(dragonPendingPrefs.getString("queue_$dragonWalletUserId", "[]") ?: "[]") }.getOrDefault(JSONArray())
                 walletPendingDelta = (0 until savedQueue.length()).sumOf { savedQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
                 balance = canonical!!
@@ -1949,7 +1961,7 @@ private fun DragonBattleMainOverlay(
                     .apply()
                 walletReady = true
                 syncDragonWalletChanges()
-            } else {
+            } else if (canonical == null && walletEventGeneration == requestGeneration) {
                 walletReady = false
                 showBanner("Wallet unavailable - try again")
             }
