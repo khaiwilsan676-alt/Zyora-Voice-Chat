@@ -87,7 +87,7 @@ class Collection {
           if(before!==JSON.stringify(docs[index])) changed.push(incoming);
         }
       }
-      return changed;
+      return {changed};
     });
   }
   async insertOne(doc) { const d={...doc,_id:doc._id||crypto.randomUUID()}; return this.mutate(docs=>{docs.push(d);return {insertedId:d._id};}); }
