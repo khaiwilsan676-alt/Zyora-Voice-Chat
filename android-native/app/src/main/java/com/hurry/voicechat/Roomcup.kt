@@ -64,7 +64,7 @@ fun RoomDailyCupTotal(roomId: String) {
     var refresh by remember(roomId) { mutableIntStateOf(0) }
     LaunchedEffect(roomId) {
         while (true) {
-            kotlinx.coroutines.delay(10_000)
+            kotlinx.coroutines.delay(30_000)
             refresh++
         }
     }
@@ -109,6 +109,8 @@ fun RoomDailyCupTotal(roomId: String) {
     Text(
         // Room header uses compact K/M/B formatting for the complete daily sent-gift coin total.
         text = formatRoomCupTotal(total),
+        maxLines = 1,
+        softWrap = false,
         color = Color(0xFFFFD54F),
         fontSize = 11.sp,
         fontWeight = FontWeight.Normal,
@@ -130,10 +132,9 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     // Swipe state handle karne ke liye
     var swipeOffset by remember { mutableFloatStateOf(0f) }
     
-    LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(10000); refreshTick++ } }
+    LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(30000); refreshTick++ } }
     
     LaunchedEffect(roomId,period,refreshTick) {
-        if (entries.isEmpty()) loading=true
         val data=withContext(Dispatchers.IO) { runCatching {
             val r=java.net.URLEncoder.encode(roomId,"UTF-8")
             val u=java.net.URLEncoder.encode(userId,"UTF-8")
@@ -282,7 +283,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                     Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-22).dp))
                                 }
                             }
-                            Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+                            Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,softWrap=false,overflow=TextOverflow.Clip)
                             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                         }
                     }
@@ -314,7 +315,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                         }
                     }
                     
-                    Text(formatCupCoins(mine?.coins ?: 0L),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
+                    Text(formatCupCoins(mine?.coins ?: 0L),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false,overflow=TextOverflow.Clip)
                     AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=6.dp).size(18.dp),contentScale=ContentScale.Fit)
                 }
             }
