@@ -1792,7 +1792,9 @@ private fun DragonBattleMainOverlay(
                 }
                 val remainingQueue = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
                 walletPendingDelta = (0 until remainingQueue.length()).sumOf { remainingQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
-                balance = updatedBalance
+                // A balance event confirms one transaction, not every other bet still queued locally.
+                // Keep the pending deltas projected over the newest server snapshot.
+                balance = (updatedBalance + walletPendingDelta).coerceAtLeast(0L)
                 walletReady = true
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", balance)
@@ -1888,7 +1890,7 @@ private fun DragonBattleMainOverlay(
                 }
                 walletPendingDelta = (0 until latestQueue.length()).sumOf { latestQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
                 if (result.success && result.balance >= 0L) {
-                    balance = result.balance
+                    balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
                     walletReady = true
                     walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
                         .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
@@ -1942,7 +1944,7 @@ private fun DragonBattleMainOverlay(
             if (canonical != null) {
                 val savedQueue = runCatching { JSONArray(dragonPendingPrefs.getString("queue_$dragonWalletUserId", "[]") ?: "[]") }.getOrDefault(JSONArray())
                 walletPendingDelta = (0 until savedQueue.length()).sumOf { savedQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
-                balance = canonical!!
+                balance = (canonical!! + walletPendingDelta).coerceAtLeast(0L)
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", balance)
                     .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
