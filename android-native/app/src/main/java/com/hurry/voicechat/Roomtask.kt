@@ -122,7 +122,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     .onSuccess { response ->
                         val array = response.optJSONArray("tasks")
                         if (array != null) {
-                            val updatedStatuses = (0 until array.length()).mapNotNull { index ->
+                            taskStatuses = (0 until array.length()).mapNotNull { index ->
                                 array.optJSONObject(index)?.let { item ->
                                     item.optInt("taskId") to NativeRoomTaskStatus(
                                         item.optBoolean("complete"), item.optBoolean("claimed"),
@@ -130,7 +130,6 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                     )
                                 }
                             }.toMap()
-                            if (updatedStatuses != taskStatuses) taskStatuses = updatedStatuses
                         }
                     }
                     .onFailure { /* transient refresh failure; retain last known task state */ }
@@ -301,7 +300,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     modifier = Modifier.fillMaxWidth().offset(y = (-25).dp).zIndex(1f),
                     verticalArrangement = Arrangement.spacedBy((-60).dp)
                 ) {
-                    tasks.forEachIndexed { taskIndex, task ->
+                    tasks.forEach { task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)) {
 
                             AsyncImage(
@@ -347,7 +346,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         contentScale = ContentScale.Fit
                                     )
 
-                                    val taskId = taskIndex + 1
+                                    val taskId = tasks.indexOf(task) + 1
                                     val status = taskStatuses[taskId]
                                     Column(
                                         modifier = Modifier.weight(1f).padding(start = 12.dp),
@@ -491,9 +490,18 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Keep the original decorative frame image at the actual bottom of the task list.
+                // Restore the original bottom decorative image position (80dp upward).
                 Box(
-                    modifier = Modifier.fillMaxWidth().zIndex(10f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(10f)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val shiftUp = 80.dp.roundToPx()
+                            layout(placeable.width, (placeable.height - shiftUp).coerceAtLeast(0)) {
+                                placeable.placeRelative(0, -shiftUp)
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
