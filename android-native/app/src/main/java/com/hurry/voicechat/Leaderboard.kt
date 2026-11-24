@@ -25,6 +25,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import okio.Path.Companion.toOkioPath
 import coil3.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.verticalScroll
@@ -400,7 +401,7 @@ private fun rememberLeaderboardAvatarImageLoader(): ImageLoader {
             .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.20).build() }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(context.cacheDir.resolve("zyora_leaderboard_avatar_cache"))
+                    .directory(context.cacheDir.resolve("zyora_leaderboard_avatar_cache").toOkioPath())
                     .maxSizeBytes(64L * 1024L * 1024L)
                     .build()
             }
