@@ -42,6 +42,7 @@ const saveLocalReport = async (report: any) => {
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(REPORTS_STORE, 'readwrite');
       transaction.objectStore(REPORTS_STORE).put(report);
+      socket.emit("owner_shared_records_upsert", { records: [{ store: "userReports", record: report, updatedAt: Date.now() }] });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
@@ -87,9 +88,22 @@ export default function Reports() {
       });
     };
     socket.on('user_report', handleNewReport);
+    const handleSharedReports = (payload: any) => {
+      if (!mounted || !Array.isArray(payload?.records)) return;
+      payload.records.filter((entry: any) => entry?.store === "userReports" && entry?.record?.id).forEach((entry: any) => {
+        const report = { ...entry.record, status: getStatus(entry.record) };
+        void saveLocalReport(report);
+        setReports(previous => {
+          const next = [report, ...previous.filter(item => String(item.id) !== String(report.id))];
+          return next.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+        });
+      });
+    };
+    socket.on("owner_shared_records", handleSharedReports);
     return () => {
       mounted = false;
       socket.off('user_report', handleNewReport);
+      socket.off("owner_shared_records", handleSharedReports);
     };
   }, []);
 
