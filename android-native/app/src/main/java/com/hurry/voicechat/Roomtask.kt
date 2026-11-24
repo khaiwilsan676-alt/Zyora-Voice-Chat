@@ -78,16 +78,10 @@ private object NativeRoomTaskApi {
 }
 
 @Composable
-fun Roomtask(onBack: () -> Unit = {}) {
+fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val accountId = remember {
-        context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-            .getString("accountId", "").orEmpty().ifBlank {
-                context.getSharedPreferences("hurry_user", android.content.Context.MODE_PRIVATE)
-                    .getString("accountId", "").orEmpty()
-            }
-    }
+    val taskRoomId = remember(roomId) { roomId.trim() }
     var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
     var taskError by remember { mutableStateOf("") }
@@ -98,10 +92,10 @@ fun Roomtask(onBack: () -> Unit = {}) {
     var second by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(accountId) {
-        if (accountId.isNotBlank()) {
+    LaunchedEffect(taskRoomId) {
+        if (taskRoomId.isNotBlank()) {
             while (true) {
-                runCatching { NativeRoomTaskApi.request(accountId) }
+                runCatching { NativeRoomTaskApi.request(taskRoomId) }
                     .onSuccess { response ->
                         val array = response.optJSONArray("tasks")
                         if (array != null) {
@@ -362,10 +356,10 @@ fun Roomtask(onBack: () -> Unit = {}) {
                                         val status = taskStatuses[taskId]
                                         Button(
                                             onClick = {
-                                                if (status?.complete == true && status.claimed != true && claimingTask == 0 && accountId.isNotBlank()) {
+                                                if (status?.complete == true && status.claimed != true && claimingTask == 0 && taskRoomId.isNotBlank()) {
                                                     claimingTask = taskId
                                                     scope.launch {
-                                                        runCatching { NativeRoomTaskApi.request(accountId, taskId) }
+                                                        runCatching { NativeRoomTaskApi.request(taskRoomId, taskId) }
                                                             .onSuccess {
                                                                 taskStatuses = taskStatuses + (taskId to NativeRoomTaskStatus(true, true))
                                                             }
