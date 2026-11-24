@@ -2161,3 +2161,9 @@ Current documentation does not certify that all historical features are build-, 
 - Selected images upload through the shared `uploadChatImage` helper to the dedicated `private-chat-image` media folder (5 MB limit), then send the hosted URL using the existing Socket.IO `private_message` event with `type=image` and `imageUrl`.
 - The sender gets an immediate local image bubble and conversation preview; the existing receiver image rendering and full-screen preview remain unchanged. Existing text, voice, chat layout, and room chat behavior are untouched.
 - Native APK build and multi-device delivery verification are still pending.
+
+
+## 2026-11-24 — Wallet background refresh load reduction
+- `CoinsNativePage.kt`: reduced the Wallet Agent seller refresh interval from 15 seconds to 60 seconds. Cached seller cards remain visible while the background refresh runs; this reduces repeated seller-list and per-seller canonical-wallet API fan-out.
+- No coin balance calculation, recharge, deduction, betting, exchange, transaction, or wallet UI code was changed.
+- Verification pending: native APK build and runtime timing/network checks on device. This source change alone does not establish an end-to-end Wallet speed improvement.
