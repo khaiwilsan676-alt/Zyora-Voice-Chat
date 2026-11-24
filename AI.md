@@ -2144,3 +2144,9 @@ Current documentation does not certify that all historical features are build-, 
 - `PublicProfile.kt`: changed only the image asset used by the Family tag beside `Lv.1` to `public/file_000000008c708246ba734e7cd0278c4f.png`.
 - Kept the existing Family tag visibility, name overlay, dimensions, alignment, and all other profile UI unchanged.
 - Native APK build and device image-loading verification remain pending.
+
+
+## 2026-11-24 — Owner Panel App Staff and ID Ban labels
+- Owner Panel `Host Applications` is now `App Staff`. The panel follows the Manage Users visual structure and lists only real user records carrying staff/special tags (Official Head, Official, Admin, Service/CS, Host, Seller, VIP, Premium, Owner, and related tagged records); it displays the App ID and tag labels.
+- Owner Panel navigation and the ban page heading now use `ID Ban`.
+- No unrelated Manage Users layout or user data behavior was intentionally changed.
