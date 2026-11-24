@@ -1781,17 +1781,8 @@ private fun DragonBattleMainOverlay(
             if (eventUserId in setOf(dragonWalletUserId, dragonAccountId) && updatedBalance >= 0L) {
                 val appliedId = payload.optString("transactionId")
                 val queueKey = "queue_$dragonWalletUserId"
-                if (appliedId.isNotBlank()) synchronized(dragonPendingPrefs) {
-                    val saved = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
-                    val remaining = JSONArray()
-                    for (index in 0 until saved.length()) {
-                        val item = saved.optJSONObject(index) ?: continue
-                        if (item.optString("id") != appliedId) remaining.put(item)
-                    }
-                    check(dragonPendingPrefs.edit().putString(queueKey, remaining.toString()).commit())
-                }
-                val remainingQueue = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
-                walletPendingDelta = (0 until remainingQueue.length()).sumOf { remainingQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
+                if (appliedId.isNotBlank()) NativeWalletPending.acknowledge(context, dragonWalletUserId, appliedId)
+                walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
                 // A balance event confirms one transaction, not every other bet still queued locally.
                 // Keep the pending deltas projected over the newest server snapshot.
                 balance = (updatedBalance + walletPendingDelta).coerceAtLeast(0L)
@@ -1888,7 +1879,8 @@ private fun DragonBattleMainOverlay(
                     check(dragonPendingPrefs.edit().putString(queueKey, remaining.toString()).commit())
                     remaining
                 }
-                walletPendingDelta = (0 until latestQueue.length()).sumOf { latestQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
+                NativeWalletPending.acknowledge(context, dragonWalletUserId, txId)
+                walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
                 if (result.success && result.balance >= 0L) {
                     balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
                     walletReady = true
@@ -1918,9 +1910,11 @@ private fun DragonBattleMainOverlay(
             val queue = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
             queue.put(JSONObject().put("id", transactionId).put("delta", delta).put("action", action))
             check(dragonPendingPrefs.edit().putString(queueKey, queue.toString()).commit())
-            walletPendingDelta = (0 until queue.length()).sumOf { queue.optJSONObject(it)?.optLong("delta") ?: 0L }
+            walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
         }
         balance = (balance + delta).coerceAtLeast(0L)
+        walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
+            .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
         dragonRejectedCallbacks[transactionId] = onRejected
         scope.launch(Dispatchers.IO) { syncDragonWalletChanges() }
     }
@@ -1942,8 +1936,7 @@ private fun DragonBattleMainOverlay(
                 }
             }
             if (canonical != null) {
-                val savedQueue = runCatching { JSONArray(dragonPendingPrefs.getString("queue_$dragonWalletUserId", "[]") ?: "[]") }.getOrDefault(JSONArray())
-                walletPendingDelta = (0 until savedQueue.length()).sumOf { savedQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
+                walletPendingDelta = NativeWalletPending.delta(context, dragonWalletUserId)
                 balance = (canonical!! + walletPendingDelta).coerceAtLeast(0L)
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", balance)
