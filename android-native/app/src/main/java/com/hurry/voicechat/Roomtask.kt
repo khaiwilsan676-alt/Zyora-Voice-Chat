@@ -534,10 +534,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
 
         // Pin the decorative frame to the actual screen bottom, outside the scrolling content.
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .zIndex(10f),
+            modifier = Modifier.fillMaxSize().zIndex(10f),
             contentAlignment = Alignment.BottomCenter
         ) {
             AsyncImage(
