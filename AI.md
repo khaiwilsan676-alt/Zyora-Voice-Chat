@@ -2190,3 +2190,10 @@ Current documentation does not certify that all historical features are build-, 
 - RoomPage.kt: ignores older timestamped wallet broadcasts so a delayed socket event cannot roll the room Gift Picker balance backward.
 - All four surfaces continue to use the canonical server users.coins wallet and existing wallet_balance_updated broadcasts; no UI/layout/animation changes intended.
 - Verification: commits are pushed; APK CI and rapid simultaneous betting/gifting across Wild Party, Dragon Battle, Gift Picker, and Coins Wallet still need to complete before runtime behavior can be marked verified.
+
+
+## 2026-11-25 — Owner Manage Users details page
+- Manage Users → Open now switches from the user table to a dedicated User Details page inside the existing Owner Panel, keeping the sidebar and existing owner navigation intact.
+- Added screenshot-matched sections for User Details, Controls, VIP History, Wallet Activity, and Gift Activity, plus Back to Users navigation.
+- Balance/VIP action buttons are intentionally disabled because this repository currently has no verified owner-authorized balance-adjustment or VIP grant/cancel API. Activity sections show an empty-state until real history endpoints are connected; no fake records or balance mutations are created.
+- Commit: `62400cefacd24477feb971f99985d81486d000b7`.
