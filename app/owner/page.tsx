@@ -1489,6 +1489,20 @@ export default function StaffPanel() {
             vipIdDays: Number(u.vipIdDays || 0),
             vipIdExpiresAt: Number(u.vipIdExpiresAt || 0),
             vipIdBadge: Boolean(u.vipIdBadge),
+            ownerImageTag: String(u.ownerImageTag || ''),
+            ownerImageTagExpiresAt: Number(u.ownerImageTagExpiresAt || 0),
+            officialHeadTag: Boolean(u.officialHeadTag), officialHeadTagExpiresAt: Number(u.officialHeadTagExpiresAt || 0),
+            officialTag: Boolean(u.officialTag), officialTagExpiresAt: Number(u.officialTagExpiresAt || 0),
+            adminTag: Boolean(u.adminTag), adminTagExpiresAt: Number(u.adminTagExpiresAt || 0),
+            serviceTag: Boolean(u.serviceTag), serviceTagExpiresAt: Number(u.serviceTagExpiresAt || 0),
+            hostTag: Boolean(u.hostTag || u.isHost), isHost: Boolean(u.isHost || u.hostTag),
+            coinSellerTag: Boolean(u.coinSellerTag || u.coinSeller || u.sellerTag),
+            coinSeller: Boolean(u.coinSeller), sellerTag: Boolean(u.sellerTag),
+            csTag: Boolean(u.csTag),
+            familyRewardTag: Boolean(u.familyRewardTag),
+            familyRewardTagImage: String(u.familyRewardTagImage || ''),
+            vipTag: Boolean(u.vipTag), vipTagExpiresAt: Number(u.vipTagExpiresAt || 0),
+            premiumTag: Boolean(u.premiumTag), premiumTagExpiresAt: Number(u.premiumTagExpiresAt || 0),
             uid: String(u.uid || u.firebaseUid || u.firebaseUID || u.userId || ''),
             appShortId: String(u.appShortId || u.appShortID || u.shortId || u.shortID || u.id || '—'),
             country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
@@ -1679,7 +1693,7 @@ export default function StaffPanel() {
       (selectedUserStatusFilter === 'Offline' && !isBanned && !isOnline);
     return matchesSearch && matchesRole && matchesStatus;
   }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  const staffTagKeys = ['officialHeadTag', 'officialTag', 'adminTag', 'serviceTag', 'csTag', 'hostTag', 'coinSellerTag', 'coinSeller', 'sellerTag', 'vipTag', 'premiumTag', 'ownerImageTag', 'familyRewardTag', 'familyRewardTagImage'];
+  const staffTagKeys = ['officialHeadTag', 'officialTag', 'adminTag', 'serviceTag', 'csTag', 'hostTag', 'coinSellerTag', 'coinSeller', 'sellerTag', 'csTag', 'isHost', 'vipTag', 'premiumTag', 'ownerImageTag', 'familyRewardTag', 'familyRewardTagImage'];
   const filteredAppStaff = users.filter((u: any) => staffTagKeys.some(key => Boolean(u[key])) && (!searchQuery.trim() || [u.name, u.hurryId, u.id, u.accountId, u.appShortId].some(value => String(value || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))));
   const appStaffPageCount = Math.max(1, Math.ceil(filteredAppStaff.length / 20));
   const paginatedAppStaff = filteredAppStaff.slice((usersPage - 1) * 20, usersPage * 20);
@@ -2028,7 +2042,7 @@ export default function StaffPanel() {
                     <thead><tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide"><th className="py-3 pl-4 pr-2 w-14">S.No</th><th className="py-3 px-2">Staff</th><th className="py-3 px-2">App ID</th><th className="py-3 px-2">Tags</th></tr></thead>
                     <tbody className="divide-y divide-slate-100">
                       {paginatedAppStaff.map((u: any, idx: number) => {
-                        const tagLabels = [{key:'officialHeadTag',label:'Official Head'},{key:'officialTag',label:'Official'},{key:'adminTag',label:'Admin'},{key:'serviceTag',label:'Service'},{key:'csTag',label:'CS'},{key:'hostTag',label:'Host'},{key:'coinSellerTag',label:'Seller'},{key:'coinSeller',label:'Seller'},{key:'sellerTag',label:'Seller'},{key:'vipTag',label:'VIP'},{key:'premiumTag',label:'Premium'},{key:'ownerImageTag',label:'Owner'},{key:'familyRewardTag',label:'Family'},{key:'familyRewardTagImage',label:'Family'}].filter(tag => Boolean(u[tag.key]));
+                        const tagLabels = [{key:'officialHeadTag',label:'Official Head'},{key:'officialTag',label:'Official'},{key:'adminTag',label:'Admin'},{key:'serviceTag',label:'Service'},{key:'csTag',label:'CS'},{key:'hostTag',label:'Host'},{key:'isHost',label:'Host'},{key:'coinSellerTag',label:'Seller'},{key:'coinSeller',label:'Seller'},{key:'sellerTag',label:'Seller'},{key:'vipTag',label:'VIP'},{key:'premiumTag',label:'Premium'},{key:'ownerImageTag',label:'Owner'},{key:'familyRewardTag',label:'Family'},{key:'familyRewardTagImage',label:'Family'}].filter(tag => Boolean(u[tag.key]));
                         return <tr key={u.id} className="hover:bg-slate-50/70 transition-colors"><td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{(usersPage - 1) * 20 + idx + 1}</td><td className="py-3 px-2"><div className="flex items-center gap-2.5 min-w-0">{u.image ? <img src={u.image} alt={u.name} className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0" /> : <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-sm shrink-0">{String(u.name || '?').charAt(0).toUpperCase()}</div>}<span className="text-xs font-medium text-slate-800 truncate">{u.name}</span></div></td><td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{u.hurryId || u.appShortId || u.id || '—'}</td><td className="py-3 px-2"><div className="flex flex-wrap gap-1">{tagLabels.map(tag => <span key={tag.key} className="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">{tag.label}</span>)}</div></td></tr>;
                       })}
                       {filteredAppStaff.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-400 font-medium text-sm">No tagged App Staff found</td></tr>}
