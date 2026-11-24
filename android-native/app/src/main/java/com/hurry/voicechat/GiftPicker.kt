@@ -1305,3 +1305,9 @@ fun LuckyComboButton(
                         color = Color.White.copy(alpha = 0.35f),
                         radius = size.minDimension / 2 - stroke.width / 2,
                         style = stroke,
+                    )
+                }
+            }
+        }
+    }
+}
