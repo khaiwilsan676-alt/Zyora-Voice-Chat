@@ -1183,6 +1183,12 @@ export default function StaffPanel() {
         luckyRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
         return Array.from(map.values()).sort((x, y) => Number(y.createdAt || 0) - Number(x.createdAt || 0));
       });
+      const walletRows = grouped.get("transferHistory") || [];
+      if (walletRows.length) setMasterWalletHistory(prev => {
+        const map = new Map<string, any>(prev.map(row => [String(row.id), row]));
+        walletRows.forEach(row => map.set(String(row.id), { ...map.get(String(row.id)), ...row }));
+        return Array.from(map.values()).sort((x, y) => Number(y.timestamp || 0) - Number(x.timestamp || 0));
+      });
       const inviteRows = grouped.get("bindUserIds") || [];
       if (inviteRows.length) setInviteBindRows(prev => {
         const map = new Map<string, any>(prev.map(row => [String(row.id), row]));
