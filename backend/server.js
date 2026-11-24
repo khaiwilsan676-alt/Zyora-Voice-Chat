@@ -2454,7 +2454,7 @@ io.on("connection", (socket) => {
     }
     try {
       const records = await db.collection("ownerPanelSharedRecords").find({}).limit(20000).toArray();
-      socket.emit("owner_shared_records", { records: records.map(({ _id, ...record }) => record) });
+      socket.emit("owner_shared_records", { snapshot: true, records: records.map(({ _id, ...record }) => record) });
     } catch (error) {
       console.error("Owner shared snapshot failed:", error);
       socket.emit("owner_shared_records", { records: [], error: "storage_unavailable" });
@@ -2462,24 +2462,27 @@ io.on("connection", (socket) => {
   });
   socket.on("owner_shared_records_upsert", async (data = {}) => {
     if (!socket.ownerPanelAuthorized || !db || !Array.isArray(data.records)) return;
-    const collection = db.collection("ownerPanelSharedRecords");
-    const batch = data.records.slice(0, 100);
-    const changed = [];
-    for (const item of batch) {
+    const accepted = [];
+    for (const item of data.records.slice(0, 100)) {
       const store = String(item?.store || "");
       const keyField = OWNER_SHARED_STORE_KEYS[store];
       const record = item?.record;
       if (!keyField || !record || typeof record !== "object" || Array.isArray(record) || record[keyField] == null) continue;
       const recordId = String(record[keyField]).slice(0, 256);
-      const updatedAt = Math.max(0, Number(item.updatedAt || record.updatedAt || record.timestamp || record.createdAt || 0));
-      const key = store + ":" + recordId;
-      const existing = await collection.findOne({ key });
-      if (existing && Number(existing.updatedAt || 0) > updatedAt) continue;
-      const normalized = { key, store, record: { ...record }, updatedAt: updatedAt || Date.now() };
-      await collection.updateOne({ key }, { $set: normalized }, { upsert: true });
-      changed.push(normalized);
+      accepted.push({
+        key: store + ":" + recordId,
+        store,
+        record: { ...record },
+        updatedAt: Math.max(0, Number(item.updatedAt || record.updatedAt || record.timestamp || record.createdAt || Date.now()))
+      });
     }
-    if (changed.length) io.to("owner-panel").emit("owner_shared_records", { records: changed });
+    if (!accepted.length) return;
+    try {
+      const changed = await db.collection("ownerPanelSharedRecords").bulkUpsert(accepted);
+      if (changed.length) io.to("owner-panel").emit("owner_shared_records", { records: changed });
+    } catch (error) {
+      console.error("Owner shared record batch save failed:", error);
+    }
   });
 
   console.log("User connected:", socket.id);
