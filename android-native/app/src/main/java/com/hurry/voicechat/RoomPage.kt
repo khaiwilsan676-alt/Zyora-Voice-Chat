@@ -240,6 +240,12 @@ fun RoomPage(
     // The room session itself is deliberately not restored.
     val lastMusicPrefs = remember { appContext.getSharedPreferences("zyora_last_room_music", android.content.Context.MODE_PRIVATE) }
     val lastMusicKey = "last_track_$accountId"
+    // Remember the last seat per account and room so reconnecting owners return to it.
+    val lastSeatPrefs = remember { appContext.getSharedPreferences("zyora_last_room_seat", android.content.Context.MODE_PRIVATE) }
+    val lastSeatKey = "last_seat_${roomId}_$accountId"
+    fun saveLastRoomSeat(number: Int) {
+        if (number in 1..15) lastSeatPrefs.edit().putInt(lastSeatKey, number).apply()
+    }
     val savedRoomTrack = remember(accountId) {
         runCatching {
             val saved = lastMusicPrefs.getString(lastMusicKey, null) ?: return@runCatching null
@@ -1507,18 +1513,22 @@ fun RoomPage(
                         ))
                     }
                     val ownerIds = setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).filter { it.isNotBlank() }.toSet()
-                    val firstSeat = normalizedParsed.firstOrNull { it.number == 1 }
-                    if (accountId in ownerIds && firstSeat != null && ownerAutoSeatAttempted.compareAndSet(false, true)) {
+                    val savedSeatNumber = lastSeatPrefs.getInt(lastSeatKey, 1).coerceIn(1, 15)
+                    val preferredSeat = normalizedParsed.firstOrNull { it.number == savedSeatNumber }
+                    if (accountId in ownerIds && preferredSeat != null && ownerAutoSeatAttempted.compareAndSet(false, true)) {
                         val ownerAlreadySeated = normalizedParsed.any { it.occupied && it.accountId in ownerIds }
-                        if (!firstSeat.occupied && !firstSeat.locked && !ownerAlreadySeated) {
+                        val targetSeat = if (!preferredSeat.occupied && !preferredSeat.locked) preferredSeat
+                            else normalizedParsed.firstOrNull { !it.occupied && !it.locked }
+                        if (targetSeat != null && !ownerAlreadySeated) {
                             val ownerUser = JSONObject()
                                 .put("name", latestRoomDisplayName.ifBlank { "User" })
                                 .put("image", latestRoomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL })
                                 .put("accountId", accountId)
+                            saveLastRoomSeat(targetSeat.number)
                             roomSocket.emit(
                                 "room_seat_action",
                                 JSONObject().put("roomId", roomId).put("userId", accountId)
-                                    .put("action", "take").put("seatNumber", 1).put("user", ownerUser)
+                                    .put("action", "take").put("seatNumber", targetSeat.number).put("user", ownerUser)
                             )
                         }
                     }
@@ -2032,6 +2042,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     occupied = true, userName = displayName, userImage = displayImage,
                                     accountId = accountId, muted = tappedSeat.muted, locked = false
                                 )
+                                saveLastRoomSeat(tappedSeat.number)
                                 roomSocketRef.value?.emit(
                                     "room_seat_action",
                                     JSONObject().put("roomId", roomId).put("userId", accountId)
@@ -3166,6 +3177,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                             seats[index] = NativeRoomSeat(number = previous.number, locked = previous.locked)
                         }
                         if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },accountId=accountId,muted=seat.muted,selfMuted=false,speaking=false,locked=false)
+                        saveLastRoomSeat(seat.number)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",user))
                         showSeatSheet=false;selectedSeat=0
                     }
