@@ -35,6 +35,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
+
+private fun luckyBagClaimName(claim: JSONObject): String {
+    val user = claim.optJSONObject("user") ?: claim.optJSONObject("profile") ?: JSONObject()
+    return listOf("userName", "name", "displayName", "username", "fullName")
+        .asSequence().map { claim.optString(it).takeUnless { value -> value == "null" || value == "undefined" }.orEmpty() }
+        .firstOrNull { it.isNotBlank() }
+        ?: listOf("name", "displayName", "username", "fullName")
+            .asSequence().map { user.optString(it).takeUnless { value -> value == "null" || value == "undefined" }.orEmpty() }
+            .firstOrNull { it.isNotBlank() }
+        ?: claim.optString("userId").takeIf { it.isNotBlank() && it != "null" }
+        ?: "Unknown user"
+}
+
+private fun luckyBagClaimImage(claim: JSONObject): String {
+    val user = claim.optJSONObject("user") ?: claim.optJSONObject("profile") ?: JSONObject()
+    val value = (listOf("userImage", "image", "avatar", "photoURL", "photoUrl", "dp", "picture", "profileImage")
+        .asSequence().map { claim.optString(it).takeUnless { item -> item == "null" || item == "undefined" }.orEmpty() }
+        .firstOrNull { it.isNotBlank() }
+        ?: listOf("image", "avatar", "photoURL", "photoUrl", "dp", "picture", "profileImage")
+            .asSequence().map { user.optString(it).takeUnless { item -> item == "null" || item == "undefined" }.orEmpty() }
+            .firstOrNull { it.isNotBlank() }
+        ?: "")
+    return when {
+        value.isBlank() -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png"
+        value.startsWith("/") -> "https://zyora-server.onrender.com$value"
+        else -> value
+    }
+}
+
 private val LuckyGold = Color(0xFF8B5E3C)
 private val LuckyCream = Color(0xFFF5D9A8)
 private val LuckyPink = Color(0xFFFE3C68)
