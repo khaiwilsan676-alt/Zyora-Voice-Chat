@@ -1469,7 +1469,7 @@ fun RoomPage(
                                 }
                             }, 1800L)
                         }
-                    }, LUCKY_SEAT_LANDING_EFFECT_DELAY_MS
+                    }, LUCKY_SEAT_LANDING_EFFECT_DELAY_MS)
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
