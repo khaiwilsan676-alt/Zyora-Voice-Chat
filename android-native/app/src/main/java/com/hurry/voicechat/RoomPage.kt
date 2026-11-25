@@ -469,33 +469,19 @@ fun RoomPage(
         }
     }
     
-    var luckyGiftOrigin by remember(roomId) { mutableStateOf<Offset?>(null) }
-    val luckySeatCenters = remember(roomId) { mutableStateMapOf<String, Offset>() }
-    var roomRootSize by remember(roomId) { mutableStateOf(IntSize.Zero) }
-    var luckyGiftFlight by remember(roomId) { mutableStateOf<LuckyGiftFlight?>(null) }
-    var luckyGiftNotice by remember(roomId) { mutableStateOf<LuckyNotice?>(null) }
-    var luckyNoticeGeneration by remember(roomId) { mutableIntStateOf(0) }
-    var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
-    var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
-    var luckyComboGeneration by remember(roomId) { mutableIntStateOf(0) }
-    var luckyComboPending by remember(roomId) { mutableStateOf(false) }
-    var lastLuckyComboPayload by remember(roomId) { mutableStateOf<JSONObject?>(null) }
-    // A single room-scoped Compose timer owns the combo window. Re-keying it on
-    // every new gift or combo tap cancels the previous countdown instead of
-    // leaving several Handler callbacks racing to hide the button.
-    LaunchedEffect(roomId, luckyComboGeneration) {
-        if (!showLuckyComboButton) return@LaunchedEffect
-        val activeGeneration = luckyComboGeneration
-        for (second in 1..5) {
-            kotlinx.coroutines.delay(1000L)
-            if (luckyComboGeneration != activeGeneration) return@LaunchedEffect
-            luckyComboTimeLeft = 5 - second
-        }
-        if (luckyComboGeneration == activeGeneration) {
-            showLuckyComboButton = false
-            luckyComboTimeLeft = 0
-        }
-    }
+    val luckyAnimation = rememberLuckyAnimationController(roomId)
+    LuckyAnimationControllerEffects(luckyAnimation)
+    var luckyGiftOrigin by luckyAnimation::origin
+    val luckySeatCenters = luckyAnimation.seatCenters
+    var roomRootSize by luckyAnimation::rootSize
+    var luckyGiftFlight by luckyAnimation::flight
+    var luckyGiftNotice by luckyAnimation::notice
+    var luckyNoticeGeneration by luckyAnimation::noticeGeneration
+    var showLuckyComboButton by luckyAnimation::showComboButton
+    var luckyComboTimeLeft by luckyAnimation::comboTimeLeft
+    var luckyComboGeneration by luckyAnimation::comboGeneration
+    var luckyComboPending by luckyAnimation::comboPending
+    var lastLuckyComboPayload by luckyAnimation::lastComboPayload
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
@@ -1469,16 +1455,7 @@ fun RoomPage(
                     luckyComboGeneration++
                 }
                 if (giftImage.isNotBlank()) {
-                    val firstTargetCenter = recipientIds.firstNotNullOfOrNull { luckySeatCenters[it] }
-                    if (firstTargetCenter != null && roomRootSize != IntSize.Zero) {
-                        luckyGiftFlight = LuckyGiftFlight(
-                            id = noticeId,
-                            image = giftImage,
-                            start = luckyGiftOrigin ?: Offset(roomRootSize.width / 2f, roomRootSize.height * 0.88f),
-                            target = firstTargetCenter,
-                            rootCenter = Offset(roomRootSize.width / 2f, roomRootSize.height / 2f)
-                        )
-                    }
+                    luckyAnimation.launchToRecipients(noticeId, giftImage, recipientIds)
                     // Start the target-seat effect on landing, not at send time.
                     mainHandler.postDelayed({
                         seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
@@ -1492,21 +1469,11 @@ fun RoomPage(
                                 }
                             }, 1800L)
                         }
-                    }, 560L)
+                    }, LUCKY_SEAT_LANDING_EFFECT_DELAY_MS
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
-                val noticeGeneration = ++luckyNoticeGeneration
-                mainHandler.postDelayed({
-                    if (luckyNoticeGeneration == noticeGeneration && luckyGiftNotice?.id == activeNoticeId) {
-                        luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
-                        mainHandler.postDelayed({
-                            if (luckyNoticeGeneration == noticeGeneration && luckyGiftNotice?.id == activeNoticeId) {
-                                luckyGiftNotice = null
-                            }
-                        }, 450L)
-                    }
-                }, 5000L)
+                luckyAnimation.renewNotice()
             }
         }
         val seatListener = Emitter.Listener { args ->
@@ -2978,18 +2945,9 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("timestamp", System.currentTimeMillis())
                                 val recipientJson = comboTransfer.optJSONArray("recipientIds") ?: JSONArray()
                                 val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
-                                val targetCenter = recipientIds.firstNotNullOfOrNull { luckySeatCenters[it] }
                                 val image = comboTransfer.optString("giftImage").ifBlank { comboTransfer.optString("luckyImage") }
                                 val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
-                                if (targetCenter != null && roomRootSize != IntSize.Zero && resolvedImage.isNotBlank()) {
-                                    luckyGiftFlight = LuckyGiftFlight(
-                                        id = nextTransferId,
-                                        image = resolvedImage,
-                                        start = luckyGiftOrigin ?: Offset(roomRootSize.width / 2f, roomRootSize.height * 0.88f),
-                                        target = targetCenter,
-                                        rootCenter = Offset(roomRootSize.width / 2f, roomRootSize.height / 2f)
-                                    )
-                                }
+                                luckyAnimation.launchToRecipients(nextTransferId, resolvedImage, recipientIds)
                                 // Optimistically reflect the tap; the server echo confirms the
                                 // same combo without adding a second multiplier increment.
                                 luckyGiftNotice = luckyGiftNotice?.copy(
