@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -22,9 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,9 +46,13 @@ private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/
 
 private data class MeMenu(val label: String, val asset: String)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
+    var showCdKeySheet by remember { mutableStateOf(false) }
+    var cdKeyInput by remember { mutableStateOf("") }
+
     SideEffect {
         var currentContext: Context = context
         while (currentContext !is Activity && currentContext is ContextWrapper) {
@@ -250,7 +257,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     }
 
     val topItems = buildList {
-        add(MeMenu("Invite Friends", "IMG_20260915_225333.png"))
+        add(MeMenu("CD-Key", "IMG_20261125_223626.png"))
         add(MeMenu("Medal", "IMG_20260915_225426.png"))
         add(MeMenu("Level", "IMG_20260915_225404.png"))
         add(MeMenu("Family", "IMG_20260915_225349.png"))
@@ -366,7 +373,17 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         }
 
         item {
-            MenuCard(topItems, onOpen, Modifier.offset(y = (-76).dp))
+            MenuCard(
+                items = topItems,
+                onOpen = { label ->
+                    if (label == "CD-Key") {
+                        showCdKeySheet = true
+                    } else {
+                        onOpen(label)
+                    }
+                },
+                modifier = Modifier.offset(y = (-76).dp)
+            )
         }
 
         item {
@@ -389,6 +406,95 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         Text(nativeText(languageCode, when (label) { "Invite Friends" -> "invite"; "Family" -> "family"; "Level" -> "level"; "Medal" -> "medal"; "Store" -> "store"; "Bag" -> "bag"; "Seller Center" -> "seller"; "Language Setting" -> "language"; "Settings" -> "settings"; "Customer Service" -> "support"; "Help & Feedback" -> "help"; else -> label }), Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
                         Text("›", fontSize = 25.sp, color = Color(0xFFAAAAAA))
                     }
+                }
+            }
+        }
+    }
+
+    if (showCdKeySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCdKeySheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            containerColor = Color.White,
+            dragHandle = null
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(top = 20.dp, bottom = 220.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "CD-KEY",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color(0xFF1F2937)
+                )
+
+                Spacer(Modifier.height(48.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 36.dp)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFFF3F3F3))
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    BasicTextField(
+                        value = cdKeyInput,
+                        onValueChange = { cdKeyInput = it },
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color(0xFF111827)
+                        ),
+                        cursorBrush = SolidColor(Color(0xFF2563EB)),
+                        modifier = Modifier.fillMaxWidth(),
+                        decorationBox = { innerTextField ->
+                            if (cdKeyInput.isEmpty()) {
+                                Text(
+                                    text = "Enter Cd-key",
+                                    fontSize = 15.sp,
+                                    color = Color(0xFFBDBDBD)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(30.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(Color(0xFF2563EB))
+                        .clickable {
+                            val trimmed = cdKeyInput.trim()
+                            if (trimmed.isEmpty()) {
+                                Toast.makeText(context, "Please enter CD-Key", Toast.LENGTH_SHORT).show()
+                            } else {
+                                cdKeyInput = ""
+                                showCdKeySheet = false
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Apply",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
                 }
             }
         }
@@ -475,35 +581,36 @@ private fun MeMenuIcon(type: MeIconType) {
     Column(modifier.padding(horizontal = 16.dp, vertical = 0.dp).clip(RoundedCornerShape(6.dp)).background(Color.White)) {
         items.forEach { item ->
             Row(Modifier.fillMaxWidth().clickable { onOpen(item.label) }.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(
-                        when (item.asset) {
-                            "IMG_20260915_225333.png" -> R.drawable.wp_img_20260915_225333
-                            "IMG_20260915_225426.png" -> R.drawable.wp_img_20260915_225426
-                            "IMG_20260915_225404.png" -> R.drawable.wp_img_20260915_225404
-                            "IMG_20260915_225349.png" -> R.drawable.wp_img_20260915_225349
-                            "IMG_20260915_225447.png" -> R.drawable.wp_img_20260915_225447
-                            "IMG_20260915_225506.png" -> R.drawable.wp_img_20260915_225506
-                            else -> R.drawable.wp_img_20260915_225536
-                        }
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(if (item.label == "Seller Center") 40.dp else 32.dp),
-                    contentScale = ContentScale.Crop
-                )
+                if (item.asset == "IMG_20261125_223626.png") {
+                    AsyncImage(
+                        model = RAW_ME + item.asset,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(
+                            when (item.asset) {
+                                "IMG_20260915_225426.png" -> R.drawable.wp_img_20260915_225426
+                                "IMG_20260915_225404.png" -> R.drawable.wp_img_20260915_225404
+                                "IMG_20260915_225349.png" -> R.drawable.wp_img_20260915_225349
+                                "IMG_20260915_225447.png" -> R.drawable.wp_img_20260915_225447
+                                "IMG_20260915_225506.png" -> R.drawable.wp_img_20260915_225506
+                                else -> R.drawable.wp_img_20260915_225536
+                            }
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(if (item.label == "Seller Center") 40.dp else 32.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Spacer(Modifier.width(16.dp))
                 
                 Text(item.label, Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
                 
                 if (item.label == "Family") {
                     Text("Join Now", fontSize = 12.sp, color = Color(0xFF6B7280), modifier = Modifier.padding(end = 8.dp))
-                } else if (item.label == "Invite Friends") {
-                    Image(
-                        painter = painterResource(R.drawable.wp_img_20261022_212625),
-                        contentDescription = null,
-                        modifier = Modifier.height(20.dp).padding(end = 8.dp),
-                        contentScale = ContentScale.Fit
-                    )
                 } else if (item.label == "Level") {
                     Box(
                         modifier = Modifier.padding(end = 8.dp),
