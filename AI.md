@@ -2217,3 +2217,11 @@ Current documentation does not certify that all historical features are build-, 
 - Added a dedicated shared Coil 3 image loader for leaderboard avatars with a 20% memory-cache budget and a 64 MB disk cache. Rank 1–3, ranked-list, and current-user avatars now reuse that cache across Honour, Charm, and Room tabs and subsequent visits.
 - No avatar dimensions, positions, clipping, leaderboard layout, colors, rank data, or tab behavior intentionally changed.
 - Status: **Implemented in repository**. Native APK build and Redmi 14C first-load / repeat-load timing still require CI and device verification; no runtime speed claim is certified yet.
+
+
+## 2026-11-25 — Fix native gift media source resolution
+- `GiftPicker.kt`: changed relative gift image/video resolution from the Vercel deployment URL to the repository's raw `public/` asset URL. This prevents the native picker/player from depending on a stale Vercel deployment when loading newly committed media.
+- Verified in the repository public asset listing that the Luxury Golden tiger image `file_000000008a8c821186f5941d97193ee7.png` and video `alioss_28_2025121214091492750~2.mp4` both exist.
+- The six newly added Hot gift MP4 filenames currently referenced by the picker are not present in this repository's `public/` directory; their video playback cannot work until those exact MP4 files are uploaded/committed. Their PNG artwork files are present.
+- No gift names, prices, picker layout, combo controls, notification strip, or send logic changed.
+- Commit: `d8f68750e108336aeb1d3934c5166109e1400ef7`. APK/runtime playback still needs build/device verification.
