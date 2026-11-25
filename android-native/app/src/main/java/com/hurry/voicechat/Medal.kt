@@ -1,6 +1,5 @@
 package com.hurry.voicechat
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -17,11 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -33,10 +28,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.launch
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 private const val RAW_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val String.fullUrl: String get() = if (this.startsWith("http")) this else RAW_URL + this.removePrefix("/")
@@ -414,7 +405,7 @@ fun MedalScreen(onBack: () -> Unit) {
             }
         }
 
-        // FULL SCREEN MEDAL DETAIL DIALOG (POPUP + GOLDEN SPARKLE + SHINING BUBBLES + TIERS)
+        // FULL SCREEN MEDAL DETAIL DIALOG (PLAIN IMAGE, NO ANIMATION)
         if (selectedMedal != null && displayMedal != null) {
             MedalDetailDialog(
                 displayMedal = displayMedal,
@@ -600,44 +591,6 @@ fun MedalDetailDialog(
     onSelectTier: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val isRichMedal = displayMedal.tierGroup == "rich"
-
-    // Popup animation har baar open hone ya tier switch karne par trigger hogi
-    val popupScale = remember { Animatable(0.45f) }
-    val popupAlpha = remember { Animatable(0f) }
-
-    LaunchedEffect(displayMedal.id) {
-        popupScale.snapTo(0.45f)
-        popupAlpha.snapTo(0f)
-        launch {
-            popupScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = 0.55f,
-                    stiffness = 260f
-                )
-            )
-        }
-        launch {
-            popupAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 220)
-            )
-        }
-    }
-
-    // Subtle floating breathing effect after popup
-    val floatTransition = rememberInfiniteTransition(label = "medalFloat")
-    val floatOffsetY by floatTransition.animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "medalFloatY"
-    )
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -664,59 +617,32 @@ fun MedalDetailDialog(
             ) {
                 Spacer(modifier = Modifier.height(64.dp))
 
-                // Medal Image with Golden Sunburst behind + Popup Animation
+                // Medal Image (Bina kisi animation ke)
                 Box(
                     modifier = Modifier.size(310.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    GoldenSunburstEffect(modifier = Modifier.fillMaxSize())
-
-                    if (isRichMedal) {
-                        // Rich medal: Real Glass Bubble ke andar image + har 3 second me bubble me shine
-                        RealGlassBubbleMedal(
-                            displayMedal = displayMedal,
-                            modifier = Modifier
-                                .size(240.dp)
-                                .graphicsLayer {
-                                    scaleX = popupScale.value
-                                    scaleY = popupScale.value
-                                    alpha = popupAlpha.value
-                                    translationY = floatOffsetY
-                                }
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(215.dp)
-                                .graphicsLayer {
-                                    scaleX = popupScale.value
-                                    scaleY = popupScale.value
-                                    alpha = popupAlpha.value
-                                    translationY = floatOffsetY
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
-                                StoreVideoPreview(
-                                    url = displayMedal.previewVideo.fullUrl,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(4.dp)),
-                                    mute = true,
-                                    loop = true
-                                )
-                            } else {
-                                AsyncImage(
-                                    model = displayMedal.video.fullUrl,
-                                    contentDescription = displayMedal.name,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                    Box(
+                        modifier = Modifier.size(215.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
+                            StoreVideoPreview(
+                                url = displayMedal.previewVideo.fullUrl,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(4.dp)),
+                                mute = true,
+                                loop = true
+                            )
+                        } else {
+                            AsyncImage(
+                                model = displayMedal.video.fullUrl,
+                                contentDescription = displayMedal.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
-
-                        // Golden Sparkle + Shining Bubble Animation right over the medal image
-                        GoldenSparkleAndBubbleOverlay(modifier = Modifier.size(270.dp))
                     }
                 }
 
@@ -828,482 +754,6 @@ fun MedalDetailDialog(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
                     modifier = Modifier.padding(bottom = 26.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun RealGlassBubbleMedal(
-    displayMedal: MedalItem,
-    modifier: Modifier = Modifier
-) {
-    // Har 3 second (3000ms) me ek baar glass bubble ke andar shining sweep aayegi
-    val infiniteTransition = rememberInfiniteTransition(label = "glassBubbleShine")
-    val shineCycle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "glassBubbleShineCycle"
-    )
-
-    Box(
-        modifier = modifier.clip(CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        // 1. Glass Bubble Back Depth (image ke peeche halka translucent glass tint)
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val radius = size.minDimension / 2f
-            val center = Offset(size.width / 2f, size.height / 2f)
-
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color.White.copy(alpha = 0.03f),
-                        0.68f to Color(0xFFD8F0FF).copy(alpha = 0.06f),
-                        0.88f to Color(0xFFBFE6FF).copy(alpha = 0.16f),
-                        1.0f to Color.White.copy(alpha = 0.28f)
-                    ),
-                    center = center,
-                    radius = radius
-                ),
-                radius = radius,
-                center = center
-            )
-        }
-
-        // 2. Medal Image Bubble ke andar
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (displayMedal.previewVideo.endsWith(".mp4", ignoreCase = true)) {
-                StoreVideoPreview(
-                    url = displayMedal.previewVideo.fullUrl,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape),
-                    mute = true,
-                    loop = true
-                )
-            } else {
-                AsyncImage(
-                    model = displayMedal.video.fullUrl,
-                    contentDescription = displayMedal.name,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-
-        // 3. Real Glass Bubble Front Reflection + Har 3 Second Shining Sweep
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val radius = size.minDimension / 2f
-            val center = Offset(w / 2f, h / 2f)
-
-            // Spherical Glass Fresnel Edge (center clear, edges glossy glass)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color.Transparent,
-                        0.62f to Color.Transparent,
-                        0.82f to Color(0xFFE6F7FF).copy(alpha = 0.12f),
-                        0.93f to Color.White.copy(alpha = 0.30f),
-                        1.0f to Color.White.copy(alpha = 0.52f)
-                    ),
-                    center = center,
-                    radius = radius
-                ),
-                radius = radius,
-                center = center
-            )
-
-            // Har 3 second me bubble ke andar diagonal glass shine sweep (last 0.9s of every 3s cycle)
-            if (shineCycle >= 0.70f) {
-                val t = ((shineCycle - 0.70f) / 0.30f).coerceIn(0f, 1f)
-                val easedT = t * t * (3f - 2f * t)
-                val sweepOffset = -w * 0.85f + (w * 1.70f * easedT)
-                val bandWidth = w * 0.34f
-
-                rotate(degrees = -32f, pivot = center) {
-                    drawRect(
-                        brush = Brush.horizontalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.28f to Color.White.copy(alpha = 0.18f),
-                                0.50f to Color.White.copy(alpha = 0.68f),
-                                0.72f to Color.White.copy(alpha = 0.18f),
-                                1.0f to Color.Transparent
-                            ),
-                            startX = center.x + sweepOffset - bandWidth / 2f,
-                            endX = center.x + sweepOffset + bandWidth / 2f
-                        ),
-                        topLeft = Offset(center.x + sweepOffset - bandWidth / 2f, -h * 0.5f),
-                        size = Size(bandWidth, h * 2f)
-                    )
-                }
-            }
-
-            // Top-Left Curved Real Glass Specular Highlight
-            rotate(degrees = -35f, pivot = Offset(w * 0.31f, h * 0.24f)) {
-                drawOval(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.72f),
-                            Color.White.copy(alpha = 0.22f),
-                            Color.Transparent
-                        ),
-                        startY = h * 0.16f,
-                        endY = h * 0.32f
-                    ),
-                    topLeft = Offset(w * 0.17f, h * 0.17f),
-                    size = Size(w * 0.28f, h * 0.13f)
-                )
-            }
-
-            // Small secondary specular glint dot (top-left)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.85f),
-                        Color.White.copy(alpha = 0.25f),
-                        Color.Transparent
-                    ),
-                    center = Offset(w * 0.21f, h * 0.36f),
-                    radius = w * 0.045f
-                ),
-                radius = w * 0.045f,
-                center = Offset(w * 0.21f, h * 0.36f)
-            )
-
-            // Bottom-Right Inner Glass Rim Reflection Arc
-            drawArc(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color(0xFFBDE8FF).copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.55f),
-                        Color.Transparent
-                    ),
-                    start = Offset(w * 0.45f, h * 0.95f),
-                    end = Offset(w * 0.95f, h * 0.45f)
-                ),
-                startAngle = 15f,
-                sweepAngle = 72f,
-                useCenter = false,
-                topLeft = Offset(w * 0.055f, h * 0.055f),
-                size = Size(w * 0.89f, h * 0.89f),
-                style = Stroke(width = 4.5f, cap = StrokeCap.Round)
-            )
-
-            // Crisp Outer Glass Bubble Border Rim
-            drawCircle(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.82f),
-                        Color(0xFFC4EAFF).copy(alpha = 0.32f),
-                        Color.White.copy(alpha = 0.20f),
-                        Color(0xFFD9F3FF).copy(alpha = 0.65f)
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(w, h)
-                ),
-                radius = radius - 1.5f,
-                center = center,
-                style = Stroke(width = 2.6f)
-            )
-        }
-    }
-}
-
-private data class SparkleSpec(
-    val xFrac: Float,
-    val yFrac: Float,
-    val maxRadius: Float,
-    val phaseOffset: Float
-)
-
-private data class ShiningBubbleSpec(
-    val xFrac: Float,
-    val radiusPx: Float,
-    val phaseOffset: Float,
-    val driftAmp: Float
-)
-
-@Composable
-fun GoldenSparkleAndBubbleOverlay(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "sparkleAndBubbles")
-
-    val sparklePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sparklePhase"
-    )
-
-    val bubblePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "bubblePhase"
-    )
-
-    val shinePulse by infiniteTransition.animateFloat(
-        initialValue = 0.14f,
-        targetValue = 0.34f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shinePulse"
-    )
-
-    val sparkles = remember {
-        listOf(
-            SparkleSpec(0.24f, 0.25f, 15f, 0.00f),
-            SparkleSpec(0.76f, 0.22f, 17f, 0.18f),
-            SparkleSpec(0.50f, 0.16f, 13f, 0.35f),
-            SparkleSpec(0.18f, 0.56f, 14f, 0.52f),
-            SparkleSpec(0.83f, 0.52f, 16f, 0.68f),
-            SparkleSpec(0.34f, 0.74f, 15f, 0.82f),
-            SparkleSpec(0.68f, 0.76f, 14f, 0.26f),
-            SparkleSpec(0.42f, 0.42f, 12f, 0.61f),
-            SparkleSpec(0.61f, 0.38f, 13f, 0.91f),
-            SparkleSpec(0.49f, 0.64f, 12f, 0.44f),
-            SparkleSpec(0.29f, 0.40f, 11f, 0.74f),
-            SparkleSpec(0.72f, 0.63f, 12f, 0.11f)
-        )
-    }
-
-    val bubbles = remember {
-        listOf(
-            ShiningBubbleSpec(0.22f, 9f, 0.05f, 10f),
-            ShiningBubbleSpec(0.35f, 13f, 0.22f, -12f),
-            ShiningBubbleSpec(0.48f, 8f, 0.40f, 9f),
-            ShiningBubbleSpec(0.62f, 14f, 0.58f, -11f),
-            ShiningBubbleSpec(0.77f, 10f, 0.75f, 10f),
-            ShiningBubbleSpec(0.29f, 7f, 0.88f, -8f),
-            ShiningBubbleSpec(0.54f, 11f, 0.15f, 12f),
-            ShiningBubbleSpec(0.70f, 8f, 0.33f, -9f),
-            ShiningBubbleSpec(0.40f, 6f, 0.50f, 8f),
-            ShiningBubbleSpec(0.82f, 9f, 0.67f, -10f),
-            ShiningBubbleSpec(0.17f, 10f, 0.81f, 9f),
-            ShiningBubbleSpec(0.58f, 7f, 0.94f, -8f)
-        )
-    }
-
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val center = Offset(w / 2f, h / 2f)
-
-        // 1. Soft Pulsing Golden Shine Aura over the Image
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFFFFF4C2).copy(alpha = shinePulse),
-                    Color(0xFFFFD452).copy(alpha = shinePulse * 0.45f),
-                    Color.Transparent
-                ),
-                center = center,
-                radius = size.minDimension * 0.48f
-            ),
-            radius = size.minDimension * 0.48f,
-            center = center
-        )
-
-        // 2. Rising Shining Golden Bubbles
-        bubbles.forEach { b ->
-            val progress = (bubblePhase + b.phaseOffset) % 1f
-            val y = h * (0.90f - progress * 0.78f)
-            val x = (w * b.xFrac) + (sin(progress * 2.0 * PI) * b.driftAmp).toFloat()
-            val alpha = when {
-                progress < 0.18f -> (progress / 0.18f)
-                progress > 0.78f -> ((1f - progress) / 0.22f)
-                else -> 1f
-            }.coerceIn(0f, 1f)
-
-            val bubbleCenter = Offset(x, y)
-            val r = b.radiusPx * (0.85f + 0.25f * sin(progress * PI).toFloat())
-
-            // Outer golden glow
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFFFE98A).copy(alpha = 0.50f * alpha),
-                        Color(0xFFE5B230).copy(alpha = 0.22f * alpha),
-                        Color.Transparent
-                    ),
-                    center = bubbleCenter,
-                    radius = r * 2.0f
-                ),
-                radius = r * 2.0f,
-                center = bubbleCenter
-            )
-
-            // Translucent golden bubble body
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFFFFBE0).copy(alpha = 0.35f * alpha),
-                        Color(0xFFFFD863).copy(alpha = 0.22f * alpha),
-                        Color(0xFFE5A924).copy(alpha = 0.42f * alpha)
-                    ),
-                    center = bubbleCenter,
-                    radius = r
-                ),
-                radius = r,
-                center = bubbleCenter
-            )
-
-            // Crisp shining bubble rim
-            drawCircle(
-                color = Color(0xFFFFF0A8).copy(alpha = 0.78f * alpha),
-                radius = r,
-                center = bubbleCenter,
-                style = Stroke(width = 1.2f)
-            )
-
-            // Specular white-gold shine dot inside bubble
-            drawCircle(
-                color = Color.White.copy(alpha = 0.90f * alpha),
-                radius = r * 0.28f,
-                center = Offset(x - r * 0.32f, y - r * 0.32f)
-            )
-        }
-
-        // 3. Golden 4-Point Twinkling Sparkles right over the Image
-        sparkles.forEach { s ->
-            val wave = ((sin((sparklePhase + s.phaseOffset) * 2.0 * PI) + 1.0) / 2.0).toFloat()
-            val intensity = wave * wave // Sharp twinkle peak
-            if (intensity > 0.06f) {
-                val cx = w * s.xFrac
-                val cy = h * s.yFrac
-                val outerR = s.maxRadius * (0.35f + 0.65f * intensity)
-                val innerR = outerR * 0.22f
-
-                // Golden sparkle halo
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFFFFF8D2).copy(alpha = 0.85f * intensity),
-                            Color(0xFFFFCC3D).copy(alpha = 0.40f * intensity),
-                            Color.Transparent
-                        ),
-                        center = Offset(cx, cy),
-                        radius = outerR * 1.45f
-                    ),
-                    radius = outerR * 1.45f,
-                    center = Offset(cx, cy)
-                )
-
-                // 4-point star sparkle
-                val starPath = Path().apply {
-                    moveTo(cx, cy - outerR)
-                    lineTo(cx + innerR, cy - innerR)
-                    lineTo(cx + outerR, cy)
-                    lineTo(cx + innerR, cy + innerR)
-                    lineTo(cx, cy + outerR)
-                    lineTo(cx - innerR, cy + innerR)
-                    lineTo(cx - outerR, cy)
-                    lineTo(cx - innerR, cy - innerR)
-                    close()
-                }
-                drawPath(
-                    path = starPath,
-                    color = Color(0xFFFFF7CC).copy(alpha = 0.95f * intensity)
-                )
-
-                // Bright white center core
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.95f * intensity),
-                    radius = innerR * 0.95f,
-                    center = Offset(cx, cy)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "sunburst")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 28000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sunburstRotation"
-    )
-
-    Canvas(modifier = modifier) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = size.minDimension * 0.80f
-        val rayCount = 18
-
-        // Soft Golden Radial Glow
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFFFFDF7A).copy(alpha = 0.45f),
-                    Color(0xFFD9A12B).copy(alpha = 0.20f),
-                    Color.Transparent
-                ),
-                center = center,
-                radius = radius * 0.85f
-            ),
-            radius = radius * 0.85f,
-            center = center
-        )
-
-        // Rotating Golden Rays
-        rotate(degrees = rotation, pivot = center) {
-            val stepAngle = 360f / rayCount
-            for (i in 0 until rayCount) {
-                val startDeg = i * stepAngle
-                val halfSpread = stepAngle * 0.28f
-                val rad1 = Math.toRadians((startDeg - halfSpread).toDouble())
-                val rad2 = Math.toRadians((startDeg + halfSpread).toDouble())
-
-                val path = Path().apply {
-                    moveTo(center.x, center.y)
-                    lineTo(
-                        center.x + (radius * cos(rad1)).toFloat(),
-                        center.y + (radius * sin(rad1)).toFloat()
-                    )
-                    lineTo(
-                        center.x + (radius * cos(rad2)).toFloat(),
-                        center.y + (radius * sin(rad2)).toFloat()
-                    )
-                    close()
-                }
-                drawPath(
-                    path = path,
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFFFFE694).copy(alpha = 0.58f),
-                            Color(0xFFE0A82E).copy(alpha = 0.28f),
-                            Color.Transparent
-                        ),
-                        center = center,
-                        radius = radius
-                    )
                 )
             }
         }
