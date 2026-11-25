@@ -1200,7 +1200,7 @@ fun RoomPage(
             val video = payload.optString("video").trim()
             if (video.isBlank()) return@Listener
             val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
-                else "https://zyora-voice-chat.vercel.app/" + video.trimStart('/')
+                else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + video.trimStart('/')
             mainHandler.post { roomGiftVideoPreview = videoUrl }
         }
         val vehicleEntryListener = Emitter.Listener { args ->
