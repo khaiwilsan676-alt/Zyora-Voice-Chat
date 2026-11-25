@@ -586,7 +586,7 @@ private fun MeMenuIcon(type: MeIconType) {
                         model = RAW_ME + item.asset,
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 } else {
                     Image(
