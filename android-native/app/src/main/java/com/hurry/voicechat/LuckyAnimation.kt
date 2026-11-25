@@ -734,9 +734,26 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
     val itemAlpha = remember(flight.id) { Animatable(0f) }
 
     LaunchedEffect(flight.id) {
-        // No center pause or delayed staging: move directly on tap to the recipient seat.
-        itemAlpha.snapTo(1f)
-        scaleAnim.snapTo(1f)
+        // Preserve the original Lucky gift animation: bottom -> center -> hold -> recipient seat.
+        val fadeInJob = launch {
+            itemAlpha.snapTo(1f)
+        }
+        val moveXToCenterJob = launch {
+            posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        val moveYToCenterJob = launch {
+            posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        val growToOriginalJob = launch {
+            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        fadeInJob.join()
+        moveXToCenterJob.join()
+        moveYToCenterJob.join()
+        growToOriginalJob.join()
+
+        delay(800L)
+
         val flyXJob = launch {
             posX.animateTo(flight.target.x, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
         }
@@ -744,12 +761,13 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
             posY.animateTo(flight.target.y, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
         }
         val fadeOutJob = launch {
-            delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 90).coerceAtLeast(0).toLong())
-            itemAlpha.animateTo(0f, animationSpec = tween(90))
+            delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 100).coerceAtLeast(0).toLong())
+            itemAlpha.animateTo(0f, animationSpec = tween(100))
         }
         flyXJob.join()
         flyYJob.join()
         fadeOutJob.join()
+
         onFinished()
     }
 
