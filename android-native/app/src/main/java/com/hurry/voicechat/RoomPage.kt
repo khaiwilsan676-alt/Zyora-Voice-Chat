@@ -743,6 +743,7 @@ fun RoomPage(
     var selectedOfficialChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var pendingRoomInvitationJson by remember { mutableStateOf<String?>(null) }
     var showMenu by remember{mutableStateOf(false)}
+    var showPkPage by remember { mutableStateOf(false) }
     var showStore by remember { mutableStateOf(false) }
     var storeInitialView by remember { mutableStateOf("store") }
     var showExitMenu by remember{mutableStateOf(false)}
@@ -2686,6 +2687,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             roomId = roomId,
             openMusicPageRequest = openMusicPageFromController,
             onClose={showMenu=false},
+            onOpenPk={ showMenu = false; showPkPage = true },
             onClearChat={
                 messages.clear()
                 kickNotices.clear()
@@ -2791,6 +2793,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             }
         )
         
+        if (showPkPage) {
+            PKBattlePage(onClose = { showPkPage = false })
+        }
+
         // Block all room controls while a full-screen Store/Bag/Games/Lucky Bag
         // overlay is open. Keep this blocker below the actual overlay content.
         if (showStore || showGames || showLuckyBagCenterReveal || showLuckyBagClaimedCard) {
