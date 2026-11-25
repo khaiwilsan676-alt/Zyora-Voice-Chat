@@ -1455,21 +1455,10 @@ fun RoomPage(
                     luckyComboGeneration++
                 }
                 if (giftImage.isNotBlank()) {
+                    // LuckyGiftFlightOverlay is the sole Lucky image renderer.
+                    // Do not also attach the same image to the seat avatar's gifSrc,
+                    // which draws a second enlarged copy over the landing avatar.
                     luckyAnimation.launchToRecipients(noticeId, giftImage, recipientIds)
-                    // Start the target-seat effect on landing, not at send time.
-                    mainHandler.postDelayed({
-                        seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
-                            val seat = seats[index]
-                            seats[index] = seat.copy(gifSrc = giftImage, gifTimestamp = timestamp, gifDurationMs = 1800L)
-                            val seatNumber = seat.number
-                            mainHandler.postDelayed({
-                                val currentIndex = seats.indexOfFirst { it.number == seatNumber }
-                                if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == timestamp) {
-                                    seats[currentIndex] = seats[currentIndex].copy(gifSrc = "", gifTimestamp = 0L, gifDurationMs = 5000L)
-                                }
-                            }, 1800L)
-                        }
-                    }, LUCKY_SEAT_LANDING_EFFECT_DELAY_MS)
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
