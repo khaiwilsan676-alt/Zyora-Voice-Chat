@@ -746,18 +746,25 @@ private fun InviteDetailsCard(userId: String, idToken: String) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        AsyncImage(
-                            model = event.optString("friendAvatar").takeIf { it.startsWith("http") },
-                            contentDescription = "Friend avatar",
-                            modifier = Modifier.size(38.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                        val isShare = event.optString("type") == "share"
+                        if (isShare) {
+                            Box(Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF1C8B58)), contentAlignment = Alignment.Center) {
+                                Text(event.optString("source", "share").take(1).uppercase(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            AsyncImage(
+                                model = event.optString("friendAvatar").takeIf { it.startsWith("http") },
+                                contentDescription = "Friend avatar",
+                                modifier = Modifier.size(38.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                         Column(Modifier.weight(1f)) {
-                            Text(event.optString("friendName", "User"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                            Text("ID: " + event.optString("friendId", "—") + " • " + event.optString("source", event.optString("type", "invite")).replaceFirstChar { it.uppercase() }, color = mutedText, fontSize = 10.sp, maxLines = 1)
+                            Text(if (isShare) "Link shared via " + event.optString("source", "Other").replaceFirstChar { it.uppercase() } else event.optString("friendName", "User"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                            if (!isShare) Text("ID: " + event.optString("friendId", "—") + " • " + event.optString("source", event.optString("type", "invite")).replaceFirstChar { it.uppercase() }, color = mutedText, fontSize = 10.sp, maxLines = 1)
                             Text(SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(event.optLong("timestamp", 0L))), color = mutedText, fontSize = 10.sp)
                         }
-                        Text("+" + event.optLong("amount", 0L), color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        if (!isShare && event.optLong("amount", 0L) > 0L) Text("+" + event.optLong("amount", 0L), color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(dividerColor))
                 }
