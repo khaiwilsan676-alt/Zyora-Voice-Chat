@@ -3391,7 +3391,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     .edit().putLong("claim_" + luckyBagId + "_" + canonicalWalletUserId, it).apply()
             },
             onShowFloatingLuckyBagChange = { showFloatingLuckyBag = it },
-            onRoomWalletBalanceChange = { roomWalletBalance = it }
+            onRoomWalletBalanceChange = { roomWalletBalance = it },
+            onOpenPublicProfile = onOpenPublicProfile
         )
         
         if (showInviteSheet) RoomInviteSheet(
