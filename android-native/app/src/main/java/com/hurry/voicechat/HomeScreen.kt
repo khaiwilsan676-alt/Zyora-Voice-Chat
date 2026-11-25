@@ -289,9 +289,9 @@ fun HomeScreen(
 
 
     LaunchedEffect(Unit) {
-        // Give the first homepage frame priority; room data still comes from the warm cache/Room DB.
+        // Warm Room DB immediately after the first frame; never hold homepage room data
+        // behind an artificial delay. The memory/Room snapshot renders as soon as ready.
         withFrameNanos { }
-        kotlinx.coroutines.delay(650L)
         // Warm the shared snapshot from Room DB before network completes. This makes
         // cards immediately available after tab navigation and cold app starts.
         if (NativeRoomMemoryCache.rooms == null && dao != null) {
@@ -405,9 +405,9 @@ fun HomeScreen(
     }
     val dailyTopThreeAvatars = NativeLeaderboardAvatarCache.avatars
     LaunchedEffect(Unit) {
-        // Defer leaderboard avatar requests until the homepage's first scroll window is responsive.
+        // Start all three leaderboard avatar requests immediately after the first frame.
+        // Existing in-memory avatars remain visible while fresh data is fetched in parallel.
         withFrameNanos { }
-        kotlinx.coroutines.delay(1_500L)
         val cache = NativeLeaderboardAvatarCache
         val cacheIsFresh = cache.avatars.size == 3 &&
             System.currentTimeMillis() - cache.lastRefreshAt < 300_000L
