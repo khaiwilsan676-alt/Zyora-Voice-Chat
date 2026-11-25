@@ -12,6 +12,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
@@ -19,6 +20,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,6 +70,7 @@ private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 430
 private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
 private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
+private const val LUCKY_COMBO_PRESS_DURATION_MS = 50
 
 private fun luckyAnimationAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
@@ -546,6 +550,13 @@ fun LuckyAnimationComboButton(
     onClick: () -> Unit,
 ) {
     if (!visible) return
+    val comboInteraction = remember { MutableInteractionSource() }
+    val isComboPressed by comboInteraction.collectIsPressedAsState()
+    val comboPressScale by animateFloatAsState(
+        targetValue = if (isComboPressed) 0.94f else 1f,
+        animationSpec = tween(LUCKY_COMBO_PRESS_DURATION_MS, easing = FastOutSlowInEasing),
+        label = "comboPressResponse",
+    )
     val infiniteTransition = rememberInfiniteTransition(label = "comboPulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -596,12 +607,19 @@ fun LuckyAnimationComboButton(
                 Modifier
                     .size(76.dp)
                     .clip(CircleShape)
+                    .graphicsLayer {
+                        scaleX = comboPressScale
+                        scaleY = comboPressScale
+                    }
                     .background(
                         Brush.radialGradient(
                             listOf(Color(0xFFFF4D79), Color(0xFFFF1A4D))
                         )
                     )
-                    .clickable { onClick() },
+                    .clickable(
+                        interactionSource = comboInteraction,
+                        indication = null,
+                    ) { onClick() },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
