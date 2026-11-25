@@ -120,6 +120,14 @@ private fun giftAssetUrl(path: String): String {
 // GIFTS
 // ============================================================
 private val hotGifts = listOf(
+    GiftPickerGift(2004, "Christmas Deer", 24900, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014144.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2025112718560649595~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2005, "Liffy lipstick", 12900, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014203.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_20_2026111817155739325~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2006, "Kitty Cat", 9999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014233.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_4_wm_20261119100204_45937~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2007, "Heart lamp", 45000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014348.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2026032011584793951~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(3, "Arab King", 500000, "${GITHUB_PUBLIC_BASE_URL}image_d9df9625~2.jpg",
         video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_17e19680~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2001, "Mysalo Princess", 499999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165000.png",
@@ -128,18 +136,10 @@ private val hotGifts = listOf(
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2003, "Castle Night", 170000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165043.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2004, "Christmas Deer", 24900, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014144.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_4_wm_20261119100204_45937~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2005, "Liffy lipstick", 12900, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014203.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2025112718560649595~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2006, "Kitty Cat", 9999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014233.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2026032011584793951~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2007, "Heart lamp", 45000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014348.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2008, "Heartbeat", 120999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014410.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2009, "Desert Aura", 55000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014422.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_20_2026111817155739325~2.mp4", videoStyle = "fade", sideFade = true),
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
 private val luxuryGifts = listOf(
@@ -165,7 +165,7 @@ private val standardGifts = listOf(
     GiftPickerGift(2115, "Sword", 7250, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163337.png", noMask = true),
 )
 
-private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
+private val tabs = listOf("Hot", "Luxury", "Lucky", "Event")
 
 private val multipliers = listOf("1", "10", "299", "599", "999")
 
@@ -582,7 +582,7 @@ fun GiftPicker(
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(4),
                                 horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .then(
@@ -818,7 +818,7 @@ private fun GiftCard(
                 if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent
             )
             .clickable { onClick() }
-            .padding(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 1.dp),
+            .padding(start = 2.dp, end = 2.dp, top = 5.dp, bottom = 5.dp),
     ) {
         if (activeTab == "Lucky") {
             AsyncImage(
@@ -867,7 +867,7 @@ private fun GiftCard(
                                             blendMode = BlendMode.DstIn,
                                         )
                                     } else {
-                                        val edgeFade = if (isDesertAura) 0.02f else 0.12f
+                                        val edgeFade = if (isDesertAura) 0.05f else 0.12f
                                         drawRect(
                                             brush = Brush.horizontalGradient(
                                                 0f to Color.Transparent,
@@ -913,11 +913,11 @@ private fun GiftCard(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 1.dp),
+                    .padding(top = 4.dp),
             )
 
             Row(
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                modifier = Modifier.padding(top = 2.dp, bottom = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -1120,10 +1120,15 @@ private fun VideoEffectOverlay(
     val isKing = resolvedUrl.contains("17e19680~2")
     val isMysaloPrincess = resolvedUrl.contains("2026031617445981861~2")
     val isCastleNight = resolvedUrl.contains("2026032620350482882~2")
+    val isHeartLamp = resolvedUrl.contains("2026032011584793951~2")
+    val isDesertAura = resolvedUrl.contains("2025102210290741641~2")
+    val isLuxuryGift = luxuryGifts.any { it.video != null && resolvedUrl == giftAssetUrl(it.video) } ||
+        resolvedUrl.contains("2025121214091492750~2")
+    val isBottomAligned = isHeartLamp || isDesertAura || isLuxuryGift
 
     Box(
         Modifier.fillMaxSize().background(Color.Transparent),
-        contentAlignment = Alignment.Center,
+        contentAlignment = if (isBottomAligned) Alignment.BottomCenter else Alignment.Center,
     ) {
         AndroidView(
             factory = { textureView },
