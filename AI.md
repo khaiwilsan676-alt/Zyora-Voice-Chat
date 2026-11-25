@@ -2238,3 +2238,9 @@ Current documentation does not certify that all historical features are build-, 
 - The room now uses one seat-flight renderer: `LuckyGiftFlightOverlay`, with its duration, arc height, and image size controlled by the constants in `LuckyAnimation.kt`. `RoomPage.kt` remains responsible for detecting the gift event, resolving the recipient seat, and triggering that single animation.
 - Kept the notification strip, reward badge, combo button, combo timing, gift send flow, and room UI unchanged.
 - Status: code committed; native APK build and on-device animation verification are still pending.
+
+
+### Lucky gift animation centralization (2026-11-25)
+- Centralized room-scoped Lucky animation state, seat-center targeting, origin/root geometry, flight creation, combo countdown, and notification timing in `LuckyAnimation.kt` via `LuckyAnimationController`.
+- `RoomPage.kt` now binds room seat/origin geometry and socket-confirmed gift/combo events to that controller; seat landing effect delay is controlled by `LUCKY_SEAT_LANDING_EFFECT_DELAY_MS` in `LuckyAnimation.kt`.
+- Existing notification slider, combo button visuals, gift flight rendering, and seat landing behavior are retained; no intentional UI redesign.
