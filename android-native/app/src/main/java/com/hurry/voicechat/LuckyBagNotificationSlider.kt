@@ -281,7 +281,7 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         AsyncImage(
                             model = LUCKY_BAG_CARD_PNG,
                             contentDescription = "Lucky Bag Card",
-                            modifier = Modifier.requiredSize(64.dp),
+                            modifier = Modifier.requiredSize(51.dp),
                             contentScale = ContentScale.Fit
                         )
 
