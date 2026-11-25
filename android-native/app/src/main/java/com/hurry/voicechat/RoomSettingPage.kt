@@ -196,6 +196,8 @@ fun RoomSettingPage(
     var adminSearch by remember { mutableStateOf("") }
     var admins by remember(initial.admin) { mutableStateOf(initial.admin) }
     var customTheme by remember(roomOwnerId) { mutableStateOf(context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).getString("customTheme_$roomOwnerId", "").orEmpty()) }
+    var pendingCustomThemeImage by remember { mutableStateOf("") }
+    var pendingCustomThemeName by remember { mutableStateOf("") }
     var pendingPicker by remember { mutableStateOf("photo") }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
@@ -371,9 +373,7 @@ fun RoomSettingPage(
                     if (pendingPicker == "photo") {
                         performSave(state.copy(roomDp = dataUrl))
                     } else {
-                        customTheme = dataUrl
-                        performSave(state.copy(theme = "custom", customTheme = dataUrl))
-                        sheet = ""
+                        pendingCustomThemeImage = dataUrl
                     }
                 }
                 .onFailure { saveError = it.message ?: "Could not load image" }
@@ -652,81 +652,187 @@ fun RoomSettingPage(
             hasCustom = customTheme.isNotBlank(),
             onBack = { sheet = "" },
             onPick = { id -> performSave(state.copy(theme = id)); sheet = "" },
-            onUploadCustom = { sheet = "customized-theme" }
+            onUploadCustom = {
+                pendingCustomThemeImage = ""
+                pendingCustomThemeName = ""
+                sheet = "customized-theme"
+            }
         )
 
-        "customized-theme" -> BottomSheetModal(
-            scrimAlpha = 0.55f,
-            heightFraction = 0.70f,
-            dark = true,
-            cornerRadius = 12.dp,
-            onDismiss = { sheet = "theme" }
+        "customized-theme" -> Dialog(
+            onDismissRequest = { sheet = "theme" },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
+            val isUploadActive = pendingCustomThemeImage.isNotBlank()
             Column(
-                Modifier.fillMaxSize().background(Color.Black)
+                Modifier.fillMaxSize()
+                    .background(Color.White)
+                    .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 18.dp)
             ) {
-                Text(
-                    "Customized Theme",
-                    Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 24.dp),
-                    color = Color.White, fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
-                )
-                Box(
-                    Modifier.size(104.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.5.dp, blue500, RoundedCornerShape(12.dp))
-                        .clickable {
-                            pendingPicker = "theme"
-                            picker.launch("image/*")
-                        },
-                    contentAlignment = Alignment.Center
+                Row(
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("+", color = blue500, fontSize = 34.sp, fontWeight = FontWeight.Normal)
-                        Text("Upload Image", color = blue400, fontSize = 11.sp)
-                    }
-                }
-                Spacer(Modifier.height(22.dp))
-                Text("Rule:", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(10.dp))
-                listOf(
-                    "Upload Any Image For Customized Room Background.",
-                    "Make sure Do Not Upload Any Vulgar Image.",
-                    "Image Review / Approval Time Is 24 To 48 Hours.",
-                    "If Your Room Theme Is Rejected, The Coin Amount Will Be Returned To Your Coin Wallet."
-                ).forEach { rule ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                        verticalAlignment = Alignment.Top
+                    Box(
+                        Modifier.size(40.dp).clip(CircleShape).clickable { sheet = "theme" },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("•", color = Color.White, fontSize = 13.sp)
+                        Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(24.dp))
+                    }
+                    Text(
+                        "Room Theme",
+                        Modifier.weight(1f),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = gray800,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.size(40.dp))
+                }
+
+                Column(
+                    Modifier.weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(Modifier.height(10.dp))
+
+                    Box(
+                        Modifier.fillMaxWidth(0.62f)
+                            .aspectRatio(0.58f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(gray100)
+                            .border(1.dp, gray300, RoundedCornerShape(12.dp))
+                            .clickable {
+                                pendingPicker = "theme"
+                                picker.launch("image/*")
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (pendingCustomThemeImage.isNotBlank()) {
+                            AsyncImage(
+                                model = pendingCustomThemeImage,
+                                contentDescription = "Selected Room Theme",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                "+",
+                                color = gray600,
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Light
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        "750*1600px",
+                        color = gray500,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("*", color = red500, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            rule,
-                            Modifier.weight(1f).padding(start = 8.dp),
-                            color = Color(0xFFE5E7EB), fontSize = 12.sp,
-                            lineHeight = 18.sp
+                            " Theme name",
+                            color = gray800,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Box(
+                        Modifier.fillMaxWidth()
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(gray50)
+                            .border(1.dp, gray200, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        BasicTextField(
+                            value = pendingCustomThemeName,
+                            onValueChange = { pendingCustomThemeName = it.take(30) },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = TextStyle(fontSize = 14.sp, color = gray800),
+                            singleLine = true,
+                            decorationBox = { inner ->
+                                Box {
+                                    if (pendingCustomThemeName.isEmpty()) {
+                                        Text("Please enter", color = gray400, fontSize = 14.sp)
+                                    }
+                                    inner()
+                                }
+                            }
+                        )
+                    }
+
+                    Spacer(Modifier.height(28.dp))
+
+                    Text(
+                        "After uploading the room background, you need to wait for official review. If you have any questions contact the official customer service.If fails, the coins will be returned",
+                        color = gray500,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                    )
+
+                    Spacer(Modifier.height(24.dp))
                 }
-                Spacer(Modifier.weight(1f))
+
                 Box(
-                    Modifier.fillMaxWidth().padding(bottom = 14.dp)
-                        .height(48.dp).clip(CircleShape)
-                        .background(blue500)
-                        .clickable {
-                            pendingPicker = "theme"
-                            picker.launch("image/*")
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isUploadActive) blue500 else blue500.copy(alpha = 0.45f))
+                        .clickable(enabled = isUploadActive) {
+                            customTheme = pendingCustomThemeImage
+                            performSave(state.copy(theme = "custom", customTheme = pendingCustomThemeImage))
+                            pendingCustomThemeImage = ""
+                            pendingCustomThemeName = ""
+                            sheet = ""
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Confirm", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(10.dp))
-                        Text("🪙", fontSize = 17.sp)
+                        Text(
+                            "Upload",
+                            color = if (isUploadActive) Color.White else Color.White.copy(alpha = 0.85f),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        AsyncImage(
+                            model = RAW_SETTINGS + "file_00000000e56882119c217d508b6733dc.png",
+                            contentDescription = "Coins",
+                            modifier = Modifier.size(18.dp),
+                            contentScale = ContentScale.Fit
+                        )
                         Spacer(Modifier.width(5.dp))
-                        Text("5,00,000", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "5,00,000/7Days",
+                            color = if (isUploadActive) Color.White else Color.White.copy(alpha = 0.85f),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
