@@ -3000,11 +3000,17 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 } else null
             },
             onSendCoinTransfer = { transfer ->
-                // Show Combo as soon as the Lucky transfer is queued; server echo confirms it.
+                // Start the Lucky image immediately on the Send tap; the server echo
+                // confirms the transfer but must not replay the same visual twice.
                 if (transfer["luckyGift"] == true) {
                     val optimisticPayload = JSONObject(transfer)
                     lastLuckyComboPayload = optimisticPayload
                     pendingLuckyGiftTransferId = optimisticPayload.optString("transferId")
+                    val recipientJson = optimisticPayload.optJSONArray("recipientIds") ?: JSONArray()
+                    val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
+                    val image = optimisticPayload.optString("giftImage").ifBlank { optimisticPayload.optString("luckyImage") }
+                    val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
+                    luckyAnimation.launchToRecipients(pendingLuckyGiftTransferId, resolvedImage, recipientIds)
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
                     luckyComboGeneration++
