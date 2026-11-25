@@ -649,7 +649,7 @@ fun RoomSettingPage(
             current = state.theme,
             items = themeItems,
             onBack = { sheet = "" },
-            onPick = { id -> performSave(state.copy(theme = id, customTheme = "")); customTheme = ""; sheet = "" }
+            onPick = { id -> customTheme = ""; performSave(state.copy(theme = id, customTheme = "")); sheet = "" }
         )
 
         "customized-theme" -> Dialog(
