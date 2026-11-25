@@ -158,7 +158,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         flights.add(
             LuckyGiftFlight(
                 id, image,
-                if (popupAtCenter) center else origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
+                origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
                 target,
                 center,
                 popupAtCenter
