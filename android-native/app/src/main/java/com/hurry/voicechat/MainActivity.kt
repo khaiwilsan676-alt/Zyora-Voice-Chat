@@ -829,6 +829,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         // Resume the retained live room session directly without a second join.
                         keptRoom?.let { room ->
                             if (roomSession?.id != room.id) roomSession = room
+                            // The mini-room is a global return target: close any covering
+                            // profile/chat surface before revealing the retained live room.
+                            openedPublicProfile = null
+                            openedFamilyId = null
+                            openedChat = null
+                            openedRoomSupport = false
+                            openedSearch = false
+                            openedLeaderboard = null
+                            openedInvite = false
                             openedRoom = room
                             keptRoom = null
                             authPrefs.edit().remove("kept_room_data").apply()
