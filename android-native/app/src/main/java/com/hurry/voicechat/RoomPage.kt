@@ -478,6 +478,7 @@ fun RoomPage(
     var luckyGiftNotice by luckyAnimation::notice
     var luckyNoticeGeneration by luckyAnimation::noticeGeneration
     var showLuckyComboButton by luckyAnimation::showComboButton
+    var pendingLuckyGiftTransferId by remember(roomId) { mutableStateOf("") }
     var luckyComboTimeLeft by luckyAnimation::comboTimeLeft
     var luckyComboGeneration by luckyAnimation::comboGeneration
     var luckyComboPending by luckyAnimation::comboPending
@@ -1381,6 +1382,13 @@ fun RoomPage(
             val reason = payload.optString("reason")
             mainHandler.post {
                 luckyComboPending = false
+                val failedTransferId = payload.optString("transferId")
+                if (pendingLuckyGiftTransferId.isNotBlank() && failedTransferId == pendingLuckyGiftTransferId) {
+                    pendingLuckyGiftTransferId = ""
+                    showLuckyComboButton = false
+                    lastLuckyComboPayload = null
+                    luckyComboTimeLeft = 0
+                }
                 val balance = payload.optLong("balance", -1L)
                 if (balance >= 0L) roomWalletBalance = balance
                 roomToastText = when (reason) {
@@ -1449,6 +1457,7 @@ fun RoomPage(
                 if (senderId == accountId) {
                     // Only a server-confirmed transfer may start/renew the combo window.
                     lastLuckyComboPayload = JSONObject(payload.toString())
+                    pendingLuckyGiftTransferId = ""
                     luckyComboPending = false
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
@@ -2975,7 +2984,15 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 } else null
             },
             onSendCoinTransfer = { transfer ->
-                // Render only after server wallet confirmation; never show a false success.
+                // Show Combo as soon as the Lucky transfer is queued; server echo confirms it.
+                if (transfer["luckyGift"] == true) {
+                    val optimisticPayload = JSONObject(transfer)
+                    lastLuckyComboPayload = optimisticPayload
+                    pendingLuckyGiftTransferId = optimisticPayload.optString("transferId")
+                    showLuckyComboButton = true
+                    luckyComboTimeLeft = 5
+                    luckyComboGeneration++
+                }
                 roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
             },
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }

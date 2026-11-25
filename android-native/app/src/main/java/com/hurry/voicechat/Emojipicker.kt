@@ -294,7 +294,7 @@ private fun AnimatedSeatBannerOverlay(
 
 // Shared bounded disk cache for seat emoji MP4s. Reuses downloaded bytes
 // across room re-entry and player recreation; evicts least-recently-used data.
-private object SeatEmojiVideoCache {
+internal object SeatEmojiVideoCache {
     @Volatile private var instance: SimpleCache? = null
 
     fun get(context: android.content.Context): SimpleCache =

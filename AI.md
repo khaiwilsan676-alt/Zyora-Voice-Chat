@@ -2250,3 +2250,9 @@ Current documentation does not certify that all historical features are build-, 
 - Each overlay removes only its own flight when it finishes; concurrent flights retain independent animation state.
 - Removed the Combo button's 50ms press-scale tween so the pressed response is immediate. Button artwork, placement, timer, combo request validation, and server-confirmed wallet flow remain unchanged.
 - Status: code committed; native APK build and on-device verification are pending.
+
+## 2026-11-25 — Instant Lucky Combo visibility and smoother gift video playback
+- Lucky Combo control is shown optimistically as soon as the Lucky transfer is queued, without waiting for the server echo. A matching transfer failure rolls back the temporary button and payload; server confirmation remains authoritative and refreshes the combo window.
+- Gift video playback now uses Media3 ExoPlayer with the existing bounded disk cache used by seat emoji videos, shorter network timeouts, TextureView rendering, preserved fade/pure effects, and player release on dismissal/completion/error.
+- No gift artwork, video assets, animation styling, Lucky reward/debit rules, or room layout changes intended.
+- Status: code committed; APK build and on-device playback verification pending.

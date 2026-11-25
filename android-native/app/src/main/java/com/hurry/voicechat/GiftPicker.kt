@@ -56,6 +56,13 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
@@ -1050,107 +1057,103 @@ private fun VideoEffectOverlay(
     onFinished: () -> Unit,
     onStarted: () -> Unit,
 ) {
+    val context = LocalContext.current
     val resolvedUrl = giftAssetUrl(src)
     val isFade = style == "fade"
-    var show by remember(resolvedUrl) { mutableStateOf(true) }
     var videoRatio by remember(resolvedUrl) { mutableStateOf<Float?>(null) }
+    val latestOnFinished by rememberUpdatedState(onFinished)
+
+    val player = remember(context, resolvedUrl) {
+        val appContext = context.applicationContext
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(5_000)
+            .setReadTimeoutMs(10_000)
+            .setAllowCrossProtocolRedirects(true)
+        val cacheFactory = CacheDataSource.Factory()
+            .setCache(SeatEmojiVideoCache.get(appContext))
+            .setUpstreamDataSourceFactory(DefaultDataSource.Factory(appContext, httpFactory))
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        ExoPlayer.Builder(appContext)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(cacheFactory))
+            .build()
+            .apply {
+                setMediaItem(MediaItem.fromUri(resolvedUrl))
+                repeatMode = Player.REPEAT_MODE_OFF
+                playWhenReady = true
+                addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_ENDED) latestOnFinished()
+                    }
+                    override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                        if (videoSize.width > 0 && videoSize.height > 0) {
+                            videoRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
+                        }
+                    }
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        latestOnFinished()
+                    }
+                })
+                prepare()
+            }
+    }
 
     LaunchedEffect(resolvedUrl) { onStarted() }
-
-    if (!show) return
 
     val isKing = resolvedUrl.contains("17e19680~2")
     val isMysaloPrincess = resolvedUrl.contains("2026031617445981861~2")
     val isCastleNight = resolvedUrl.contains("2026032620350482882~2")
 
     Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Transparent),
+        Modifier.fillMaxSize().background(Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
-        key(resolvedUrl) {
-            AndroidView(
-                factory = { ctx ->
-                    android.view.TextureView(ctx).apply {
-                        isOpaque = false
-                        surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
-                            var mediaPlayer: android.media.MediaPlayer? = null
-
-                            override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {
-                                try {
-                                    mediaPlayer = android.media.MediaPlayer().apply {
-                                        setDataSource(ctx, Uri.parse(resolvedUrl))
-                                        setSurface(android.view.Surface(surface))
-                                        setVolume(1f, 1f)
-                                        setOnVideoSizeChangedListener { _, w, h ->
-                                            if (w > 0 && h > 0) {
-                                                videoRatio = w.toFloat() / h.toFloat()
-                                            }
-                                        }
-                                        setOnPreparedListener { mp ->
-                                            mp.isLooping = false
-                                            mp.start()
-                                        }
-                                        setOnCompletionListener { onFinished() }
-                                        setOnErrorListener { _, _, _ ->
-                                            onFinished()
-                                            true
-                                        }
-                                        prepareAsync()
-                                    }
-                                } catch (e: Exception) {
-                                    onFinished()
-                                }
-                            }
-
-                            override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
-
-                            override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
-                                mediaPlayer?.release()
-                                mediaPlayer = null
-                                return true
-                            }
-
-                            override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
+        AndroidView(
+            factory = { _ ->
+                android.view.TextureView(context).apply {
+                    isOpaque = false
+                    player.setVideoTextureView(this)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.fillMaxSize())
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    if (style == "pure") blendMode = BlendMode.Plus
+                }
+                .drawWithContent {
+                    drawContent()
+                    if (isFade) {
+                        val topFadeStop = if (isCastleNight) 0.13f else 0.1f
+                        val bottomFadeStop = when {
+                            isKing -> 0.85f
+                            isMysaloPrincess -> 0.87f
+                            isCastleNight -> 0.87f
+                            else -> 0.9f
                         }
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0.0f to Color.Transparent,
+                                topFadeStop to Color.White,
+                                bottomFadeStop to Color.White,
+                                1.0f to Color.Transparent
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.fillMaxSize())
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                        if (style == "pure") {
-                            blendMode = BlendMode.Plus
-                        }
-                    }
-                    .drawWithContent {
-                        drawContent()
-                        if (isFade) {
-                            val topFadeStop = if (isCastleNight) 0.13f else 0.1f
-                            val bottomFadeStop = when {
-                                isKing -> 0.85f
-                                isMysaloPrincess -> 0.87f
-                                isCastleNight -> 0.87f
-                                else -> 0.9f
-                            }
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    0.0f to Color.White.copy(alpha = 0f),
-                                    topFadeStop to Color.White,
-                                    bottomFadeStop to Color.White,
-                                    1.0f to Color.White.copy(alpha = 0f)
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                    }
-            )
+                }
+        )
+    }
+
+    DisposableEffect(player) {
+        onDispose {
+            player.clearVideoTextureView(null)
+            player.stop()
+            player.clearMediaItems()
+            player.release()
         }
     }
 }
-
 @Composable
 fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
     VideoEffectOverlay(src = giftAssetUrl(src), style = "fade", onFinished = onFinished, onStarted = {})
