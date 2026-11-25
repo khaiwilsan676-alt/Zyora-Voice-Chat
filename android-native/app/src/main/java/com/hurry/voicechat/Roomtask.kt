@@ -122,7 +122,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val taskRoomId = remember(roomId) { roomId.trim() }
-    var taskStatuses by remember { mutableStateOf>(emptyMap()) }
+    var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
     var pendingShareTask by remember { mutableIntStateOf(0) }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
