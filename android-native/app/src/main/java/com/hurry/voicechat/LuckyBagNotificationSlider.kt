@@ -22,6 +22,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -344,8 +346,34 @@ fun LuckyBagOpenConfirmCards(
     onLuckyBagClaimErrorChange: (String?) -> Unit,
     onLuckyBagClaimAmountChange: (Long) -> Unit,
     onShowFloatingLuckyBagChange: (Boolean) -> Unit,
-    onRoomWalletBalanceChange: (Long) -> Unit
+    onRoomWalletBalanceChange: (Long) -> Unit,
+    onOpenPublicProfile: (RoomProfileUser) -> Unit = {}
 ) {
+    var luckyBagClaims by remember(luckyBagId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var luckyBagClaimsLoading by remember(luckyBagId) { mutableStateOf(false) }
+    LaunchedEffect(luckyBagId, showLuckyBagClaimedCard) {
+        if (luckyBagId.isNotBlank() && showLuckyBagClaimedCard) {
+            luckyBagClaimsLoading = true
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/$luckyBagId").openConnection() as java.net.HttpURLConnection).apply {
+                        connectTimeout = 5000; readTimeout = 6000
+                        setRequestProperty("Cache-Control", "no-cache, no-store")
+                    }
+                    try {
+                        val status = connection.responseCode
+                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                        val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                        if (status !in 200..299) error("Lucky Bag details unavailable")
+                        val array = json.optJSONArray("claims") ?: org.json.JSONArray()
+                        (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+                    } finally { connection.disconnect() }
+                }
+            }
+            result.onSuccess { luckyBagClaims = it }
+            luckyBagClaimsLoading = false
+        }
+    }
         if (showLuckyBagCenterReveal) {
             Box(
                 Modifier
@@ -576,44 +604,54 @@ fun LuckyBagOpenConfirmCards(
 
                             Spacer(Modifier.height(12.dp))
 
-                            // Claimant Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AsyncImage(
-                                    model = claimantImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
-                                    contentDescription = "Your avatar",
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Text(
-                                    text = claimantName.ifBlank { "User" },
-                                    color = Color(0xFF7B5738),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier
-                                        .padding(start = 10.dp, end = 8.dp)
-                                        .weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "%,d".format(luckyBagClaimAmount),
-                                        color = Color(0xFFE55B65),
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Spacer(Modifier.width(4.dp))
+                            // All users who opened this bag; same server-backed claims feed as Claim Details.
+                            val visibleClaims = luckyBagClaims
+                            if (luckyBagClaimsLoading && visibleClaims.isEmpty()) {
+                                Text("Loading...", color = Color(0xFFC59362), fontSize = 11.sp)
+                            } else if (visibleClaims.isEmpty()) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(
-                                        model = LUCKY_BAG_COIN_PNG,
-                                        contentDescription = "Coin",
-                                        modifier = Modifier.size(16.dp),
-                                        contentScale = ContentScale.Fit
+                                        model = claimantImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                                        contentDescription = "Your avatar",
+                                        modifier = Modifier.size(36.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
                                     )
+                                    Text(claimantName.ifBlank { "User" }, color = Color(0xFF7B5738), fontSize = 13.sp,
+                                        modifier = Modifier.padding(start = 10.dp).weight(1f))
+                                    Text("%,d".format(luckyBagClaimAmount), color = Color(0xFFE55B65), fontSize = 14.sp)
+                                }
+                            } else {
+                                Column(Modifier.fillMaxWidth().heightIn(max = 126.dp).verticalScroll(rememberScrollState())) {
+                                    visibleClaims.forEach { claim ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)
+                                                .clickable {
+                                                    val id = claim.optString("userId")
+                                                    onOpenPublicProfile(RoomProfileUser(
+                                                        id = id, uid = id, accountId = id,
+                                                        name = claim.optString("userName").ifBlank { "User" },
+                                                        image = claim.optString("userImage")
+                                                    ))
+                                                },
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            AsyncImage(
+                                                model = claim.optString("userImage").ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                                                contentDescription = "Lucky Bag opener",
+                                                modifier = Modifier.size(34.dp).clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                            Text(claim.optString("userName").ifBlank { "User" }, color = Color(0xFF7B5738),
+                                                fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(start = 9.dp, end = 6.dp).weight(1f),
+                                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text("%,d".format(claim.optLong("amount", 0L)), color = Color(0xFFE55B65),
+                                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                            Spacer(Modifier.width(3.dp))
+                                            AsyncImage(model = LUCKY_BAG_COIN_PNG, contentDescription = "Coins",
+                                                modifier = Modifier.size(15.dp), contentScale = ContentScale.Fit)
+                                        }
+                                    }
                                 }
                             }
                         }
