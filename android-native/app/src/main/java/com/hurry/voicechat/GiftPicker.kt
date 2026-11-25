@@ -373,7 +373,7 @@ fun GiftPicker(
                 dialogWindow?.setDimAmount(0f)
                 dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
-            
+
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.BottomCenter,
@@ -381,7 +381,7 @@ fun GiftPicker(
                 val giftSheetHeight = maxHeight * 0.52f
                 // Drag dismiss variable
                 var offsetY by remember { mutableStateOf(0f) }
-                
+
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
@@ -408,9 +408,9 @@ fun GiftPicker(
                         }
                         .background(
                             color = Color(0xEB000000),
-                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp) 
+                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
                         )
-                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)) 
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .border(
                             1.dp,
                             Color.White.copy(alpha = 0.10f),
@@ -563,35 +563,35 @@ fun GiftPicker(
                                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (activeTab == "Hot") {
-                                Modifier
-                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent {
-                                        drawContent()
-                                        val edgeFade = 0.01f
-                                        drawRect(
-                                            brush = Brush.horizontalGradient(
-                                                0f to Color.Transparent,
-                                                edgeFade to Color.White,
-                                                (1f - edgeFade) to Color.White,
-                                                1f to Color.Transparent,
-                                            ),
-                                            blendMode = BlendMode.DstIn,
-                                        )
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0f to Color.Transparent,
-                                                edgeFade to Color.White,
-                                                (1f - edgeFade) to Color.White,
-                                                1f to Color.Transparent,
-                                            ),
-                                            blendMode = BlendMode.DstIn,
-                                        )
-                                    }
-                            } else Modifier
-                        ),
+                                    .fillMaxSize()
+                                    .then(
+                                        if (activeTab == "Hot") {
+                                            Modifier
+                                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                                .drawWithContent {
+                                                    drawContent()
+                                                    val edgeFade = 0.01f
+                                                    drawRect(
+                                                        brush = Brush.horizontalGradient(
+                                                            0f to Color.Transparent,
+                                                            edgeFade to Color.White,
+                                                            (1f - edgeFade) to Color.White,
+                                                            1f to Color.Transparent,
+                                                        ),
+                                                        blendMode = BlendMode.DstIn,
+                                                    )
+                                                    drawRect(
+                                                        brush = Brush.verticalGradient(
+                                                            0f to Color.Transparent,
+                                                            edgeFade to Color.White,
+                                                            (1f - edgeFade) to Color.White,
+                                                            1f to Color.Transparent,
+                                                        ),
+                                                        blendMode = BlendMode.DstIn,
+                                                    )
+                                                }
+                                        } else Modifier
+                                    ),
                             ) {
                                 items(currentGifts, key = { it.id }) { gift ->
                                     GiftCard(
@@ -652,7 +652,7 @@ fun GiftPicker(
                                             content = {
                                                 Surface(
                                                     color = Color(0xFF0C1418),
-                                                    shape = RoundedCornerShape(12.dp), 
+                                                    shape = RoundedCornerShape(12.dp),
                                                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                                                     shadowElevation = 8.dp,
                                                     modifier = Modifier.width(50.dp)
@@ -663,18 +663,18 @@ fun GiftPicker(
                                                             Box(
                                                                 Modifier
                                                                     .fillMaxWidth()
-                                                                    .background(Color.Transparent) 
+                                                                    .background(Color.Transparent)
                                                                     .clickable {
                                                                         selectedMultiplier = m
                                                                         showMultipliers = false
                                                                     }
-                                                                    .padding(vertical = 4.dp), 
+                                                                    .padding(vertical = 4.dp),
                                                                 contentAlignment = Alignment.Center,
                                                             ) {
                                                                 Text(
                                                                     text = m,
                                                                     color = if (active) Color.White else Color(0xFFD1D5DB),
-                                                                    fontSize = 10.sp, 
+                                                                    fontSize = 10.sp,
                                                                     fontWeight = FontWeight.Medium,
                                                                 )
                                                             }
@@ -694,7 +694,7 @@ fun GiftPicker(
                                     Row(
                                         Modifier
                                             .clip(RoundedCornerShape(50))
-                                            .background(Color.Transparent) 
+                                            .background(Color.Transparent)
                                             .border(1.dp, Blue500.copy(alpha = 0.6f), RoundedCornerShape(50)),
                                     ) {
                                         // 1x Multiplier Part
@@ -729,12 +729,12 @@ fun GiftPicker(
                                                 .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
                                                 .background(
                                                     Brush.verticalGradient(
-                                                        colors = listOf(Color(0xFF60A5FA), Color(0xFF1D4ED8)) 
+                                                        colors = listOf(Color(0xFF60A5FA), Color(0xFF1D4ED8))
                                                     )
                                                 )
                                                 .border(
                                                     width = 0.5.dp,
-                                                    color = Color.White.copy(alpha = 0.4f), 
+                                                    color = Color.White.copy(alpha = 0.4f),
                                                     shape = RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)
                                                 )
                                                 .clickable(enabled = selectedGift != null && !sending) {
@@ -794,7 +794,7 @@ private fun GiftCard(
         Modifier
             .clip(RoundedCornerShape(6.dp))
             .background(
-                if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
+                if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent
             )
             .clickable { onClick() }
             .padding(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 1.dp),
@@ -813,45 +813,57 @@ private fun GiftCard(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val size = if (gift.noMask) 48.dp else 64.dp
-            val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
-            val isHotEdgeFade = activeTab == "Hot" && (gift.id == 2001 || gift.id == 2002 || gift.id == 2003 || gift.id in 2004..2009)
+            val size = if (gift.noMask) 45.dp else 56.dp
+            val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3)
+            val isLipstick = gift.id == 2005
+            val isImageEdgeFade = activeTab == "Hot" || activeTab == "Lucky" || activeTab == "Luxury"
 
             Box(
                 Modifier
                     .size(size)
                     .clip(
                         when {
-                            isHotCircle -> CircleShape 
+                            isHotCircle -> CircleShape
+                            isLipstick -> RoundedCornerShape(0.dp)
                             gift.sideFade -> RoundedCornerShape(12.dp)
                             else -> RoundedCornerShape(0.dp)
                         }
                     )
                     .then(
-                        if (isHotEdgeFade) {
+                        if (isImageEdgeFade) {
                             Modifier
                                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
-                                    val edgeFade = 0.05f
-                                    drawRect(
-                                        brush = Brush.horizontalGradient(
-                                            0f to Color.Transparent,
-                                            edgeFade to Color.White,
-                                            (1f - edgeFade) to Color.White,
-                                            1f to Color.Transparent,
-                                        ),
-                                        blendMode = BlendMode.DstIn,
-                                    )
-                                    drawRect(
-                                        brush = Brush.verticalGradient(
-                                            0f to Color.Transparent,
-                                            edgeFade to Color.White,
-                                            (1f - edgeFade) to Color.White,
-                                            1f to Color.Transparent,
-                                        ),
-                                        blendMode = BlendMode.DstIn,
-                                    )
+                                    if (isHotCircle) {
+                                        drawRect(
+                                            brush = Brush.radialGradient(
+                                                0.82f to Color.White,
+                                                1.0f to Color.Transparent,
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    } else {
+                                        val edgeFade = 0.12f
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                0f to Color.Transparent,
+                                                edgeFade to Color.White,
+                                                (1f - edgeFade) to Color.White,
+                                                1f to Color.Transparent,
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                edgeFade to Color.White,
+                                                (1f - edgeFade) to Color.White,
+                                                1f to Color.Transparent,
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    }
                                 }
                         } else Modifier
                     ),
@@ -859,36 +871,9 @@ private fun GiftCard(
                 AsyncImage(
                     model = giftAssetUrl(gift.image),
                     contentDescription = gift.name,
-                    contentScale = if (gift.noMask) ContentScale.Fit else ContentScale.Crop,
+                    contentScale = if (gift.noMask || isLipstick) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
-
-                if (isHotCircle) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.radialGradient(
-                                    0.90f to Color.Transparent, 
-                                    1.0f to Color.Black.copy(alpha = 0.6f) 
-                                )
-                            )
-                    )
-                }
-
-                if (activeTab == "Hot") {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(16.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color(0x99000000))
-                                )
-                            )
-                    )
-                }
             }
 
             Text(
@@ -1025,14 +1010,14 @@ private fun RecipientButton(
                 }
             }
         }
-        
+
         Surface(
             color = if (isActive) Blue500 else Color(0xFF9CA3AF),
             shape = RoundedCornerShape(50),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .offset(x = (-2).dp, y = (-2).dp)
-                .height(13.dp), 
+                .height(13.dp),
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp)) {
                 Text(
@@ -1051,7 +1036,7 @@ private fun RecipientButton(
 }
 
 // ============================================================
-// VIDEO OVERLAY 
+// VIDEO OVERLAY
 // ============================================================
 @Composable
 private fun VideoEffectOverlay(
@@ -1062,7 +1047,7 @@ private fun VideoEffectOverlay(
 ) {
     val isFade = style == "fade"
     var show by remember { mutableStateOf(true) }
-    
+
     var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     LaunchedEffect(src) { onStarted() }
@@ -1082,7 +1067,7 @@ private fun VideoEffectOverlay(
         AndroidView(
             factory = { ctx ->
                 android.view.TextureView(ctx).apply {
-                    isOpaque = false 
+                    isOpaque = false
                     surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                         var mediaPlayer: android.media.MediaPlayer? = null
 
@@ -1099,7 +1084,7 @@ private fun VideoEffectOverlay(
                                     }
                                     setOnPreparedListener { mp ->
                                         mp.isLooping = false
-                                        mp.start() 
+                                        mp.start()
                                     }
                                     setOnCompletionListener { onFinished() }
                                     setOnErrorListener { _, _, _ ->
@@ -1114,13 +1099,13 @@ private fun VideoEffectOverlay(
                         }
 
                         override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
-                        
+
                         override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
                             mediaPlayer?.release()
                             mediaPlayer = null
                             return true
                         }
-                        
+
                         override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
                     }
                 }
@@ -1128,10 +1113,10 @@ private fun VideoEffectOverlay(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.wrapContentHeight())
-                .graphicsLayer { 
-                    compositingStrategy = CompositingStrategy.Offscreen 
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
                     if (style == "pure") {
-                        blendMode = BlendMode.Plus 
+                        blendMode = BlendMode.Plus
                     }
                 }
                 .drawWithContent {
@@ -1146,12 +1131,12 @@ private fun VideoEffectOverlay(
                         }
                         drawRect(
                             brush = Brush.verticalGradient(
-                                0.0f to Color.White.copy(alpha = 0f), 
-                                topFadeStop to Color.White, 
-                                bottomFadeStop to Color.White, 
-                                1.0f to Color.White.copy(alpha = 0f) 
+                                0.0f to Color.White.copy(alpha = 0f),
+                                topFadeStop to Color.White,
+                                bottomFadeStop to Color.White,
+                                1.0f to Color.White.copy(alpha = 0f)
                             ),
-                            blendMode = BlendMode.DstIn 
+                            blendMode = BlendMode.DstIn
                         )
                     }
                 }
