@@ -51,7 +51,7 @@ private data class MeMenu(val label: String, val asset: String)
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
     var showCdKeySheet by remember { mutableStateOf(false) }
-    var cdKeyInput by remember { mutableStateOf("") }
+    var cdKeyInput by remember { mutableStateOf("") }\n    var cdKeyAction by remember { mutableStateOf("Apply") }\n    var cdKeyBusy by remember { mutableStateOf(false) }\n    val cdKeyScope = rememberCoroutineScope()
 
     SideEffect {
         var currentContext: Context = context
@@ -478,19 +478,86 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         .height(50.dp)
                         .clip(RoundedCornerShape(25.dp))
                         .background(Color(0xFF2563EB))
-                        .clickable {
-                            val trimmed = cdKeyInput.trim()
-                            if (trimmed.isEmpty()) {
-                                Toast.makeText(context, "Please enter CD-Key", Toast.LENGTH_SHORT).show()
+                        .clickable(enabled = !cdKeyBusy) {
+                            val token = prefs.getString("idToken", "").orEmpty()
+                            if (token.isBlank()) {
+                                Toast.makeText(context, "Please sign in again", Toast.LENGTH_SHORT).show()
+                            } else if (cdKeyAction == "Apply") {
+                                cdKeyBusy = true
+                                cdKeyScope.launch {
+                                    val result = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            val connection = (URL("https://zyora-server.onrender.com/api/cd-key/apply").openConnection() as HttpURLConnection).apply {
+                                                requestMethod = "POST"; connectTimeout = 10000; readTimeout = 15000
+                                                doOutput = true; setRequestProperty("Authorization", "Bearer $token")
+                                                setRequestProperty("Content-Type", "application/json")
+                                                setRequestProperty("Cache-Control", "no-store")
+                                            }
+                                            val response = connection.responseCode
+                                            val stream = if (response in 200..299) connection.inputStream else connection.errorStream
+                                            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                                            connection.disconnect()
+                                            val json = JSONObject(body)
+                                            if (response !in 200..299 || !json.optBoolean("success")) error(json.optString("error", "Could not generate CD-Key"))
+                                            json
+                                        }
+                                    }
+                                    cdKeyBusy = false
+                                    result.onSuccess {
+                                        cdKeyAction = "Exchange"
+                                        Toast.makeText(context, "Unique CD-Key sent by Zyora System message", Toast.LENGTH_LONG).show()
+                                    }.onFailure {
+                                        Toast.makeText(context, it.message ?: "Could not generate CD-Key", Toast.LENGTH_LONG).show()
+                                    }
+                                }
                             } else {
-                                cdKeyInput = ""
-                                showCdKeySheet = false
+                                val trimmed = cdKeyInput.trim()
+                                if (trimmed.isEmpty()) {
+                                    Toast.makeText(context, "Please enter CD-Key", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    cdKeyBusy = true
+                                    cdKeyScope.launch {
+                                        val result = withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                val connection = (URL("https://zyora-server.onrender.com/api/cd-key/redeem").openConnection() as HttpURLConnection).apply {
+                                                    requestMethod = "POST"; connectTimeout = 10000; readTimeout = 15000
+                                                    doOutput = true; setRequestProperty("Authorization", "Bearer $token")
+                                                    setRequestProperty("Content-Type", "application/json")
+                                                    setRequestProperty("Cache-Control", "no-store")
+                                                }
+                                                connection.outputStream.bufferedWriter().use { it.write(JSONObject().put("code", trimmed).toString()) }
+                                                val response = connection.responseCode
+                                                val stream = if (response in 200..299) connection.inputStream else connection.errorStream
+                                                val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                                                connection.disconnect()
+                                                val json = JSONObject(body)
+                                                if (response !in 200..299 || !json.optBoolean("success")) error(json.optString("error", "CD-Key exchange failed"))
+                                                json
+                                            }
+                                        }
+                                        cdKeyBusy = false
+                                        result.onSuccess { json ->
+                                            val reward = json.optJSONObject("reward")
+                                            val message = if (reward?.optString("type") == "coins") {
+                                                "You received ${reward.optInt("coins")} Coins"
+                                            } else {
+                                                "You received ${reward?.optJSONObject("item")?.optString("name", "a Bag item") ?: "a Bag item"} for 1 day"
+                                            }
+                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                            cdKeyInput = ""
+                                            cdKeyAction = "Apply"
+                                            showCdKeySheet = false
+                                        }.onFailure {
+                                            Toast.makeText(context, it.message ?: "CD-Key exchange failed", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Apply",
+                        text = if (cdKeyBusy) "Please wait..." else cdKeyAction,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color.White
