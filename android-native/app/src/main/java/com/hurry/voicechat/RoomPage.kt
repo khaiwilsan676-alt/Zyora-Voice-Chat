@@ -3044,7 +3044,14 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             }
         })
         selectedChatProfile?.let { profileMessage ->
-            val profileId = profileMessage.senderAccountId
+            // Room chat payloads can arrive with senderAccountId empty even though
+            // the sender is currently seated. Resolve that case only when the display
+            // name maps to exactly one occupied seat; never guess between duplicate names.
+            val profileId = profileMessage.senderAccountId.trim().ifBlank {
+                seats.singleOrNull {
+                    it.occupied && it.userName.trim().equals(profileMessage.sender.trim(), ignoreCase = true)
+                }?.accountId.orEmpty()
+            }
             RoomProfile(
                 user = RoomUser(
                     id = profileId, uid = profileId, accountId = profileId,
@@ -3106,9 +3113,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     selectedChatProfile = null
                 },
                 onMute = {
-                    val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
+                    val index = seats.indexOfFirst {
+                        it.occupied && it.accountId.trim().equals(profileId.trim(), ignoreCase = true)
+                    }
                     if (index >= 0) {
-                        val isSelfSeat = seats[index].accountId.trim() == accountId.trim()
+                        val isSelfSeat = seats[index].accountId.trim().equals(accountId.trim(), ignoreCase = true)
                         val canModerateTarget = accountId == roomOwner.accountId || accountId == roomOwner.id ||
                             accountId == roomOwner.uid || accountId == roomId ||
                             roomAdminIds.any { it.trim() in currentUserSeatIds }
