@@ -70,7 +70,7 @@ private const val LUCKY_COIN_ICON_URL =
 // ============================================================
 // LUCKY GIFT ANIMATION CONTROLS — keep all Lucky motion tuning here
 // ============================================================
-private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 430
+private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 260
 private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
 private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
@@ -146,7 +146,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         id: String,
         image: String,
         recipientIds: Collection<String>,
-        popupAtCenter: Boolean = false
+        popupAtCenter: Boolean = true
     ) {
         if (id.isBlank() || image.isBlank() || id in launchedFlightIds) return
         val target = recipientIds.firstNotNullOfOrNull { seatCenters[it] } ?: return
@@ -744,20 +744,13 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
 
     LaunchedEffect(flight.id) {
         itemAlpha.snapTo(1f)
-        if (!flight.popupAtCenter) {
-            // Regular Lucky gift keeps its original bottom -> center entrance.
-            coroutineScope {
-                launch { posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing)) }
-                launch { posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing)) }
-                launch { scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing)) }
-            }
-            delay(800L)
-        } else {
-            // Combo appears at center immediately, pops, then heads straight to the seat.
-            scaleAnim.snapTo(0.78f)
-            scaleAnim.animateTo(1.12f, animationSpec = tween(110, easing = FastOutSlowInEasing))
-            scaleAnim.animateTo(1.0f, animationSpec = tween(90, easing = FastOutSlowInEasing))
-        }
+        // Every Lucky image appears at screen center first, then flies straight
+        // to the recipient seat. No slow bottom-to-center pre-animation or hold.
+        posX.snapTo(flight.rootCenter.x)
+        posY.snapTo(flight.rootCenter.y)
+        scaleAnim.snapTo(0.88f)
+        scaleAnim.animateTo(1.08f, animationSpec = tween(75, easing = FastOutSlowInEasing))
+        scaleAnim.animateTo(1.0f, animationSpec = tween(65, easing = FastOutSlowInEasing))
 
         val flyXJob = launch {
             posX.animateTo(flight.target.x, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
