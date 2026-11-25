@@ -36,6 +36,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.tasks.Tasks
+import java.util.concurrent.TimeUnit
 import java.net.HttpURLConnection
 import java.net.URL
 import io.socket.client.IO
@@ -482,14 +485,17 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         .clip(RoundedCornerShape(25.dp))
                         .background(Color(0xFF2563EB))
                         .clickable(enabled = !cdKeyBusy) {
-                            val token = prefs.getString("idToken", "").orEmpty()
-                            if (token.isBlank()) {
+                            if (FirebaseAuth.getInstance().currentUser == null && prefs.getString("idToken", "").isNullOrBlank()) {
                                 Toast.makeText(context, "Please sign in again", Toast.LENGTH_SHORT).show()
                             } else if (cdKeyAction == "Apply") {
                                 cdKeyBusy = true
                                 cdKeyScope.launch {
                                     val result = withContext(Dispatchers.IO) {
                                         runCatching {
+                                            val firebaseUser = FirebaseAuth.getInstance().currentUser
+                                                ?: error("Please sign in again")
+                                            val token = Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
+                                                ?: error("Authentication token unavailable")
                                             val connection = (URL("https://zyora-server.onrender.com/api/cd-key/apply").openConnection() as HttpURLConnection).apply {
                                                 requestMethod = "POST"; connectTimeout = 10000; readTimeout = 15000
                                                 doOutput = true; setRequestProperty("Authorization", "Bearer $token")
@@ -522,7 +528,11 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     cdKeyScope.launch {
                                         val result = withContext(Dispatchers.IO) {
                                             runCatching {
-                                                val connection = (URL("https://zyora-server.onrender.com/api/cd-key/redeem").openConnection() as HttpURLConnection).apply {
+                                                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                                                ?: error("Please sign in again")
+                                            val token = Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
+                                                ?: error("Authentication token unavailable")
+                                            val connection = (URL("https://zyora-server.onrender.com/api/cd-key/redeem").openConnection() as HttpURLConnection).apply {
                                                     requestMethod = "POST"; connectTimeout = 10000; readTimeout = 15000
                                                     doOutput = true; setRequestProperty("Authorization", "Bearer $token")
                                                     setRequestProperty("Content-Type", "application/json")
