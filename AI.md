@@ -2225,3 +2225,9 @@ Current documentation does not certify that all historical features are build-, 
 - The six newly added Hot gift MP4 filenames currently referenced by the picker are not present in this repository's `public/` directory; their video playback cannot work until those exact MP4 files are uploaded/committed. Their PNG artwork files are present.
 - No gift names, prices, picker layout, combo controls, notification strip, or send logic changed.
 - Commit: `d8f68750e108336aeb1d3934c5166109e1400ef7`. APK/runtime playback still needs build/device verification.
+
+
+## 2026-11-25 Native room gift video URL fix
+- RoomPage `gift_video_play` receiver now resolves relative gift video paths to the Zyora GitHub `public/` Raw URL instead of the Vercel host, matching GiftPicker's asset resolver.
+- Preserved the existing gift video overlay, top/bottom fade, gift definitions, prices, and send flow.
+- The six Hot MP4 assets must exist in `public/` with their configured filenames for playback; code URL resolution alone cannot supply missing media files.
