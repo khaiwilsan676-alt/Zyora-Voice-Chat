@@ -141,7 +141,12 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     }
     private val launchedFlightIds = linkedSetOf<String>()
 
-    fun launchToRecipients(id: String, image: String, recipientIds: Collection<String>) {
+    fun launchToRecipients(
+        id: String,
+        image: String,
+        recipientIds: Collection<String>,
+        popupAtCenter: Boolean = false
+    ) {
         if (id.isBlank() || image.isBlank() || id in launchedFlightIds) return
         val target = recipientIds.firstNotNullOfOrNull { seatCenters[it] } ?: return
         if (rootSize == IntSize.Zero) return
@@ -149,12 +154,14 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         // a second copy or restart the same flight.
         launchedFlightIds.add(id)
         if (launchedFlightIds.size > 200) launchedFlightIds.remove(launchedFlightIds.first())
+        val center = Offset(rootSize.width / 2f, rootSize.height / 2f)
         flights.add(
             LuckyGiftFlight(
                 id, image,
-                origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
+                if (popupAtCenter) center else origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
                 target,
-                Offset(rootSize.width / 2f, rootSize.height / 2f)
+                center,
+                popupAtCenter
             )
         )
     }
@@ -719,7 +726,8 @@ data class LuckyGiftFlight(
     val image: String,
     val start: Offset,
     val target: Offset,
-    val rootCenter: Offset
+    val rootCenter: Offset,
+    val popupAtCenter: Boolean = false
 )
 
 @Composable
@@ -734,24 +742,32 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
     val itemAlpha = remember(flight.id) { Animatable(0f) }
 
     LaunchedEffect(flight.id) {
-        // Preserve the original Lucky gift animation: bottom -> center -> hold -> recipient seat.
-        val fadeInJob = launch {
+        if (flight.popupAtCenter) {
+            // Combo tap: show the same Lucky image immediately as a center popup.
+            posX.snapTo(flight.rootCenter.x)
+            posY.snapTo(flight.rootCenter.y)
             itemAlpha.snapTo(1f)
+            scaleAnim.animateTo(1.12f, animationSpec = tween(180, easing = FastOutSlowInEasing))
+            scaleAnim.animateTo(1.0f, animationSpec = tween(120, easing = FastOutSlowInEasing))
+        } else {
+            // Normal Lucky send keeps its original bottom -> center animation.
+            val fadeInJob = launch { itemAlpha.snapTo(1f) }
+            val moveXToCenterJob = launch {
+                posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+            }
+            val moveYToCenterJob = launch {
+                posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+            }
+            val growToOriginalJob = launch {
+                scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+            }
+            fadeInJob.join()
+            moveXToCenterJob.join()
+            moveYToCenterJob.join()
+            growToOriginalJob.join()
         }
-        val moveXToCenterJob = launch {
-            posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        val moveYToCenterJob = launch {
-            posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        val growToOriginalJob = launch {
-            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        fadeInJob.join()
-        moveXToCenterJob.join()
-        moveYToCenterJob.join()
-        growToOriginalJob.join()
 
+        // The only intentional center pause before flying to the recipient.
         delay(800L)
 
         val flyXJob = launch {
