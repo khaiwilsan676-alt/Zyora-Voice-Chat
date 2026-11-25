@@ -42,6 +42,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -147,7 +151,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val userPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val code = userPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() } ?: userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }.orEmpty()
     val inviteIdToken = userPrefs.getString("idToken", "").orEmpty()
-    val inviteLink = "https://khaiwilsan676-alt.github.io/Zyora-Voice-Chat/download/"
+    val inviteLink = "https://khaiwilsan676-alt.github.io/Zyora-Voice-Chat/download/?ref=$code"
 
     var isSheetOpen by remember { mutableStateOf(false) }
     var showDetailsPage by remember { mutableStateOf(false) }
@@ -173,7 +177,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     var helpRules by remember { mutableStateOf(false) }
 
     fun share(platform: String) {
-        val shareText = "Join me on this amazing app! Use my invite code: $code or click here: $inviteLink"
+        val shareText = "Join me on Zyora! Download using my invite link: $inviteLink"
         try {
             when (platform) {
                 "whatsapp" -> {
@@ -288,7 +292,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                 }
 
                 if (showDetailsPage) {
-                    InviteDetailsCard()
+                    InviteDetailsCard(code, inviteIdToken)
                     Spacer(Modifier.height(32.dp))
                 } else {
                     Box(Modifier.fillMaxWidth()) {
@@ -360,12 +364,13 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                                 Modifier.padding(top = 12.dp).clip(CircleShape)
                                     .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
                                     .border(1.5.dp, inviteYellow, CircleShape)
-                                    .clickable(enabled = invitePendingCoins >= 250000L) {
+                                    .clickable(enabled = invitePendingCoins > 0L) {
                                         inviteScope.launch {
                                             val result = HurryApi.claimInvite(code, inviteIdToken)
                                             if (result?.optBoolean("success") == true) {
-                                                invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
-                                                Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
+                                                invitePendingCoins = result.optLong("pendingCoins", 0L)
+                                                inviteTotalRewards = result.optLong("totalRewards", inviteTotalRewards)
+                                                Toast.makeText(context, "${result.optLong("claimedCoins", 0L)} coins added to your wallet", Toast.LENGTH_LONG).show()
                                             } else {
                                                 Toast.makeText(context, result?.optString("error") ?: "Claim failed. Please retry.", Toast.LENGTH_LONG).show()
                                             }
@@ -442,9 +447,21 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 }
 
 @Composable
-private fun InviteDetailsCard() {
+private fun InviteDetailsCard(userId: String, idToken: String) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchUserId by remember { mutableStateOf("") }
+    var inviteEvents by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
+    var weekStart by remember { mutableLongStateOf(0L) }
+    var weeklyInvitations by remember { mutableIntStateOf(0) }
+    var weeklyRewards by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(userId, idToken) {
+        val stats = HurryApi.inviteStats(userId, idToken) ?: return@LaunchedEffect
+        weekStart = stats.optLong("weekStart", 0L)
+        weeklyInvitations = stats.optInt("weeklyInvitationCount", 0)
+        weeklyRewards = stats.optLong("weeklyRewards", 0L)
+        val array = stats.optJSONArray("events") ?: org.json.JSONArray()
+        inviteEvents = (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+    }
 
     val cardGradient = Brush.verticalGradient(
         colors = listOf(
@@ -651,7 +668,7 @@ private fun InviteDetailsCard() {
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "11/13-11/19",
+                        text = if (weekStart > 0L) "Weekly • " + SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(weekStart)) + " – " + SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date()) else "This Week",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
@@ -700,6 +717,43 @@ private fun InviteDetailsCard() {
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Invitations: $weeklyInvitations", color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Weekly coins: $weeklyRewards", color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(12.dp))
+            val visibleEvents = inviteEvents.filter { event ->
+                val id = event.optString("friendId", "")
+                val name = event.optString("friendName", "")
+                searchUserId.isBlank() || id.contains(searchUserId.trim(), true) || name.contains(searchUserId.trim(), true)
+            }
+            if (visibleEvents.isEmpty()) {
+                Text("No invitation activity this week", color = mutedText, fontSize = 12.sp, modifier = Modifier.padding(vertical = 16.dp))
+            } else {
+                visibleEvents.forEach { event ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        AsyncImage(
+                            model = event.optString("friendAvatar").takeIf { it.startsWith("http") },
+                            contentDescription = "Friend avatar",
+                            modifier = Modifier.size(38.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(event.optString("friendName", "User"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                            Text("ID: " + event.optString("friendId", "—") + " • " + event.optString("source", event.optString("type", "invite")).replaceFirstChar { it.uppercase() }, color = mutedText, fontSize = 10.sp, maxLines = 1)
+                            Text(SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(event.optLong("timestamp", 0L))), color = mutedText, fontSize = 10.sp)
+                        }
+                        Text("+" + event.optLong("amount", 0L), color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(dividerColor))
                 }
             }
 
