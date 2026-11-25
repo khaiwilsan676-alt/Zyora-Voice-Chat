@@ -383,12 +383,12 @@ fun LuckyAnimationNotificationSlider(
                         )
                     }
 
-                    // Patti ke top edge se ekdam chipak ke Reward Image + Sun Rays + Overlapping Coins
+                    // Name ke right-side top corner par (20.dp niche + bigger winner image)
                     activeReward?.let { reward ->
                         Box(
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-88).dp, y = 6.dp)
+                                .align(Alignment.TopStart)
+                                .offset(x = 142.dp, y = 26.dp)
                                 .size(0.dp)
                                 .wrapContentSize(align = Alignment.BottomCenter, unbounded = true)
                                 .zIndex(2f),
@@ -447,11 +447,10 @@ private fun LuckyRewardTopBadge(
         }
     }
 
-    // Outer Box exact Reward Image size (74.dp) ka hai taaki patti se ekdam chipke
-    // aur Coins icon + value exact image ke bottom par overlap ho
+    // Bigger winning image (96.dp) — Coins icon & value untouched at bottom
     Box(
         modifier = modifier
-            .size(74.dp)
+            .size(96.dp)
             .graphicsLayer {
                 translationY = dropY.value
                 scaleX = popScale.value
@@ -461,7 +460,7 @@ private fun LuckyRewardTopBadge(
         contentAlignment = Alignment.Center,
     ) {
         // Rotating Sun Rays Shining behind image (layout bounds inflate kiye bina)
-        Canvas(modifier = Modifier.requiredSize(96.dp)) {
+        Canvas(modifier = Modifier.requiredSize(122.dp)) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val outerRadius = size.minDimension / 2f
             val rayCount = 12
@@ -515,7 +514,7 @@ private fun LuckyRewardTopBadge(
             }
         }
 
-        // Main Reward Image (increased size: 74.dp)
+        // Main Reward Image (increased size: 96.dp)
         AsyncImage(
             model = LUCKY_REWARD_BADGE_URL,
             contentDescription = null,
@@ -523,7 +522,7 @@ private fun LuckyRewardTopBadge(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // Coin Icon + Yellow Coins Amount exact image ke bottom par overlap hokar
+        // Coin Icon + Yellow Coins Amount exact image ke bottom par overlap hokar (untouched)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -707,7 +706,7 @@ fun LuckyAnimationComboButton(
 }
 
 // ============================================================
-// LUCKY GIFT SEAT FLIGHT — animation implementation lives here
+// LUCKY GIFT SEAT FLIGHT — Bottom -> Center (1.5s) -> Hold (0.8s) -> Seat Avatar (same size)
 // ============================================================
 data class LuckyGiftFlight(
     val id: String,
@@ -719,46 +718,68 @@ data class LuckyGiftFlight(
 
 @Composable
 fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
-    val progress = remember(flight.id) { Animatable(0f) }
     val density = LocalDensity.current
     val imageSizeDp = LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP.dp
-    val imageSizePx = with(density) { imageSizeDp.toPx() }
-    val arcHeightPx = with(density) { LUCKY_SEAT_FLIGHT_ARC_DP.dp.toPx() }
+    val halfImagePx = with(density) { imageSizeDp.toPx() } / 2f
 
-    // One continuous curved flight directly to the recipient's seat.
+    val posX = remember(flight.id) { Animatable(flight.start.x) }
+    val posY = remember(flight.id) { Animatable(flight.start.y) }
+    val scaleAnim = remember(flight.id) { Animatable(0.35f) }
+    val itemAlpha = remember(flight.id) { Animatable(0f) }
+
     LaunchedEffect(flight.id) {
-        progress.animateTo(
-            1f,
-            animationSpec = tween(
-                durationMillis = LUCKY_SEAT_FLIGHT_DURATION_MS,
-                easing = FastOutSlowInEasing
-            )
-        )
-        onFinished()
-    }
+        // 1. Bottom se choti (0.35f) nikalkar 1.5 second (1500ms) mein screen center par apne original size (1.0f) mein aana
+        val fadeInJob = launch {
+            itemAlpha.animateTo(1f, animationSpec = tween(150))
+        }
+        val moveXToCenterJob = launch {
+            posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        val moveYToCenterJob = launch {
+            posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        val growToOriginalJob = launch {
+            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        fadeInJob.join()
+        moveXToCenterJob.join()
+        moveYToCenterJob.join()
+        growToOriginalJob.join()
 
-    val p = progress.value.coerceIn(0f, 1f)
-    val x = flight.start.x + (flight.target.x - flight.start.x) * p
-    val y = flight.start.y + (flight.target.y - flight.start.y) * p -
-        sin(p * Math.PI).toFloat() * arcHeightPx
-    val scale = when {
-        p < 0.18f -> 0.28f + (0.82f * (p / 0.18f))
-        p > 0.78f -> 1.10f - (0.62f * ((p - 0.78f) / 0.22f))
-        else -> 1.10f
+        // 2. Center par apne original size mein 0.8 second (800ms) show karna
+        delay(800L)
+
+        // 3. Same original size (1.0f) mein seedha user seat avatar par jaana
+        val flyXJob = launch {
+            posX.animateTo(flight.target.x, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
+        }
+        val flyYJob = launch {
+            posY.animateTo(flight.target.y, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
+        }
+        val fadeOutJob = launch {
+            delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 100).coerceAtLeast(0).toLong())
+            itemAlpha.animateTo(0f, animationSpec = tween(100))
+        }
+        flyXJob.join()
+        flyYJob.join()
+        fadeOutJob.join()
+
+        onFinished()
     }
 
     Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
         AsyncImage(
-            model = flight.image,
+            model = luckyAnimationAssetUrl(flight.image),
             contentDescription = "Lucky gift animation",
             contentScale = ContentScale.Fit,
             modifier = Modifier
-                .offset { IntOffset((x - imageSizePx / 2f).roundToInt(), (y - imageSizePx / 2f).roundToInt()) }
                 .size(imageSizeDp)
                 .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    alpha = if (p < 0.04f) p / 0.04f else if (p > 0.94f) (1f - p) / 0.06f else 1f
+                    translationX = posX.value - halfImagePx
+                    translationY = posY.value - halfImagePx
+                    scaleX = scaleAnim.value
+                    scaleY = scaleAnim.value
+                    alpha = itemAlpha.value
                 }
         )
     }
