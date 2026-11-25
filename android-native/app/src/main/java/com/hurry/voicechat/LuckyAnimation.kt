@@ -70,9 +70,7 @@ private const val LUCKY_COIN_ICON_URL =
 // ============================================================
 // LUCKY GIFT ANIMATION CONTROLS — keep all Lucky motion tuning here
 // ============================================================
-private const val LUCKY_SEAT_CENTER_DURATION_MS = 850
-private const val LUCKY_SEAT_CENTER_HOLD_MS = 350L
-private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 320
+private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 430
 private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
 private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
@@ -708,7 +706,7 @@ fun LuckyAnimationComboButton(
 }
 
 // ============================================================
-// LUCKY GIFT SEAT FLIGHT — same Bottom -> Center -> Hold -> Seat Avatar motion, faster timing
+// LUCKY GIFT SEAT FLIGHT — Bottom -> Center (1.5s) -> Hold (0.8s) -> Seat Avatar (same size)
 // ============================================================
 data class LuckyGiftFlight(
     val id: String,
@@ -730,12 +728,12 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
     val itemAlpha = remember(flight.id) { Animatable(0f) }
 
     LaunchedEffect(flight.id) {
-        // 1. Same bottom-to-center movement and scale, with faster timing
+        // 1. Bottom se choti (0.35f) nikalkar 1.5 second (1500ms) mein screen center par apne original size (1.0f) mein aana
         val fadeInJob = launch {
-            itemAlpha.animateTo(1f, animationSpec = tween(100))
+            itemAlpha.snapTo(1f)
         }
         val moveXToCenterJob = launch {
-            posX.animateTo(flight.rootCenter.x, animationSpec = tween(LUCKY_SEAT_CENTER_DURATION_MS, easing = FastOutSlowInEasing))
+            posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
         }
         val moveYToCenterJob = launch {
             posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
@@ -748,10 +746,10 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
         moveYToCenterJob.join()
         growToOriginalJob.join()
 
-        // 2. Same center hold, shortened for a quicker flow
-        delay(LUCKY_SEAT_CENTER_HOLD_MS)
+        // 2. Center par apne original size mein 0.8 second (800ms) show karna
+        delay(800L)
 
-        // 3. Same-size flight directly to the recipient seat avatar
+        // 3. Same original size (1.0f) mein seedha user seat avatar par jaana
         val flyXJob = launch {
             posX.animateTo(flight.target.x, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
         }
