@@ -77,6 +77,42 @@ export default function SellerCenterUsers() {
     return () => { mounted = false; };
   }, []);
 
+  // Search the complete user directory, not only users already enabled as sellers.
+  useEffect(() => {
+    const term = query.trim();
+    if (!term) return;
+    let mounted = true;
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setMessage('');
+      try {
+        const response = await fetch(apiUrl(`/api/users?q=${encodeURIComponent(term)}`), {
+          cache: 'no-store',
+          headers: { Accept: 'application/json' }
+        });
+        const data = await readApiResponse(response);
+        const rows = Array.isArray(data?.users) ? data.users : data?.user ? [data.user] : [];
+        if (!mounted) return;
+        setUsers(rows.map((user: any) => ({
+          id: valueOf(user._id, user.id, user.uid, user.accountId),
+          uid: valueOf(user.uid, user.id, user.appLongId, user._id),
+          accountId: valueOf(user.accountId, user.accountNumber, user.displayAccountNumber, user.displayUserNumber, user.id, user.uid),
+          name: valueOf(user.name, user.displayName, user.userName) || 'User',
+          image: valueOf(user.image, user.dp, user.avatar, user.photoURL, user.photoUrl, user.profileImage, user.picture),
+          active: user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true
+        })));
+      } catch (error) {
+        if (mounted) {
+          setUsers([]);
+          setMessage(error instanceof Error && !/404/.test(error.message) ? error.message : '');
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }, 250);
+    return () => { mounted = false; window.clearTimeout(timer); };
+  }, [query]);
+
   const toggleSeller = async (user: SellerUser) => {
     const next = !user.active;
     setUpdating(user.id);
@@ -96,10 +132,7 @@ export default function SellerCenterUsers() {
     }
   };
 
-  const filteredUsers = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return term ? users.filter((user) => [user.name, user.uid, user.accountId].some((value) => value.toLowerCase().includes(term))) : users;
-  }, [users, query]);
+  const filteredUsers = users;
 
   return (
     <div className="flex flex-col h-full bg-white">
