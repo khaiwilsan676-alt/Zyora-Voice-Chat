@@ -1137,6 +1137,8 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val save = (URL("$HURRY_API_BASE/api/users").openConnection() as HttpURLConnection).apply {
         requestMethod = "PUT"; connectTimeout = 12000; readTimeout = 12000; doOutput = true
         setRequestProperty("Content-Type", "application/json")
+        val firebaseIdToken = user.optString("idToken").trim()
+        if (firebaseIdToken.isNotBlank()) setRequestProperty("Authorization", "Bearer $firebaseIdToken")
     }
     
     val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
