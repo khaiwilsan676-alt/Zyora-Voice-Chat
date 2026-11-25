@@ -2244,3 +2244,9 @@ Current documentation does not certify that all historical features are build-, 
 - Centralized room-scoped Lucky animation state, seat-center targeting, origin/root geometry, flight creation, combo countdown, and notification timing in `LuckyAnimation.kt` via `LuckyAnimationController`.
 - `RoomPage.kt` now binds room seat/origin geometry and socket-confirmed gift/combo events to that controller; seat landing effect delay is controlled by `LUCKY_SEAT_LANDING_EFFECT_DELAY_MS` in `LuckyAnimation.kt`.
 - Existing notification slider, combo button visuals, gift flight rendering, and seat landing behavior are retained; no intentional UI redesign.
+
+## 2026-11-25 — Allow overlapping Lucky gift flights and instant Combo press
+- `LuckyAnimationController` now stores active seat flights in a state list instead of a single replaceable flight, so every new Lucky gift animation starts immediately without cancelling or waiting for the previous flight.
+- Each overlay removes only its own flight when it finishes; concurrent flights retain independent animation state.
+- Removed the Combo button's 50ms press-scale tween so the pressed response is immediate. Button artwork, placement, timer, combo request validation, and server-confirmed wallet flow remain unchanged.
+- Status: code committed; native APK build and on-device verification are pending.

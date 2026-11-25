@@ -474,7 +474,7 @@ fun RoomPage(
     var luckyGiftOrigin by luckyAnimation::origin
     val luckySeatCenters = luckyAnimation.seatCenters
     var roomRootSize by luckyAnimation::rootSize
-    var luckyGiftFlight by luckyAnimation::flight
+    val luckyGiftFlights = luckyAnimation.flights
     var luckyGiftNotice by luckyAnimation::notice
     var luckyNoticeGeneration by luckyAnimation::noticeGeneration
     var showLuckyComboButton by luckyAnimation::showComboButton
@@ -2903,11 +2903,13 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
-        luckyGiftFlight?.let { flight ->
-            LuckyGiftFlightOverlay(
-                flight = flight,
-                onFinished = { if (luckyGiftFlight?.id == flight.id) luckyGiftFlight = null }
-            )
+        luckyGiftFlights.forEach { flight ->
+            key(flight.id) {
+                LuckyGiftFlightOverlay(
+                    flight = flight,
+                    onFinished = { luckyAnimation.finishFlight(flight.id) }
+                )
+            }
         }
         luckyGiftNotice?.let { notice ->
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().offset(y = 12.dp).zIndex(250f)) {

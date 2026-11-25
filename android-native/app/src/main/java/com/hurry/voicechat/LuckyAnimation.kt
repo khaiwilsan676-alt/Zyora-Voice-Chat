@@ -11,7 +11,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
@@ -74,7 +73,6 @@ private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 430
 private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
 private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
-private const val LUCKY_COMBO_PRESS_DURATION_MS = 50
 
 // Notification patti aur Combo button ka × count sync rakhne ke liye
 private object LuckyComboSyncState {
@@ -126,7 +124,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     var origin: Offset? by mutableStateOf(null)
     val seatCenters = mutableStateMapOf<String, Offset>()
     var rootSize: IntSize by mutableStateOf(IntSize.Zero)
-    var flight: LuckyGiftFlight? by mutableStateOf(null)
+    val flights = mutableStateListOf<LuckyGiftFlight>()
     var notice: LuckyNotice? by mutableStateOf(null)
     var noticeGeneration by mutableIntStateOf(0)
     var showComboButton by mutableStateOf(false)
@@ -138,15 +136,22 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun recordOrigin(value: Offset) { origin = value }
     fun recordRootSize(value: IntSize) { rootSize = value }
     fun recordSeatCenter(id: String, center: Offset) { seatCenters[id] = center }
-    fun finishFlight(id: String) { if (flight?.id == id) flight = null }
+    fun finishFlight(id: String) {
+        flights.removeAll { it.id == id }
+    }
     fun launchToRecipients(id: String, image: String, recipientIds: Collection<String>) {
         val target = recipientIds.firstNotNullOfOrNull { seatCenters[it] } ?: return
         if (rootSize == IntSize.Zero || image.isBlank()) return
-        flight = LuckyGiftFlight(
-            id, image,
-            origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
-            target,
-            Offset(rootSize.width / 2f, rootSize.height / 2f)
+        // Keep every active flight independently: new Lucky gifts never replace
+        // or wait for an animation that is already in progress.
+        flights.removeAll { it.id == id }
+        flights.add(
+            LuckyGiftFlight(
+                id, image,
+                origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
+                target,
+                Offset(rootSize.width / 2f, rootSize.height / 2f)
+            )
         )
     }
     fun updateNotice(value: LuckyNotice?) { notice = value }
@@ -579,11 +584,8 @@ fun LuckyAnimationComboButton(
     val shownCount = (comboCount ?: LuckyComboSyncState.displayMultiplier).coerceAtLeast(1)
     val comboInteraction = remember { MutableInteractionSource() }
     val isComboPressed by comboInteraction.collectIsPressedAsState()
-    val comboPressScale by animateFloatAsState(
-        targetValue = if (isComboPressed) 0.94f else 1f,
-        animationSpec = tween(LUCKY_COMBO_PRESS_DURATION_MS, easing = FastOutSlowInEasing),
-        label = "comboPressResponse",
-    )
+    // Respond on the first rendered press frame; no delayed press tween.
+    val comboPressScale = if (isComboPressed) 0.94f else 1f
 
     val textShadow = remember {
         Shadow(
