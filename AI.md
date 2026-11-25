@@ -2283,3 +2283,8 @@ Current documentation does not certify that all historical features are build-, 
 - `android-native/app/src/main/java/com/hurry/voicechat/Emojipicker.kt`: added a persistent app-cache disk layer for emoji sticker image bytes, keyed by a SHA-256 URL hash. The existing 12 MiB thread-safe bitmap LRU remains the fast in-memory layer; after the first successful fetch, reopening the picker decodes from the local cache instead of requesting every GIF again.
 - Preserved the existing emoji catalog, picker dimensions/layout, click behavior, seat emoji/video renderer, and static-first-frame GIF behavior. Failed/empty downloads are not stored as valid cache entries.
 - Status: **Implemented in repository**. Native APK CI and repeated-open/offline behavior on Redmi 14C remain to be verified; no device test is claimed.
+
+
+## 2026-11-25 — Homepage leaderboard avatar and room loading delay
+- `HomeScreen.kt`: removed the artificial 1.5-second wait before Honour, Charm, and Room leaderboard avatar requests. All three category requests now begin immediately after the first homepage frame and continue in parallel; the existing in-memory avatar cache remains available during refresh.
+- Removed the additional 650 ms artificial wait before warming the homepage room snapshot from Room DB. Existing cache, network refresh, UI, fallback behavior, and card layout are otherwise unchanged.
