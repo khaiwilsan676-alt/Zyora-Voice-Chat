@@ -621,7 +621,7 @@ fun LuckyBagOpenConfirmCards(
                                     Text("%,d".format(luckyBagClaimAmount), color = Color(0xFFE55B65), fontSize = 14.sp)
                                 }
                             } else {
-                                Column(Modifier.fillMaxWidth().heightIn(max = 126.dp).verticalScroll(rememberScrollState())) {
+                                Column(Modifier.fillMaxWidth().heightIn(max = 140.dp).verticalScroll(rememberScrollState())) {
                                     visibleClaims.forEach { claim ->
                                         Row(
                                             modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)
