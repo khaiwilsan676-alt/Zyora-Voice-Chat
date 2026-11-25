@@ -2263,3 +2263,5 @@ Current documentation does not certify that all historical features are build-, 
 - The server refunds the full bag amount to the sender only when the five-minute window expires with zero claims; claimed rewards are not refunded.
 - Removed the server-side rule that blocked the sender from opening and claiming their own Lucky Bag. Normal duplicate-claim, expiry, and recipient-limit checks remain.
 - Server commit: `1f68a02f17c9496ac83bf7f4021357deb82df943`. Render deployment and APK/device verification remain pending.
+- Native `RoomPage.kt`: remember each account's last selected seat per room and restore the owner's preferred available seat after reconnect; if it is occupied/locked, choose the first available seat. No seat layout or visual styling changes.
+- `Zyora-Server/server.js`: after the final live session is confirmed disconnected, clear matching room seats by canonical account/Firebase UID even if the stored seat socket ID is stale; retain the live-session guard so another active device is not removed.
