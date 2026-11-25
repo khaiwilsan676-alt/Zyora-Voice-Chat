@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -26,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -120,7 +122,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val taskRoomId = remember(roomId) { roomId.trim() }
-    var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
+    var taskStatuses by remember { mutableStateOf>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
     var pendingShareTask by remember { mutableIntStateOf(0) }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
@@ -553,7 +555,6 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                 }
                                             }
                                         }
-                                        }
                                     }
                                 }
                             }
@@ -571,57 +572,124 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
             }
         }
 
-        if (rules) Box(
-            Modifier.fillMaxSize().background(Color.Black.copy(alpha = .70f)).clickable { rules = false },
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Column(
-                Modifier.fillMaxWidth().heightIn(max = 620.dp).background(
-                    Brush.verticalGradient(listOf(Color(0xFF4A0A10), Color(0xFF380308))),
-                    RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                ).padding(horizontal = 20.dp, vertical = 18.dp)
-            ) {
-                Text(
-                    "ROOM TASK RULES",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 14.dp)
+        if (rules) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { rules = false },
+                properties = androidx.compose.ui.window.DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false
                 )
-                listOf(
-                    "Each user can complete a 'Room Owner' task only once per day.",
-                    "Each user can complete a daily task once per day. Tasks reset at 5:30+GMT.",
-                    "For gift-giving tasks, only gifts sent within the room are counted; gifts sent via private message are not included.",
-                    "Treasure Chest\nWhen a gift is received in a personal room, the room owner can earn a 5% coin reward of the gift's value. There is no limit on the coin bonus; the more gifts received in the room, the more coin rewards you earn.",
-                    "If you create multiple accounts using the same device or SIM card, you can only claim rewards once for each task."
-                ).forEachIndexed { index, rule ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(
-                            Modifier.size(24.dp).background(
-                                Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
-                                CircleShape
-                            ).border(1.dp, Color(0xFFF5E6A8), CircleShape),
-                            contentAlignment = Alignment.Center
+            ) {
+                val cardShape = RoundedCornerShape(14.dp)
+                val buttonShape = RoundedCornerShape(12.dp)
+                val goldenBorderBrush = Brush.verticalGradient(
+                    listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158))
+                )
+                val cardBgColors = listOf(Color(0xFF5A0A12), Color(0xFF3D050A), Color(0xFF260205))
+                val buttonBgColors = listOf(Color(0xFF7A121C), Color(0xFF4A080F))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .clickable { rules = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.86f)
+                            .clip(cardShape)
+                            .background(Brush.verticalGradient(colors = cardBgColors))
+                            .border(1.5.dp, goldenBorderBrush, cardShape)
+                            .clickable(enabled = false) {}
+                            .padding(horizontal = 18.dp, vertical = 20.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text((index + 1).toString(), color = Color(0xFF4A1F00), fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        }
-                        if (index == 3) {
-                            Column {
-                                Text("Treasure Chest", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
-                                Text(rule.substringAfter("\n"), color = Color(0xFFF5D0D0), fontSize = 13.sp, lineHeight = 18.sp)
+                            Text(
+                                text = "ROOM TASK RULES",
+                                style = TextStyle(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                                    ),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(bottom = 14.dp)
+                            )
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 280.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    "Each user can complete a 'Room Owner' task only once per day.",
+                                    "Each user can complete a daily task once per day. Tasks reset at 5:30+GMT.",
+                                    "For gift-giving tasks, only gifts sent within the room are counted; gifts sent via private message are not included.",
+                                    "Treasure Chest\nWhen a gift is received in a personal room, the room owner can earn a 5% coin reward of the gift's value. There is no limit on the coin bonus; the more gifts received in the room, the more coin rewards you earn.",
+                                    "If you create multiple accounts using the same device or SIM card, you can only claim rewards once for each task."
+                                ).forEachIndexed { index, rule ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            Modifier.size(20.dp).background(
+                                                Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
+                                                CircleShape
+                                            ).border(1.dp, Color(0xFFF5E6A8), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text((index + 1).toString(), color = Color(0xFF4A1F00), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                        }
+                                        if (index == 3) {
+                                            Column {
+                                                Text("Treasure Chest", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 2.dp))
+                                                Text(rule.substringAfter("\n"), color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, lineHeight = 16.sp)
+                                            }
+                                        } else {
+                                            Text(rule, color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, lineHeight = 16.sp)
+                                        }
+                                    }
+                                }
+                                Text(
+                                    "Regards, Zyora Team",
+                                    color = Color(0xFFFFD700),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                                )
                             }
-                        } else {
-                            Text(rule, color = Color(0xFFF5D0D0), fontSize = 13.sp, lineHeight = 18.sp)
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp)
+                                    .clip(buttonShape)
+                                    .background(Brush.verticalGradient(colors = buttonBgColors))
+                                    .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                                    .clickable { rules = false },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Got it",
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
-                Text(
-                    "Regards, Zyora Team",
-                    color = Color(0xFFFFD700),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
-                )
             }
         }
     }
+}
