@@ -2289,3 +2289,10 @@ Current documentation does not certify that all historical features are build-, 
 - `HomeScreen.kt`: removed the artificial 1.5-second wait before Honour, Charm, and Room leaderboard avatar requests. All three category requests now begin immediately after the first homepage frame and continue in parallel; the existing in-memory avatar cache remains available during refresh.
 - Removed the additional 650 ms artificial wait before warming the homepage room snapshot from Room DB. Existing cache, network refresh, UI, fallback behavior, and card layout are otherwise unchanged.
 - Public Profile received-gift pipeline: successful room gift transfers persist idempotent per-recipient gift receipt IDs in the `received_gifts` collection; `GET /api/users` attaches each profile's actual gift image/count records without caching stale responses. Native Public Profile renders gift images in a three-column grid with `×count`; the existing “No gift yet” empty card remains unchanged. Repeated transfer events do not inflate counts.
+
+## 2026-11-25 — Lucky Gift immediate single-flight fix
+- `RoomPage.kt`: Lucky Gift seat animation now starts optimistically on the Send tap instead of waiting for the Socket.IO confirmation; the server echo still confirms the transfer and updates the notice/combo state.
+- `LuckyAnimation.kt`: flight IDs are de-duplicated so the confirmation echo cannot spawn a second image or restart the same flight.
+- Removed the 1.5-second center travel plus 0.8-second hold. The Lucky image now flies directly to the recipient seat in the existing short flight duration.
+- Combo taps continue to launch immediately and use the same single-flight path. Gift charging, server confirmation, recipient selection, and existing UI layout are unchanged.
+- Native APK build and real-device verification remain pending.
