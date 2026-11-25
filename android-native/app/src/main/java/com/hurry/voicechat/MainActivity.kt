@@ -85,8 +85,19 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class MainActivity : ComponentActivity() {
+    private fun captureInviteIntent(sourceIntent: Intent?) {
+        val data = sourceIntent?.data ?: return
+        val ref = data.getQueryParameter("ref")?.trim().orEmpty()
+        if (ref.isBlank() || ref.length > 64) return
+        getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
+            .putString("pendingInviteRef", ref)
+            .putString("pendingInviteSource", data.getQueryParameter("source")?.take(32) ?: "link")
+            .apply()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        captureInviteIntent(intent)
         // Keep the foreground app awake so Android does not dim/timeout the display while in use.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
@@ -149,6 +160,12 @@ class MainActivity : ComponentActivity() {
                 HurryNativeRoot(onLogout = { authenticated = false })
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureInviteIntent(intent)
     }
 
     private suspend fun checkForHurryUpdate() {
@@ -250,6 +267,16 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
     LaunchedEffect(userId) {
         val accountId = authPrefs.getString("accountId", "").orEmpty().ifBlank { userId }
+        val pendingInviteRef = authPrefs.getString("pendingInviteRef", "").orEmpty()
+        val pendingInviteSource = authPrefs.getString("pendingInviteSource", "link").orEmpty()
+        val inviteToken = authPrefs.getString("idToken", "").orEmpty()
+        if (pendingInviteRef.isNotBlank() && accountId.isNotBlank() && inviteToken.isNotBlank()) {
+            val inviteResult = HurryApi.bindInvite(pendingInviteRef, accountId, inviteToken, pendingInviteSource)
+            if (inviteResult?.optBoolean("success") == true ||
+                inviteResult?.optString("error")?.contains("already", ignoreCase = true) == true) {
+                authPrefs.edit().remove("pendingInviteRef").remove("pendingInviteSource").apply()
+            }
+        }
         val deviceId = authPrefs.getString("deviceId", "").orEmpty()
         if (accountId.isBlank()) return@LaunchedEffect
         while (true) {
