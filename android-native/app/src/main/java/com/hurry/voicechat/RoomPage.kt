@@ -3792,58 +3792,6 @@ private fun RoomSeatInviteDialog(
     }
 }
 
-private data class LuckyGiftFlight(
-    val id: String,
-    val image: String,
-    val start: Offset,
-    val target: Offset,
-    val rootCenter: Offset
-)
-
-@Composable
-private fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
-    val progress = remember(flight.id) { Animatable(0f) }
-    val density = LocalDensity.current
-    val imageSizePx = with(density) { 58.dp.toPx() }
-    val arcHeightPx = with(density) { 42.dp.toPx() }
-
-    // Wafa-style: one continuous, quick curved flight directly onto the recipient seat.
-    // No centre pause; keep the animation short so rapid combo sends feel responsive.
-    LaunchedEffect(flight.id) {
-        progress.animateTo(
-            1f,
-            animationSpec = tween(430, easing = FastOutSlowInEasing)
-        )
-        onFinished()
-    }
-
-    val p = progress.value.coerceIn(0f, 1f)
-    val x = flight.start.x + (flight.target.x - flight.start.x) * p
-    val y = flight.start.y + (flight.target.y - flight.start.y) * p -
-        sin(p * Math.PI).toFloat() * arcHeightPx
-    val scale = when {
-        p < 0.18f -> 0.28f + (0.82f * (p / 0.18f))
-        p > 0.78f -> 1.10f - (0.62f * ((p - 0.78f) / 0.22f))
-        else -> 1.10f
-    }
-
-    Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
-        AsyncImage(
-            model = flight.image,
-            contentDescription = "Lucky gift animation",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .offset { IntOffset((x - imageSizePx / 2f).roundToInt(), (y - imageSizePx / 2f).roundToInt()) }
-                .size(58.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    alpha = if (p < 0.04f) p / 0.04f else if (p > 0.94f) (1f - p) / 0.06f else 1f
-                }
-        )
-    }
-}
-
 @Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,roomAdminIds:List<String> = emptyList(),isSpeaking:Boolean=seat.speaking,seatSize:Dp=62.dp,onBoundsChanged:(String,Offset)->Unit={_,_->},onClick:()->Unit){
     val waveProgress = if (isSpeaking) {
         val voicePulse = rememberInfiniteTransition(label = "voice-wave")
