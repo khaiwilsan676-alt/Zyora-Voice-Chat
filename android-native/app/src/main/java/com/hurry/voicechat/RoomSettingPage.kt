@@ -436,11 +436,9 @@ fun RoomSettingPage(
         }
     }
 
-    // Room Settings exposes only the user's Custom room theme.
-    // Built-in and Store themes remain untouched elsewhere in the app.
-    val themeItems = remember(customTheme) {
-        if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme))
-        else emptyList()
+    val themeItems = remember(customTheme, storeRoomThemes) {
+        (if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) else emptyList()) +
+            roomThemeChoices + storeRoomThemes
     }
 
     LaunchedEffect(storeRoomThemes) {
@@ -1346,7 +1344,7 @@ private fun ThemeFullScreen(
     onPick: (String) -> Unit,
     onUploadCustom: () -> Unit
 ) {
-    var selectedTheme by remember(current) { mutableStateOf(if (current == "custom") current else "custom") }
+    var selectedTheme by remember(current) { mutableStateOf(current) }
     val expiringThemes = remember(items) { items.filter { it.expiresAt > 0L } }
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(expiringThemes) {
