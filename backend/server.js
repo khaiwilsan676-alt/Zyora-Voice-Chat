@@ -48,7 +48,10 @@ async function attachReceivedGifts(users) {
   ))];
   if (identities.length === 0) return users;
   const records = await db.collection("received_gifts").find({
-    recipientId: { $in: identities }
+    $or: [
+      { recipientId: { $in: identities } },
+      { recipientIds: { $in: identities } }
+    ]
   }).toArray();
   const byRecipient = new Map();
   for (const record of records) {
@@ -3405,19 +3408,33 @@ io.on("connection", (socket) => {
             { displayUserNumber: recipientId }, { displayAccountNumber: recipientId }
           ]
         });
-        const giftOwnerId = String(recipientProfile?.uid || recipientProfile?.id ||
-          recipientProfile?.appLongId || recipientId);
+        const roomAliases = [...roomMap.entries()]
+          .filter(([roomUserId, roomUser]) =>
+            String(roomUserId) === recipientId ||
+            String(roomUser?.userId || "") === recipientId ||
+            String(roomUser?.accountId || "") === recipientId
+          )
+          .flatMap(([roomUserId, roomUser]) => [
+            roomUserId, roomUser?.userId, roomUser?.accountId
+          ]);
+        const recipientAliases = [...new Set([
+          recipientId, ...roomAliases,
+          recipientProfile?.uid, recipientProfile?.id, recipientProfile?.appLongId,
+          recipientProfile?.accountId, recipientProfile?.accountNumber,
+          recipientProfile?.displayUserNumber, recipientProfile?.displayAccountNumber
+        ].map((id) => String(id || "").trim()).filter(Boolean))];
         const giftNameValue = String(giftName || "Gift").trim().slice(0, 100) || "Gift";
         const giftImageValue = String(giftImage || "").trim().slice(0, 2048);
         if (giftImageValue) {
           const giftKey = crypto.createHash("sha256")
-            .update(giftOwnerId + ":" + giftNameValue + ":" + giftImageValue)
+            .update(recipientId + ":" + giftNameValue + ":" + giftImageValue)
             .digest("hex");
           await db.collection("received_gifts").updateOne(
             { _id: giftKey },
             {
               $setOnInsert: {
-                recipientId: giftOwnerId,
+                recipientId,
+                recipientIds: recipientAliases,
                 giftName: giftNameValue,
                 giftImage: giftImageValue,
                 createdAt: Date.now()
