@@ -51,7 +51,10 @@ private data class MeMenu(val label: String, val asset: String)
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
     var showCdKeySheet by remember { mutableStateOf(false) }
-    var cdKeyInput by remember { mutableStateOf("") }\n    var cdKeyAction by remember { mutableStateOf("Apply") }\n    var cdKeyBusy by remember { mutableStateOf(false) }\n    val cdKeyScope = rememberCoroutineScope()
+    var cdKeyInput by remember { mutableStateOf("") }
+    var cdKeyAction by remember { mutableStateOf("Apply") }
+    var cdKeyBusy by remember { mutableStateOf(false) }
+    val cdKeyScope = rememberCoroutineScope()
 
     SideEffect {
         var currentContext: Context = context
