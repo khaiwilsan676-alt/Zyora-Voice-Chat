@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import android.media.AudioFormat
 import android.os.Handler
 import android.os.Looper
@@ -118,6 +120,8 @@ fun JitsiRoomAudio(
         }
         var recorder: AudioRecord? = null
         var echoCanceler: AcousticEchoCanceler? = null
+        var noiseSuppressor: NoiseSuppressor? = null
+        var automaticGainControl: AutomaticGainControl? = null
         var voicePlayer: AudioTrack? = null
         var musicPlayer: AudioTrack? = null
         val playerLock = Any()
@@ -177,6 +181,10 @@ fun JitsiRoomAudio(
             captureThread = null
             runCatching { echoCanceler?.release() }
             echoCanceler = null
+            runCatching { noiseSuppressor?.release() }
+            noiseSuppressor = null
+            runCatching { automaticGainControl?.release() }
+            automaticGainControl = null
             runCatching { recorder?.release() }
             recorder = null
             onSpeakingChanged(false)
@@ -236,9 +244,22 @@ fun JitsiRoomAudio(
                     runCatching { created.setPreferredDevice(bluetoothInput) }
                 }
             }
+            // Use Android's hardware/DSP voice-processing effects on the same
+            // AudioRecord session. This keeps Socket.IO PCM transport intact while
+            // reducing speaker-to-mic echo, room noise and level differences.
             if (AcousticEchoCanceler.isAvailable()) {
                 echoCanceler = runCatching {
                     AcousticEchoCanceler.create(created.audioSessionId)?.also { it.enabled = true }
+                }.getOrNull()
+            }
+            if (NoiseSuppressor.isAvailable()) {
+                noiseSuppressor = runCatching {
+                    NoiseSuppressor.create(created.audioSessionId)?.also { it.enabled = true }
+                }.getOrNull()
+            }
+            if (AutomaticGainControl.isAvailable()) {
+                automaticGainControl = runCatching {
+                    AutomaticGainControl.create(created.audioSessionId)?.also { it.enabled = true }
                 }.getOrNull()
             }
             recording.set(true)
@@ -322,6 +343,10 @@ fun JitsiRoomAudio(
                             if (recorder === created) recorder = null
                             runCatching { echoCanceler?.release() }
                             echoCanceler = null
+                            runCatching { noiseSuppressor?.release() }
+                            noiseSuppressor = null
+                            runCatching { automaticGainControl?.release() }
+                            automaticGainControl = null
                             // Re-authorize with the server first; permissionListener starts
                             // AudioRecord only after room_voice_permission(allowed=true).
                             Handler(Looper.getMainLooper()).postDelayed({
