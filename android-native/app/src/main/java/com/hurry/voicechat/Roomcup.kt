@@ -126,6 +126,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     var period by remember { mutableStateOf("daily") }
     var entries by remember { mutableStateOf(emptyList<CupEntry>()) }
     var mine by remember { mutableStateOf<CupEntry?>(null) }
+    // Keep each period's last successful result in memory so tab changes render immediately.
+    var periodCache by remember(roomId, userId) { mutableStateOf<Map<String, Pair<List<CupEntry>, CupEntry?>>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
     var refreshTick by remember { mutableIntStateOf(0) }
     
@@ -135,6 +137,11 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(30000); refreshTick++ } }
     
     LaunchedEffect(roomId,period,refreshTick) {
+        periodCache[period]?.let { cached ->
+            entries = cached.first
+            mine = cached.second
+            loading = false
+        } ?: run { loading = true }
         val data=withContext(Dispatchers.IO) { runCatching {
             val r=java.net.URLEncoder.encode(roomId,"UTF-8")
             val u=java.net.URLEncoder.encode(userId,"UTF-8")
@@ -152,8 +159,12 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                 }
             } finally { c.disconnect() }
         }.getOrNull() }
-        if (data != null) { entries=data.first; mine=data.second }
-        loading=false
+        if (data != null) {
+            periodCache = periodCache + (period to data)
+            entries = data.first
+            mine = data.second
+        }
+        loading = false
     }
     
     val clock=remember{SimpleDateFormat("HH:mm",Locale.getDefault()).apply{timeZone=TimeZone.getTimeZone("GMT+05:30")}}
