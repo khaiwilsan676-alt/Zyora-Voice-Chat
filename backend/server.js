@@ -2328,8 +2328,25 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       const amount = Math.min(coinsLeft, share);
       bag.claimedCount += 1;
       bag.claimedTotal += amount;
-      const userName = String(req.body?.userName || "User").trim().slice(0, 80) || "User";
-      const userImage = String(req.body?.userImage || "").slice(0, 1000);
+      // Resolve the claimant from the canonical MongoDB profile. The native
+      // room cache can still be loading when the user taps Open, so client
+      // supplied "User" / blank avatar must never overwrite the real profile.
+      const profile = db ? await db.collection("users").findOne({ $or: [
+        { uid: userId }, { id: userId }, { appLongId: userId },
+        { accountId: userId }, { accountNumber: userId },
+        { displayUserNumber: userId }, { displayAccountNumber: userId }
+      ] }) : null;
+      const userName = String(
+        profile?.name || profile?.displayName || profile?.userName ||
+        profile?.profile?.name || profile?.profile?.displayName ||
+        req.body?.userName || "User"
+      ).trim().slice(0, 80) || "User";
+      const userImage = String(
+        profile?.image || profile?.dp || profile?.photoURL || profile?.photoUrl ||
+        profile?.avatar || profile?.avatarUrl || profile?.profileImage ||
+        profile?.profile?.image || profile?.profile?.avatar ||
+        req.body?.userImage || ""
+      ).slice(0, 1000);
       const claimedAt = Date.now();
       bag.claims.push({ userId, userName, userImage, amount, status: "pending_confirmation", claimedAt });
       if (bag.claimedCount >= bag.recipients) {
