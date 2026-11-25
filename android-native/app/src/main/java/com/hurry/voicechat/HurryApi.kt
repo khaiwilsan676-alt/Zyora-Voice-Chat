@@ -14,6 +14,7 @@ data class RoomSyncResult(val rooms: List<HurryRoom>, val serverTime: Long)
 object HurryApi {
     suspend fun bindInvite(inviterId: String, targetId: String, idToken: String, source: String = "link"): JSONObject? = inviteRequest("/api/invites/bind", JSONObject().put("inviterId", inviterId).put("targetId", targetId).put("source", source), idToken)
     suspend fun claimInvite(userId: String, idToken: String): JSONObject? = inviteRequest("/api/invites/claim", JSONObject().put("userId", userId), idToken)
+    suspend fun recordInviteShare(userId: String, idToken: String, platform: String): JSONObject? = inviteRequest("/api/invites/share", JSONObject().put("userId", userId).put("platform", platform), idToken)
     suspend fun inviteStats(userId: String, idToken: String): JSONObject? = withContext(Dispatchers.IO) {
         runCatching {
             val encoded = java.net.URLEncoder.encode(userId, "UTF-8")
