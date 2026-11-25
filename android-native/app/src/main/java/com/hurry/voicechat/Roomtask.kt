@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -122,7 +121,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val taskRoomId = remember(roomId) { roomId.trim() }
-    var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
+    var taskStatuses by remember { mutableStateOf>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
     var pendingShareTask by remember { mutableIntStateOf(0) }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
@@ -562,11 +561,21 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Original bottom frame stays after the task list in scroll content.
+                // Bottom frame 35dp upar + left/right borders par overlap + niche ka scroll gap kam
                 AsyncImage(
                     model = raw + "file_0000000066c88211aa777b1f6da8683f.png",
                     contentDescription = "Frame Bottom Border",
-                    modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(10f)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val shiftPx = 35.dp.roundToPx()
+                            layout(placeable.width, (placeable.height - shiftPx).coerceAtLeast(0)) {
+                                placeable.place(0, -shiftPx)
+                            }
+                        }
+                        .graphicsLayer { scaleX = 1.12f },
                     contentScale = ContentScale.FillWidth
                 )
             }
@@ -622,10 +631,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                             )
 
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 280.dp)
-                                    .verticalScroll(rememberScrollState()),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 listOf(
@@ -637,17 +643,14 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                 ).forEachIndexed { index, rule ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Box(
-                                            Modifier.size(20.dp).background(
-                                                Brush.verticalGradient(listOf(Color(0xFFF7DFA0), Color(0xFFE0A92A))),
-                                                CircleShape
-                                            ).border(1.dp, Color(0xFFF5E6A8), CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text((index + 1).toString(), color = Color(0xFF4A1F00), fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                        }
+                                        Text(
+                                            text = "•",
+                                            color = Color(0xFFFCE28B),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                         if (index == 3) {
                                             Column {
                                                 Text("Treasure Chest", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 2.dp))
@@ -658,13 +661,6 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                         }
                                     }
                                 }
-                                Text(
-                                    "Regards, Zyora Team",
-                                    color = Color(0xFFFFD700),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
-                                )
                             }
 
                             Spacer(modifier = Modifier.height(18.dp))
