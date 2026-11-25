@@ -139,12 +139,16 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun finishFlight(id: String) {
         flights.removeAll { it.id == id }
     }
+    private val launchedFlightIds = linkedSetOf<String>()
+
     fun launchToRecipients(id: String, image: String, recipientIds: Collection<String>) {
+        if (id.isBlank() || image.isBlank() || id in launchedFlightIds) return
         val target = recipientIds.firstNotNullOfOrNull { seatCenters[it] } ?: return
-        if (rootSize == IntSize.Zero || image.isBlank()) return
-        // Keep every active flight independently: new Lucky gifts never replace
-        // or wait for an animation that is already in progress.
-        flights.removeAll { it.id == id }
+        if (rootSize == IntSize.Zero) return
+        // Start once on the sender's tap. The later server echo must not create
+        // a second copy or restart the same flight.
+        launchedFlightIds.add(id)
+        if (launchedFlightIds.size > 200) launchedFlightIds.remove(launchedFlightIds.first())
         flights.add(
             LuckyGiftFlight(
                 id, image,
@@ -730,28 +734,9 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
     val itemAlpha = remember(flight.id) { Animatable(0f) }
 
     LaunchedEffect(flight.id) {
-        // 1. Bottom se choti (0.35f) nikalkar 1.5 second (1500ms) mein screen center par apne original size (1.0f) mein aana
-        val fadeInJob = launch {
-            itemAlpha.snapTo(1f)
-        }
-        val moveXToCenterJob = launch {
-            posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        val moveYToCenterJob = launch {
-            posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        val growToOriginalJob = launch {
-            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        fadeInJob.join()
-        moveXToCenterJob.join()
-        moveYToCenterJob.join()
-        growToOriginalJob.join()
-
-        // 2. Center par apne original size mein 0.8 second (800ms) show karna
-        delay(800L)
-
-        // 3. Same original size (1.0f) mein seedha user seat avatar par jaana
+        // No center pause or delayed staging: move directly on tap to the recipient seat.
+        itemAlpha.snapTo(1f)
+        scaleAnim.snapTo(1f)
         val flyXJob = launch {
             posX.animateTo(flight.target.x, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
         }
@@ -759,13 +744,12 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
             posY.animateTo(flight.target.y, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
         }
         val fadeOutJob = launch {
-            delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 100).coerceAtLeast(0).toLong())
-            itemAlpha.animateTo(0f, animationSpec = tween(100))
+            delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 90).coerceAtLeast(0).toLong())
+            itemAlpha.animateTo(0f, animationSpec = tween(90))
         }
         flyXJob.join()
         flyYJob.join()
         fadeOutJob.join()
-
         onFinished()
     }
 
