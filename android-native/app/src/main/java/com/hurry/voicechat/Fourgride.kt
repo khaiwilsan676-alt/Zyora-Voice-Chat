@@ -149,7 +149,8 @@ fun Fourgride(
     luckyBagRoomName: String = "Room",
     onLuckyBagSent: ((String, String, Long, Int, String, Long) -> Unit)? = null,
     isRoomOwner: Boolean = false,
-    roomId: String = ""
+    roomId: String = "",
+    onOpenPk: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
@@ -327,7 +328,7 @@ fun Fourgride(
                             val cellModifier = Modifier.weight(1f)
                             when (type) {
                                 PlayToolType.LUCKY_BAG -> ToolCell(cellModifier, "Lucky bag", base + "IMG_20261028_182446.png", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
-                                PlayToolType.PK_BATTLE -> ToolCell(cellModifier, "Pk Battle", base + "IMG_20261028_182422.png", onClick = {})
+                                PlayToolType.PK_BATTLE -> ToolCell(cellModifier, "Pk Battle", base + "IMG_20261028_182422.png", onClick = { onClose(); onOpenPk() })
                             }
                         }
                         // Fill the 3rd and 4th column spaces properly so 1st and 2nd won't stretch awkwardly
