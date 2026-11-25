@@ -191,37 +191,92 @@ fun RoomInfo(
     LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name, roomOwner.image) {
         val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
         if (ownerId.isBlank()) return@LaunchedEffect
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val profile = runCatching {
-                ProfilePersistence.load(TargetUser(
-                    id = ownerId, uid = ownerId, accountId = ownerId,
-                    name = roomOwner.name, image = roomOwner.image
-                ))
-            }.getOrNull()
-            val country = runCatching {
-                loadRoomProfileCountry(context, ownerId, roomOwner.name, roomOwner.image)
-            }.getOrDefault("")
-            val gender = sequenceOf(
-                profile?.optString("gender", "").orEmpty(),
-                runCatching { NativeIndexDatabase(context).loadProfile(ownerId)?.optString("gender", "").orEmpty() }.getOrDefault("")
-            ).map { it.trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
-            val name = profile?.let { p ->
-                sequenceOf("name", "displayName", "userName", "nickname")
-                    .map { p.optString(it, "").trim() }
-                    .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", true) }
-            }.orEmpty()
-            val image = profile?.let { p ->
-                sequenceOf("image", "avatar", "profileImageUrl")
-                    .map { p.optString(it, "").trim() }
-                    .firstOrNull { it.isNotBlank() && it != "null" }
-            }.orEmpty()
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                if (!isLogoOwner) {
-                    if (name.isNotBlank()) ownerDisplayName = name
-                    if (image.isNotBlank()) ownerDisplayImage = image
-                }
-                ownerCountry = country
-                ownerGender = gender
+
+        // Hydrate the owner row from local profile cache first. The previous flow
+        // waited for two network lookups before setting gender/country, so the
+        // owner row showed fallback data on every sheet open.
+        val db = NativeIndexDatabase(context)
+        val cachedProfiles = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            listOf(
+                runCatching { db.loadProfile("room_info_member:$ownerId") }.getOrNull(),
+                runCatching { db.loadProfile(ownerId) }.getOrNull()
+            )
+        }
+        fun cachedValue(keys: List<String>): String = cachedProfiles.asSequence()
+            .filterNotNull()
+            .flatMap { p -> keys.asSequence().map { p.optString(it, "").trim() } }
+            .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("undefined", true) }
+            .orEmpty()
+        val cachedName = cachedValue(listOf("name", "displayName", "userName", "nickname"))
+            .takeIf { it.isNotBlank() && !it.equals("User", true) }.orEmpty()
+        val cachedImage = cachedValue(listOf("image", "avatar", "profileImageUrl", "dp", "photo", "photoURL", "avatarUrl"))
+            .takeIf { it.isNotBlank() && !it.endsWith("/default-avatar.png", true) }.orEmpty()
+        val cachedCountry = cachedValue(listOf("country", "countryName", "nationality"))
+        val cachedGender = cachedValue(listOf("gender", "sex"))
+
+        withContext(kotlinx.coroutines.Dispatchers.Main) {
+            if (!isLogoOwner) {
+                if (cachedName.isNotBlank()) ownerDisplayName = cachedName
+                if (cachedImage.isNotBlank()) ownerDisplayImage = cachedImage
+            }
+            if (cachedCountry.isNotBlank()) ownerCountry = cachedCountry
+            if (cachedGender.isNotBlank()) ownerGender = cachedGender
+        }
+
+        // Refresh profile and room-country independently; neither request blocks
+        // the other or the already-rendered cached owner row.
+        val (profile, country) = kotlinx.coroutines.coroutineScope {
+            val profileTask = async(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    ProfilePersistence.load(TargetUser(
+                        id = ownerId, uid = ownerId, accountId = ownerId,
+                        name = roomOwner.name, image = roomOwner.image
+                    ))
+                }.getOrNull()
+            }
+            val countryTask = async(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    loadRoomProfileCountry(context, ownerId, roomOwner.name, roomOwner.image, cachedCountry)
+                }.getOrDefault("")
+            }
+            profileTask.await() to countryTask.await()
+        }
+        val name = profile?.let { p ->
+            sequenceOf("name", "displayName", "userName", "nickname")
+                .map { p.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", true) }
+        }.orEmpty()
+        val image = profile?.let { p ->
+            sequenceOf("image", "avatar", "profileImageUrl", "dp", "photo", "photoURL", "avatarUrl")
+                .map { p.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png", true) }
+        }.orEmpty()
+        val gender = sequenceOf(profile?.optString("gender", "").orEmpty(), cachedGender)
+            .map { it.trim() }
+            .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("undefined", true) }
+            .orEmpty()
+        val resolvedCountry = country.ifBlank { cachedCountry }
+
+        withContext(kotlinx.coroutines.Dispatchers.Main) {
+            if (!isLogoOwner) {
+                if (name.isNotBlank()) ownerDisplayName = name
+                if (image.isNotBlank()) ownerDisplayImage = image
+            }
+            if (resolvedCountry.isNotBlank()) ownerCountry = resolvedCountry
+            if (gender.isNotBlank()) ownerGender = gender
+        }
+
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val saved = db.loadProfile("room_info_member:$ownerId") ?: org.json.JSONObject()
+                db.saveProfile(
+                    "room_info_member:$ownerId",
+                    saved.put("name", name.ifBlank { cachedName.ifBlank { roomOwner.name } })
+                        .put("image", image.ifBlank { cachedImage.ifBlank { roomOwner.image } })
+                        .put("country", resolvedCountry)
+                        .put("gender", gender)
+                        .put("updatedAt", System.currentTimeMillis())
+                )
             }
         }
     }
