@@ -99,63 +99,64 @@ data class GiftPickerRoomUser(
 
 enum class RecipientMode { MIC, ROOM, SINGLE }
 
-// ============================================================
-// GIFTS
-// ============================================================
-private val hotGifts = listOf(
-    GiftPickerGift(3, "Arab King", 500000, "/image_d9df9625~2.jpg",
-        video = "/gemini_generated_video_17e19680~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2001, "Mysalo Princess", 499999, "/IMG_20261124_165000.png",
-        video = "/alioss_29_2026031617445981861~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2002, "Love Twinkle", 200000, "/IMG_20261124_165025.png",
-        video = "/alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2003, "Castle Night", 170000, "/IMG_20261124_165043.png",
-        video = "/alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2004, "Christmas Deer", 24900, "/IMG_20261125_014144.png",
-        video = "/alioss_4_wm_20261119100204_45937~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2005, "Liffy lipstick", 12900, "/IMG_20261125_014203.png",
-        video = "/alioss_29_2025112718560649595~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2006, "Gift", 9999, "/IMG_20261125_014233.png",
-        video = "/alioss_28_2026032011584793951~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2007, "Heart lamp", 45000, "/IMG_20261125_014348.png",
-        video = "/alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2008, "Heartbeat", 120999, "/IMG_20261125_014410.png",
-        video = "/alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2009, "Desert Aura", 55000, "/IMG_20261125_014422.png",
-        video = "/alioss_20_2026111817155739325~2.mp4", videoStyle = "fade", sideFade = true),
-)
-
-private val luxuryGifts = listOf(
-    GiftPickerGift(3001, "Golden tiger", 1_000_000, "/file_000000008a8c821186f5941d97193ee7.png",
-        video = "/alioss_28_2025121214091492750~2.mp4", videoStyle = "fade", sideFade = true),
-)
-
-private val standardGifts = listOf(
-    GiftPickerGift(2101, "Apple", 999, "/IMG_20261124_162823.png", noMask = true),
-    GiftPickerGift(2102, "Cherry", 1299, "/IMG_20261124_162846.png", noMask = true),
-    GiftPickerGift(2103, "Strawberry", 1500, "/IMG_20261124_162906.png", noMask = true),
-    GiftPickerGift(2104, "Banana", 1599, "/IMG_20261124_162922.png", noMask = true),
-    GiftPickerGift(2105, "Avocado", 2500, "/IMG_20261124_162944.png", noMask = true),
-    GiftPickerGift(2106, "Mango", 2599, "/IMG_20261124_163008.png", noMask = true),
-    GiftPickerGift(2107, "Papaya", 1400, "/IMG_20261124_163037.png", noMask = true),
-    GiftPickerGift(2108, "Watermelon", 3000, "/IMG_20261124_163056.png", noMask = true),
-    GiftPickerGift(2109, "Lucky Star", 1250, "/IMG_20261124_163119.png", noMask = true),
-    GiftPickerGift(2110, "Bell", 4999, "/IMG_20261124_163139.png", noMask = true),
-    GiftPickerGift(2111, "Love Lock", 3000, "/IMG_20261124_163202.png", noMask = true),
-    GiftPickerGift(2112, "Crystal", 5999, "/IMG_20261124_163228.png", noMask = true),
-    GiftPickerGift(2113, "Tea Pot", 2000, "/IMG_20261124_163256.png", noMask = true),
-    GiftPickerGift(2114, "Shisha", 7000, "/IMG_20261124_163315.png", noMask = true),
-    GiftPickerGift(2115, "Sword", 7250, "/IMG_20261124_163337.png", noMask = true),
-)
-
+private const val GITHUB_PUBLIC_BASE_URL =
+    "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
 private fun giftAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
     // Resolve native gift media directly from the committed public assets.
     // The previous Vercel host could serve a stale deployment for newly added files.
-    return "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" +
-        path.trimStart('/')
+    return GITHUB_PUBLIC_BASE_URL + path.trimStart('/')
 }
+
+// ============================================================
+// GIFTS
+// ============================================================
+private val hotGifts = listOf(
+    GiftPickerGift(3, "Arab King", 500000, "${GITHUB_PUBLIC_BASE_URL}image_d9df9625~2.jpg",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_17e19680~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2001, "Mysalo Princess", 499999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165000.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026031617445981861~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2002, "Love Twinkle", 200000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165025.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2003, "Castle Night", 170000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165043.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2004, "Christmas Deer", 24900, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014144.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_4_wm_20261119100204_45937~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2005, "Liffy lipstick", 12900, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014203.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2025112718560649595~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2006, "Kitty Cat", 9999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014233.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2026032011584793951~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2007, "Heart lamp", 45000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014348.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2008, "Heartbeat", 120999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014410.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2009, "Desert Aura", 55000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014422.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_20_2026111817155739325~2.mp4", videoStyle = "fade", sideFade = true),
+)
+
+private val luxuryGifts = listOf(
+    GiftPickerGift(3001, "Golden tiger", 1_000_000, "${GITHUB_PUBLIC_BASE_URL}file_000000008a8c821186f5941d97193ee7.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025121214091492750~2.mp4", videoStyle = "fade", sideFade = true),
+)
+
+private val standardGifts = listOf(
+    GiftPickerGift(2101, "Apple", 999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_162823.png", noMask = true),
+    GiftPickerGift(2102, "Cherry", 1299, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_162846.png", noMask = true),
+    GiftPickerGift(2103, "Strawberry", 1500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_162906.png", noMask = true),
+    GiftPickerGift(2104, "Banana", 1599, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_162922.png", noMask = true),
+    GiftPickerGift(2105, "Avocado", 2500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_162944.png", noMask = true),
+    GiftPickerGift(2106, "Mango", 2599, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163008.png", noMask = true),
+    GiftPickerGift(2107, "Papaya", 1400, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163037.png", noMask = true),
+    GiftPickerGift(2108, "Watermelon", 3000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163056.png", noMask = true),
+    GiftPickerGift(2109, "Lucky Star", 1250, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163119.png", noMask = true),
+    GiftPickerGift(2110, "Bell", 4999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163139.png", noMask = true),
+    GiftPickerGift(2111, "Love Lock", 3000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163202.png", noMask = true),
+    GiftPickerGift(2112, "Crystal", 5999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163228.png", noMask = true),
+    GiftPickerGift(2113, "Tea Pot", 2000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163256.png", noMask = true),
+    GiftPickerGift(2114, "Shisha", 7000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163315.png", noMask = true),
+    GiftPickerGift(2115, "Sword", 7250, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_163337.png", noMask = true),
+)
 
 private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
 
@@ -270,6 +271,8 @@ fun GiftPicker(
         val totalCostToSend = totalCost
         val totalSendCostToSend = totalSendCost
         val isLuckyToSend = isLuckyGiftTab
+        val resolvedGiftImage = giftAssetUrl(giftToSend.image)
+        val resolvedGiftVideo = giftToSend.video?.let { giftAssetUrl(it) }
 
         sending = true
         scope.launch {
@@ -293,7 +296,7 @@ fun GiftPicker(
                     "recipientIds" to targetsToSend,
                     "amount" to totalSendCostToSend,
                     "giftName" to giftToSend.name,
-                    "giftImage" to giftToSend.image,
+                    "giftImage" to resolvedGiftImage,
                     "giftType" to tabToSend,
                     "senderName" to currentUserName,
                     "senderImage" to currentUserImage,
@@ -301,19 +304,19 @@ fun GiftPicker(
                     "recipientImage" to (firstRecipientToSend?.image ?: "/default-avatar.png"),
                     "multiplier" to multiplierToSend,
                     "luckyGift" to isLuckyToSend,
-                    "luckyImage" to giftToSend.image,
+                    "luckyImage" to resolvedGiftImage,
                     "transferId" to uniqueTransferId,
                     "eventId" to uniqueTransferId,
                     "timestamp" to System.currentTimeMillis(),
                     "recipientMode" to recipientMode.name.lowercase(),
                 ))
 
-                if (giftToSend.video != null && !isLuckyToSend) {
+                if (resolvedGiftVideo != null && !isLuckyToSend) {
                     onSendGiftVideoPlay(mapOf(
                         "roomId" to roomId,
                         "senderId" to currentUserAccountId,
                         "giftName" to giftToSend.name,
-                        "video" to giftToSend.video,
+                        "video" to resolvedGiftVideo,
                         "videoStyle" to (giftToSend.videoStyle ?: "fade"),
                         "timestamp" to System.currentTimeMillis(),
                     ))
@@ -328,8 +331,8 @@ fun GiftPicker(
                 return@launch
             }
 
-            if (giftToSend.video != null) {
-                playingVideo = giftToSend.video to (giftToSend.videoStyle ?: "fade")
+            if (resolvedGiftVideo != null) {
+                playingVideo = resolvedGiftVideo to (giftToSend.videoStyle ?: "fade")
             } else {
                 sending = false
                 onClose()
@@ -813,10 +816,12 @@ private fun GiftCard(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val size = if (gift.noMask) 45.dp else 56.dp
+            val size = if (gift.noMask) 45.dp else 60.dp
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3)
             val isLipstick = gift.id == 2005
-            val isImageEdgeFade = activeTab == "Hot" || activeTab == "Lucky" || activeTab == "Luxury"
+            val isKittyCat = gift.id == 2006
+            val isDesertAura = gift.id == 2009
+            val isImageEdgeFade = (activeTab == "Hot" || activeTab == "Luxury") && !isLipstick && !isKittyCat
 
             Box(
                 Modifier
@@ -844,7 +849,7 @@ private fun GiftCard(
                                             blendMode = BlendMode.DstIn,
                                         )
                                     } else {
-                                        val edgeFade = 0.12f
+                                        val edgeFade = if (isDesertAura) 0.02f else 0.12f
                                         drawRect(
                                             brush = Brush.horizontalGradient(
                                                 0f to Color.Transparent,
@@ -1045,18 +1050,18 @@ private fun VideoEffectOverlay(
     onFinished: () -> Unit,
     onStarted: () -> Unit,
 ) {
+    val resolvedUrl = giftAssetUrl(src)
     val isFade = style == "fade"
-    var show by remember { mutableStateOf(true) }
+    var show by remember(resolvedUrl) { mutableStateOf(true) }
+    var videoRatio by remember(resolvedUrl) { mutableStateOf<Float?>(null) }
 
-    var videoRatio by remember { mutableStateOf<Float?>(null) }
-
-    LaunchedEffect(src) { onStarted() }
+    LaunchedEffect(resolvedUrl) { onStarted() }
 
     if (!show) return
 
-    val isKing = src.contains("17e19680~2")
-    val isMysaloPrincess = src.contains("2026031617445981861~2")
-    val isCastleNight = src.contains("2026032620350482882~2")
+    val isKing = resolvedUrl.contains("17e19680~2")
+    val isMysaloPrincess = resolvedUrl.contains("2026031617445981861~2")
+    val isCastleNight = resolvedUrl.contains("2026032620350482882~2")
 
     Box(
         Modifier
@@ -1064,87 +1069,89 @@ private fun VideoEffectOverlay(
             .background(Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
-        AndroidView(
-            factory = { ctx ->
-                android.view.TextureView(ctx).apply {
-                    isOpaque = false
-                    surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
-                        var mediaPlayer: android.media.MediaPlayer? = null
+        key(resolvedUrl) {
+            AndroidView(
+                factory = { ctx ->
+                    android.view.TextureView(ctx).apply {
+                        isOpaque = false
+                        surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                            var mediaPlayer: android.media.MediaPlayer? = null
 
-                        override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {
-                            try {
-                                mediaPlayer = android.media.MediaPlayer().apply {
-                                    setDataSource(ctx, Uri.parse(giftAssetUrl(src)))
-                                    setSurface(android.view.Surface(surface))
-                                    setVolume(1f, 1f)
-                                    setOnVideoSizeChangedListener { _, w, h ->
-                                        if (w > 0 && h > 0) {
-                                            videoRatio = w.toFloat() / h.toFloat()
+                            override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {
+                                try {
+                                    mediaPlayer = android.media.MediaPlayer().apply {
+                                        setDataSource(ctx, Uri.parse(resolvedUrl))
+                                        setSurface(android.view.Surface(surface))
+                                        setVolume(1f, 1f)
+                                        setOnVideoSizeChangedListener { _, w, h ->
+                                            if (w > 0 && h > 0) {
+                                                videoRatio = w.toFloat() / h.toFloat()
+                                            }
                                         }
+                                        setOnPreparedListener { mp ->
+                                            mp.isLooping = false
+                                            mp.start()
+                                        }
+                                        setOnCompletionListener { onFinished() }
+                                        setOnErrorListener { _, _, _ ->
+                                            onFinished()
+                                            true
+                                        }
+                                        prepareAsync()
                                     }
-                                    setOnPreparedListener { mp ->
-                                        mp.isLooping = false
-                                        mp.start()
-                                    }
-                                    setOnCompletionListener { onFinished() }
-                                    setOnErrorListener { _, _, _ ->
-                                        onFinished()
-                                        true
-                                    }
-                                    prepareAsync()
+                                } catch (e: Exception) {
+                                    onFinished()
                                 }
-                            } catch (e: Exception) {
-                                onFinished()
                             }
-                        }
 
-                        override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
+                            override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
 
-                        override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
-                            mediaPlayer?.release()
-                            mediaPlayer = null
-                            return true
-                        }
+                            override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+                                mediaPlayer?.release()
+                                mediaPlayer = null
+                                return true
+                            }
 
-                        override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.wrapContentHeight())
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                    if (style == "pure") {
-                        blendMode = BlendMode.Plus
-                    }
-                }
-                .drawWithContent {
-                    drawContent()
-                    if (isFade) {
-                        val topFadeStop = if (isCastleNight) 0.13f else 0.1f
-                        val bottomFadeStop = when {
-                            isKing -> 0.85f
-                            isMysaloPrincess -> 0.87f
-                            isCastleNight -> 0.87f
-                            else -> 0.9f
+                            override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
                         }
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                0.0f to Color.White.copy(alpha = 0f),
-                                topFadeStop to Color.White,
-                                bottomFadeStop to Color.White,
-                                1.0f to Color.White.copy(alpha = 0f)
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
                     }
-                }
-        )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.fillMaxSize())
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                        if (style == "pure") {
+                            blendMode = BlendMode.Plus
+                        }
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        if (isFade) {
+                            val topFadeStop = if (isCastleNight) 0.13f else 0.1f
+                            val bottomFadeStop = when {
+                                isKing -> 0.85f
+                                isMysaloPrincess -> 0.87f
+                                isCastleNight -> 0.87f
+                                else -> 0.9f
+                            }
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0.0f to Color.White.copy(alpha = 0f),
+                                    topFadeStop to Color.White,
+                                    bottomFadeStop to Color.White,
+                                    1.0f to Color.White.copy(alpha = 0f)
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                    }
+            )
+        }
     }
 }
 
 @Composable
 fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
-    VideoEffectOverlay(src = src, style = "fade", onFinished = onFinished, onStarted = {})
+    VideoEffectOverlay(src = giftAssetUrl(src), style = "fade", onFinished = onFinished, onStarted = {})
 }
