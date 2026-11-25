@@ -127,7 +127,7 @@ fun BagPage(onBack: () -> Unit = {}) {
                                     "$totalDays Days"
                                 } else "Limited-time reward"
                             Text(
-                                if (daysLeft > 0) "$durationLabel · $daysLeft day(s) left" else durationLabel,
+                                if (daysLeft > 0) "×$durationLabel · $daysLeft day(s) left" else "×$durationLabel",
                                 color = Color(0xFF9CA3AF),
                                 fontSize = 12.sp
                             )
