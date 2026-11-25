@@ -249,35 +249,63 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
             }
         }
 
-        // ==================== RULES BLACK BOTTOM SHEET ====================
-        if (showRules) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .40f)).clickable { showRules = false }, contentAlignment = Alignment.BottomCenter) {
-                Column(
-                    Modifier.fillMaxWidth().widthIn(max = 440.dp).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)).background(Color.Black).clickable(enabled = false) {}
+     // ==================== RULES BLACK BOTTOM SHEET ====================
+if (showRules) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = .40f))
+            .clickable { showRules = false },
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .widthIn(max = 440.dp)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                .background(Color.Black)
+                .clickable(enabled = false) {}
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = { showRules = false },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 8.dp)
                 ) {
-                    Box(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp), contentAlignment = Alignment.Center) {
-                        IconButton(onClick = { showRules = false }, modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                        }
-                        Text("Rules", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 32.dp)) {
-                        Text("- Rule -", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(18.dp))
-                        listOf(
-                            "Click and select the Amount to be send in the lucky packet",
-                            "Select the Number of the user who can open",
-                            "If no user grab lucky packet coins will be return in the wallet of the packet sender"
-                        ).forEachIndexed { index, rule ->
-                            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("${index + 1}.", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                                Text(rule, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 21.sp)
-                            }
-                        }
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                Text("Rules", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp)
+            ) {
+                listOf(
+                    "Click and select the Amount to be send in the lucky packet",
+                    "Select the Number of the user who can open",
+                    "If no user grab lucky packet coins will be return in the wallet of the packet sender"
+                ).forEachIndexed { index, rule ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("${index + 1}.", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(rule, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 21.sp)
                     }
                 }
             }
         }
+    }
+}
 
         // ==================== FULL SCREEN DOC CLAIM SCREEN ====================
         if (showClaim) {
