@@ -2,7 +2,6 @@ package com.hurry.voicechat
 
 import android.content.Context
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,15 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -52,11 +47,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 private const val LEVEL_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private fun levelAsset(file: String) = LEVEL_ASSET_BASE + file
@@ -187,59 +178,11 @@ private fun SectionHeading(title: String) {
     }
 }
 
-private data class LevelSparkleSpec(
-    val xFrac: Float,
-    val yFrac: Float,
-    val maxRadius: Float,
-    val phaseOffset: Float
-)
-
-private data class LevelShiningBubbleSpec(
-    val xFrac: Float,
-    val radiusPx: Float,
-    val phaseOffset: Float,
-    val driftAmp: Float
-)
-
 @Composable
 private fun LevelMedalPreviewDialog(
     medal: NativeLevelMedalItem,
     onDismiss: () -> Unit
 ) {
-    val popupScale = remember { Animatable(0.45f) }
-    val popupAlpha = remember { Animatable(0f) }
-
-    LaunchedEffect(medal.levelText) {
-        popupScale.snapTo(0.45f)
-        popupAlpha.snapTo(0f)
-        launch {
-            popupScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = 0.55f,
-                    stiffness = 260f
-                )
-            )
-        }
-        launch {
-            popupAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 220)
-            )
-        }
-    }
-
-    val floatTransition = rememberInfiniteTransition(label = "levelMedalFloat")
-    val floatOffsetY by floatTransition.animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "levelMedalFloatY"
-    )
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -264,290 +207,14 @@ private fun LevelMedalPreviewDialog(
             contentAlignment = Alignment.Center
         ) {
             Box(
-                modifier = Modifier.size(310.dp),
+                modifier = Modifier.size(215.dp),
                 contentAlignment = Alignment.Center
             ) {
-                LevelGoldenSunburstEffect(modifier = Modifier.fillMaxSize())
-
-                Box(
-                    modifier = Modifier
-                        .size(215.dp)
-                        .graphicsLayer {
-                            scaleX = popupScale.value
-                            scaleY = popupScale.value
-                            alpha = popupAlpha.value
-                            translationY = floatOffsetY
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = levelAsset(medal.imageFile),
-                        contentDescription = "${medal.levelText} Medal",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                LevelGoldenSparkleAndBubbleOverlay(modifier = Modifier.size(270.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LevelGoldenSunburstEffect(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "levelSunburst")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 28000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "levelSunburstRotation"
-    )
-
-    Canvas(modifier = modifier) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = size.minDimension * 0.80f
-        val rayCount = 18
-
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFFFFDF7A).copy(alpha = 0.45f),
-                    Color(0xFFD9A12B).copy(alpha = 0.20f),
-                    Color.Transparent
-                ),
-                center = center,
-                radius = radius * 0.85f
-            ),
-            radius = radius * 0.85f,
-            center = center
-        )
-
-        rotate(degrees = rotation, pivot = center) {
-            val stepAngle = 360f / rayCount
-            for (i in 0 until rayCount) {
-                val startDeg = i * stepAngle
-                val halfSpread = stepAngle * 0.28f
-                val rad1 = Math.toRadians((startDeg - halfSpread).toDouble())
-                val rad2 = Math.toRadians((startDeg + halfSpread).toDouble())
-
-                val path = Path().apply {
-                    moveTo(center.x, center.y)
-                    lineTo(
-                        center.x + (radius * cos(rad1)).toFloat(),
-                        center.y + (radius * sin(rad1)).toFloat()
-                    )
-                    lineTo(
-                        center.x + (radius * cos(rad2)).toFloat(),
-                        center.y + (radius * sin(rad2)).toFloat()
-                    )
-                    close()
-                }
-                drawPath(
-                    path = path,
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFFFFE694).copy(alpha = 0.58f),
-                            Color(0xFFE0A82E).copy(alpha = 0.28f),
-                            Color.Transparent
-                        ),
-                        center = center,
-                        radius = radius
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LevelGoldenSparkleAndBubbleOverlay(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "levelSparkleAndBubbles")
-
-    val sparklePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "levelSparklePhase"
-    )
-
-    val bubblePhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "levelBubblePhase"
-    )
-
-    val shinePulse by infiniteTransition.animateFloat(
-        initialValue = 0.14f,
-        targetValue = 0.34f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "levelShinePulse"
-    )
-
-    val sparkles = remember {
-        listOf(
-            LevelSparkleSpec(0.24f, 0.25f, 15f, 0.00f),
-            LevelSparkleSpec(0.76f, 0.22f, 17f, 0.18f),
-            LevelSparkleSpec(0.50f, 0.16f, 13f, 0.35f),
-            LevelSparkleSpec(0.18f, 0.56f, 14f, 0.52f),
-            LevelSparkleSpec(0.83f, 0.52f, 16f, 0.68f),
-            LevelSparkleSpec(0.34f, 0.74f, 15f, 0.82f),
-            LevelSparkleSpec(0.68f, 0.76f, 14f, 0.26f),
-            LevelSparkleSpec(0.42f, 0.42f, 12f, 0.61f),
-            LevelSparkleSpec(0.61f, 0.38f, 13f, 0.91f),
-            LevelSparkleSpec(0.49f, 0.64f, 12f, 0.44f),
-            LevelSparkleSpec(0.29f, 0.40f, 11f, 0.74f),
-            LevelSparkleSpec(0.72f, 0.63f, 12f, 0.11f)
-        )
-    }
-
-    val bubbles = remember {
-        listOf(
-            LevelShiningBubbleSpec(0.22f, 9f, 0.05f, 10f),
-            LevelShiningBubbleSpec(0.35f, 13f, 0.22f, -12f),
-            LevelShiningBubbleSpec(0.48f, 8f, 0.40f, 9f),
-            LevelShiningBubbleSpec(0.62f, 14f, 0.58f, -11f),
-            LevelShiningBubbleSpec(0.77f, 10f, 0.75f, 10f),
-            LevelShiningBubbleSpec(0.29f, 7f, 0.88f, -8f),
-            LevelShiningBubbleSpec(0.54f, 11f, 0.15f, 12f),
-            LevelShiningBubbleSpec(0.70f, 8f, 0.33f, -9f),
-            LevelShiningBubbleSpec(0.40f, 6f, 0.50f, 8f),
-            LevelShiningBubbleSpec(0.82f, 9f, 0.67f, -10f),
-            LevelShiningBubbleSpec(0.17f, 10f, 0.81f, 9f),
-            LevelShiningBubbleSpec(0.58f, 7f, 0.94f, -8f)
-        )
-    }
-
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val center = Offset(w / 2f, h / 2f)
-
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFFFFF4C2).copy(alpha = shinePulse),
-                    Color(0xFFFFD452).copy(alpha = shinePulse * 0.45f),
-                    Color.Transparent
-                ),
-                center = center,
-                radius = size.minDimension * 0.48f
-            ),
-            radius = size.minDimension * 0.48f,
-            center = center
-        )
-
-        bubbles.forEach { b ->
-            val progress = (bubblePhase + b.phaseOffset) % 1f
-            val y = h * (0.90f - progress * 0.78f)
-            val x = (w * b.xFrac) + (sin(progress * 2.0 * PI) * b.driftAmp).toFloat()
-            val alpha = when {
-                progress < 0.18f -> (progress / 0.18f)
-                progress > 0.78f -> ((1f - progress) / 0.22f)
-                else -> 1f
-            }.coerceIn(0f, 1f)
-
-            val bubbleCenter = Offset(x, y)
-            val r = b.radiusPx * (0.85f + 0.25f * sin(progress * PI).toFloat())
-
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFFFE98A).copy(alpha = 0.50f * alpha),
-                        Color(0xFFE5B230).copy(alpha = 0.22f * alpha),
-                        Color.Transparent
-                    ),
-                    center = bubbleCenter,
-                    radius = r * 2.0f
-                ),
-                radius = r * 2.0f,
-                center = bubbleCenter
-            )
-
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFFFFBE0).copy(alpha = 0.35f * alpha),
-                        Color(0xFFFFD863).copy(alpha = 0.22f * alpha),
-                        Color(0xFFE5A924).copy(alpha = 0.42f * alpha)
-                    ),
-                    center = bubbleCenter,
-                    radius = r
-                ),
-                radius = r,
-                center = bubbleCenter
-            )
-
-            drawCircle(
-                color = Color(0xFFFFF0A8).copy(alpha = 0.78f * alpha),
-                radius = r,
-                center = bubbleCenter,
-                style = Stroke(width = 1.2f)
-            )
-
-            drawCircle(
-                color = Color.White.copy(alpha = 0.90f * alpha),
-                radius = r * 0.28f,
-                center = Offset(x - r * 0.32f, y - r * 0.32f)
-            )
-        }
-
-        sparkles.forEach { s ->
-            val wave = ((sin((sparklePhase + s.phaseOffset) * 2.0 * PI) + 1.0) / 2.0).toFloat()
-            val intensity = wave * wave
-            if (intensity > 0.06f) {
-                val cx = w * s.xFrac
-                val cy = h * s.yFrac
-                val outerR = s.maxRadius * (0.35f + 0.65f * intensity)
-                val innerR = outerR * 0.22f
-
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFFFFF8D2).copy(alpha = 0.85f * intensity),
-                            Color(0xFFFFCC3D).copy(alpha = 0.40f * intensity),
-                            Color.Transparent
-                        ),
-                        center = Offset(cx, cy),
-                        radius = outerR * 1.45f
-                    ),
-                    radius = outerR * 1.45f,
-                    center = Offset(cx, cy)
-                )
-
-                val starPath = Path().apply {
-                    moveTo(cx, cy - outerR)
-                    lineTo(cx + innerR, cy - innerR)
-                    lineTo(cx + outerR, cy)
-                    lineTo(cx + innerR, cy + innerR)
-                    lineTo(cx, cy + outerR)
-                    lineTo(cx - innerR, cy + innerR)
-                    lineTo(cx - outerR, cy)
-                    lineTo(cx - innerR, cy - innerR)
-                    close()
-                }
-                drawPath(
-                    path = starPath,
-                    color = Color(0xFFFFF7CC).copy(alpha = 0.95f * intensity)
-                )
-
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.95f * intensity),
-                    radius = innerR * 0.95f,
-                    center = Offset(cx, cy)
+                AsyncImage(
+                    model = levelAsset(medal.imageFile),
+                    contentDescription = "${medal.levelText} Medal",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -1233,7 +900,7 @@ fun Level(onBack: () -> Unit = {}) {
                 item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
-                // 3. MEDAL SECTION (Lv.10 to Lv.100 Rich Medal Images + Original BG Popup/Sparkle Animation)
+                // 3. MEDAL SECTION (Lv.10 to Lv.100 Rich Medal Images, No Animation)
                 // ==============================================
                 item {
                     SectionHeading("Medal")
