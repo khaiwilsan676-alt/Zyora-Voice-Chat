@@ -149,7 +149,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
             Offset(rootSize.width / 2f, rootSize.height / 2f)
         )
     }
-    fun setNotice(value: LuckyNotice?) { notice = value; noticeGeneration++ }
+    fun setNotice(value: LuckyNotice?) { notice = value }
     fun renewNotice() { noticeGeneration++ }
     fun confirmCombo(payload: JSONObject) {
         lastComboPayload = JSONObject(payload.toString())
