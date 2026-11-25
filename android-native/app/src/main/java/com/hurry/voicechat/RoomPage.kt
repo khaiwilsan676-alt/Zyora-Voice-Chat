@@ -1382,7 +1382,7 @@ fun RoomPage(
             val reason = payload.optString("reason")
             mainHandler.post {
                 luckyComboPending = false
-                val failedTransferId = payload.optString("transferId")
+                val failedTransferId = payload.optString("transferId").ifBlank { payload.optString("eventId") }
                 if (pendingLuckyGiftTransferId.isNotBlank() && failedTransferId == pendingLuckyGiftTransferId) {
                     pendingLuckyGiftTransferId = ""
                     showLuckyComboButton = false

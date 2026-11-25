@@ -1097,6 +1097,13 @@ private fun VideoEffectOverlay(
             }
     }
 
+    val textureView = remember(player) {
+        android.view.TextureView(context).apply {
+            isOpaque = false
+            player.setVideoTextureView(this)
+        }
+    }
+
     LaunchedEffect(resolvedUrl) { onStarted() }
 
     val isKing = resolvedUrl.contains("17e19680~2")
@@ -1108,12 +1115,7 @@ private fun VideoEffectOverlay(
         contentAlignment = Alignment.Center,
     ) {
         AndroidView(
-            factory = { _ ->
-                android.view.TextureView(context).apply {
-                    isOpaque = false
-                    player.setVideoTextureView(this)
-                }
-            },
+            factory = { textureView },
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.fillMaxSize())
@@ -1145,9 +1147,9 @@ private fun VideoEffectOverlay(
         )
     }
 
-    DisposableEffect(player) {
+    DisposableEffect(player, textureView) {
         onDispose {
-            player.clearVideoTextureView(null)
+            player.clearVideoTextureView(textureView)
             player.stop()
             player.clearMediaItems()
             player.release()
