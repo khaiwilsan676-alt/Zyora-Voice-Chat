@@ -26,7 +26,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-private data class BagRewardItem(val id: String, val name: String, val tab: String, val image: String)
+private data class BagRewardItem(val id: String, val name: String, val tab: String, val image: String, val duration: String, val expiresAt: Long)
 
 @Composable
 fun BagPage(onBack: () -> Unit = {}) {
@@ -63,7 +63,9 @@ fun BagPage(onBack: () -> Unit = {}) {
                                     item.optString("itemId"),
                                     item.optString("name", "Reward"),
                                     tab,
-                                    item.optString("image")
+                                    item.optString("image"),
+                                    item.optString("duration"),
+                                    item.optLong("expiresAt", 0L)
                                 ))
                             }
                         }
@@ -116,7 +118,19 @@ fun BagPage(onBack: () -> Unit = {}) {
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(item.name, color = Color(0xFF1F2937), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                            Text("Permanent reward", color = Color(0xFF9CA3AF), fontSize = 12.sp)
+                            val daysLeft = if (item.expiresAt > 0L) {
+                                kotlin.math.ceil((item.expiresAt - System.currentTimeMillis()).coerceAtLeast(0L) / 86400000.0).toInt()
+                            } else 0
+                            val durationLabel = item.duration.takeIf { it.isNotBlank() && !it.equals("PERMANENT", true) }
+                                ?: if (item.expiresAt > 0L) {
+                                    val totalDays = kotlin.math.ceil((item.expiresAt - System.currentTimeMillis()).coerceAtLeast(0L) / 86400000.0).toInt()
+                                    "$totalDays Days"
+                                } else "Limited-time reward"
+                            Text(
+                                if (daysLeft > 0) "$durationLabel · $daysLeft day(s) left" else durationLabel,
+                                color = Color(0xFF9CA3AF),
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
