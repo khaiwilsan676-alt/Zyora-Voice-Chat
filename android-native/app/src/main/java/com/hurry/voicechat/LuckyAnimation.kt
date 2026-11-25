@@ -742,32 +742,29 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
     val itemAlpha = remember(flight.id) { Animatable(0f) }
 
     LaunchedEffect(flight.id) {
+        // Keep the original bottom -> center travel for every Lucky flight.
+        val fadeInJob = launch { itemAlpha.snapTo(1f) }
+        val moveXToCenterJob = launch {
+            posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        val moveYToCenterJob = launch {
+            posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        val growToOriginalJob = launch {
+            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
+        fadeInJob.join()
+        moveXToCenterJob.join()
+        moveYToCenterJob.join()
+        growToOriginalJob.join()
+
+        // Add only a small popup pulse after the image reaches center.
         if (flight.popupAtCenter) {
-            // Combo tap: show the same Lucky image immediately as a center popup.
-            posX.snapTo(flight.rootCenter.x)
-            posY.snapTo(flight.rootCenter.y)
-            itemAlpha.snapTo(1f)
             scaleAnim.animateTo(1.12f, animationSpec = tween(180, easing = FastOutSlowInEasing))
             scaleAnim.animateTo(1.0f, animationSpec = tween(120, easing = FastOutSlowInEasing))
-        } else {
-            // Normal Lucky send keeps its original bottom -> center animation.
-            val fadeInJob = launch { itemAlpha.snapTo(1f) }
-            val moveXToCenterJob = launch {
-                posX.animateTo(flight.rootCenter.x, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-            }
-            val moveYToCenterJob = launch {
-                posY.animateTo(flight.rootCenter.y, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-            }
-            val growToOriginalJob = launch {
-                scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-            }
-            fadeInJob.join()
-            moveXToCenterJob.join()
-            moveYToCenterJob.join()
-            growToOriginalJob.join()
         }
 
-        // The only intentional center pause before flying to the recipient.
+        // Keep the requested 0.8s center hold, then fly to the seat.
         delay(800L)
 
         val flyXJob = launch {
