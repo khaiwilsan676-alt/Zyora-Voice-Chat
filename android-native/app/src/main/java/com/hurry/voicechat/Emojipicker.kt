@@ -71,6 +71,7 @@ val staticBitmapCache = object : LruCache<String, Bitmap>(12 * 1024) {
 // Yeh Custom Image loader hai jo 100% GIF ko play hone se rokega
 @Composable
 fun CustomStaticImage(url: String, contentDescription: String, modifier: Modifier) {
+    val context = LocalContext.current
     var bitmap by remember { mutableStateOf(staticBitmapCache[url]) }
 
     LaunchedEffect(url) {
