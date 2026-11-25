@@ -2296,3 +2296,8 @@ Current documentation does not certify that all historical features are build-, 
 - Removed the 1.5-second center travel plus 0.8-second hold. The Lucky image now flies directly to the recipient seat in the existing short flight duration.
 - Combo taps continue to launch immediately and use the same single-flight path. Gift charging, server confirmation, recipient selection, and existing UI layout are unchanged.
 - Native APK build and real-device verification remain pending.
+
+
+## 2026-11-25 — Block unauthenticated fake account creation
+- Production `Zyora-Server/server.js` now refuses first-time MongoDB profile upserts unless the request carries a valid Firebase ID token and its verified UID matches the requested profile UID. Missing/invalid tokens return 401; UID mismatches return 403. Existing profiles are not deleted or reset.
+- Native `NativeLoginScreen.kt` sends the Firebase ID token as a Bearer token when syncing the first profile after successful authentication.
