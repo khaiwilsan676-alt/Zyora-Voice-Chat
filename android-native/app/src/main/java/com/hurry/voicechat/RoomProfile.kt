@@ -672,7 +672,7 @@ fun RoomProfile(
                                     horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
-                                        .clickable(enabled = !followBusy) {
+                                        .clickable(enabled = !followBusy, interactionSource = remember { MutableInteractionSource() }, indication = null) {
                                             if (myFollowId.isNotBlank() && targetFollowId.isNotBlank() && myFollowId != targetFollowId) {
                                                 val previousFollowing = isFollowing
                                                 val previousCount = followersCount
@@ -728,7 +728,7 @@ fun RoomProfile(
                                     horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
-                                        .clickable { onMessage() }
+                                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onMessage() }
                                 ) {
                                     AsyncImage(
                                         model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
@@ -753,7 +753,7 @@ fun RoomProfile(
                                     horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
-                                        .clickable { onThirdAction() }
+                                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onThirdAction() }
                                 ) {
                                     AsyncImage(
                                         model = "file_00000000b9f481fa90d96c422ae8dd32.png".fullUrl(), 
