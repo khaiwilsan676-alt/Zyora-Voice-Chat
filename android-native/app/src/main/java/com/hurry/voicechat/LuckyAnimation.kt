@@ -47,6 +47,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import org.json.JSONObject
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -113,6 +115,87 @@ fun calculateLuckyCoinReturn(giftCost: Long): LuckyCoinReturnResult {
         winAmount = giftCost * multiplier,
     )
 }
+
+
+private const val LUCKY_NOTICE_VISIBLE_DURATION_MS = 5000L
+private const val LUCKY_NOTICE_EXIT_DURATION_MS = 450L
+const val LUCKY_SEAT_LANDING_EFFECT_DELAY_MS = 560L
+
+/** Single owner for every Lucky animation state, seat target and combo timer. */
+class LuckyAnimationController internal constructor(val roomId: String) {
+    var origin: Offset? by mutableStateOf(null)
+    val seatCenters = mutableStateMapOf<String, Offset>()
+    var rootSize: IntSize by mutableStateOf(IntSize.Zero)
+    var flight: LuckyGiftFlight? by mutableStateOf(null)
+    var notice: LuckyNotice? by mutableStateOf(null)
+    var noticeGeneration by mutableIntStateOf(0)
+    var showComboButton by mutableStateOf(false)
+    var comboTimeLeft by mutableIntStateOf(5)
+    var comboGeneration by mutableIntStateOf(0)
+    var comboPending by mutableStateOf(false)
+    var lastComboPayload: JSONObject? by mutableStateOf(null)
+
+    fun recordOrigin(value: Offset) { origin = value }
+    fun recordRootSize(value: IntSize) { rootSize = value }
+    fun recordSeatCenter(id: String, center: Offset) { seatCenters[id] = center }
+    fun finishFlight(id: String) { if (flight?.id == id) flight = null }
+    fun launchToRecipients(id: String, image: String, recipientIds: Collection<String>) {
+        val target = recipientIds.firstNotNullOfOrNull { seatCenters[it] } ?: return
+        if (rootSize == IntSize.Zero || image.isBlank()) return
+        flight = LuckyGiftFlight(
+            id, image,
+            origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
+            target,
+            Offset(rootSize.width / 2f, rootSize.height / 2f)
+        )
+    }
+    fun setNotice(value: LuckyNotice?) { notice = value; noticeGeneration++ }
+    fun renewNotice() { noticeGeneration++ }
+    fun confirmCombo(payload: JSONObject) {
+        lastComboPayload = JSONObject(payload.toString())
+        comboPending = false
+        showComboButton = true
+        comboTimeLeft = 5
+        comboGeneration++
+    }
+    fun beginCombo() { comboPending = true }
+    fun failCombo() { comboPending = false }
+    fun optimisticCombo() {
+        notice = notice?.copy(multiplier = (notice?.multiplier ?: 1) + 1, isExiting = false)
+        noticeGeneration++
+    }
+    fun tickCombo(value: Int) { comboTimeLeft = value.coerceIn(0, 5) }
+    fun hideCombo() { showComboButton = false; comboTimeLeft = 0 }
+}
+
+@Composable
+fun rememberLuckyAnimationController(roomId: String): LuckyAnimationController =
+    remember(roomId) { LuckyAnimationController(roomId) }
+
+@Composable
+fun LuckyAnimationControllerEffects(controller: LuckyAnimationController) {
+    LaunchedEffect(controller.roomId, controller.comboGeneration) {
+        if (!controller.showComboButton) return@LaunchedEffect
+        val generation = controller.comboGeneration
+        for (second in 1..5) {
+            delay(1000L)
+            if (controller.comboGeneration != generation) return@LaunchedEffect
+            controller.tickCombo(5 - second)
+        }
+        if (controller.comboGeneration == generation) controller.hideCombo()
+    }
+    LaunchedEffect(controller.roomId, controller.noticeGeneration) {
+        val generation = controller.noticeGeneration
+        val id = controller.notice?.id ?: return@LaunchedEffect
+        delay(LUCKY_NOTICE_VISIBLE_DURATION_MS)
+        if (controller.noticeGeneration != generation || controller.notice?.id != id) return@LaunchedEffect
+        controller.setNotice(controller.notice?.copy(isExiting = true))
+        val exitGeneration = controller.noticeGeneration
+        delay(LUCKY_NOTICE_EXIT_DURATION_MS)
+        if (controller.noticeGeneration == exitGeneration && controller.notice?.id == id) controller.setNotice(null)
+    }
+}
+
 
 // ============================================================
 // LUCKY GIFT NOTIFICATION SLIDER + FLY ANIMATION + REWARD BADGE
