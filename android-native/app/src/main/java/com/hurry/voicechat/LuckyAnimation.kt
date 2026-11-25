@@ -149,7 +149,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
             Offset(rootSize.width / 2f, rootSize.height / 2f)
         )
     }
-    fun setNotice(value: LuckyNotice?) { notice = value }
+    fun updateNotice(value: LuckyNotice?) { notice = value }
     fun renewNotice() { noticeGeneration++ }
     fun confirmCombo(payload: JSONObject) {
         lastComboPayload = JSONObject(payload.toString())
@@ -189,10 +189,10 @@ fun LuckyAnimationControllerEffects(controller: LuckyAnimationController) {
         val id = controller.notice?.id ?: return@LaunchedEffect
         delay(LUCKY_NOTICE_VISIBLE_DURATION_MS)
         if (controller.noticeGeneration != generation || controller.notice?.id != id) return@LaunchedEffect
-        controller.setNotice(controller.notice?.copy(isExiting = true))
+        controller.updateNotice(controller.notice?.copy(isExiting = true))
         val exitGeneration = controller.noticeGeneration
         delay(LUCKY_NOTICE_EXIT_DURATION_MS)
-        if (controller.noticeGeneration == exitGeneration && controller.notice?.id == id) controller.setNotice(null)
+        if (controller.noticeGeneration == exitGeneration && controller.notice?.id == id) controller.updateNotice(null)
     }
 }
 
