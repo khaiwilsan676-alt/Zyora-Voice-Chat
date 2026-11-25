@@ -131,11 +131,6 @@ data class LuckyNotice(
     val isExiting: Boolean = false,
 )
 
-private data class LuckyFlyAnimItem(
-    val id: String,
-    val giftImage: String,
-)
-
 private data class LuckyRewardPopupState(
     val id: String,
     val winAmount: Long,
@@ -147,11 +142,10 @@ fun LuckyAnimationNotificationSlider(
     floatingWins: List<Pair<String, Long>> = emptyList(),
     targetAvatarOffset: Offset? = null,
 ) {
-    // Har × increase par naya gift fly karega, purana cancel nahi hoga
-    val activeFlyItems = remember { mutableStateListOf<LuckyFlyAnimItem>() }
+    // RoomPage owns the single seat-flight animation. This composable owns
+    // only the notification slider and reward badge, avoiding duplicate flights.
     var lastAnimatedNoticeId by remember { mutableStateOf<String?>(null) }
     var lastAnimatedMultiplier by remember { mutableIntStateOf(0) }
-    var flySpawnCounter by remember { mutableLongStateOf(0L) }
 
     // Reward badge state (3 sec ke liye, naya reward aate hi purana hat ke naya upar se aayega)
     var activeReward by remember { mutableStateOf<LuckyRewardPopupState?>(null) }
@@ -182,14 +176,6 @@ fun LuckyAnimationNotificationSlider(
             }
             LuckyComboSyncState.displayMultiplier = syncedMultiplier
 
-            flySpawnCounter += 1L
-            activeFlyItems.add(
-                LuckyFlyAnimItem(
-                    id = "${notice.id}_${syncedMultiplier}_$flySpawnCounter",
-                    giftImage = notice.giftImage,
-                )
-            )
-
             if (notice.totalWinAmount > 0L) {
                 activeReward = LuckyRewardPopupState(
                     id = "${notice.id}_${syncedMultiplier}_$flySpawnCounter",
@@ -208,11 +194,7 @@ fun LuckyAnimationNotificationSlider(
         }
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val density = LocalDensity.current
-        val screenWidthPx = with(density) { maxWidth.toPx() }
-        val screenHeightPx = with(density) { maxHeight.toPx() }
-
+    Box(modifier = Modifier.fillMaxSize()) {
         // Notification patti (thori niche + thori wide + trailing fade)
         Box(
             modifier = Modifier
@@ -337,20 +319,6 @@ fun LuckyAnimationNotificationSlider(
             }
         }
 
-        // Lucky gift flying animation (jaise × increase hoga waise hi har gift fly karega)
-        activeFlyItems.forEach { item ->
-            key(item.id) {
-                LuckyGiftFlyOverlayItem(
-                    giftImage = item.giftImage,
-                    screenWidthPx = screenWidthPx,
-                    screenHeightPx = screenHeightPx,
-                    targetAvatarOffset = targetAvatarOffset,
-                    onFinished = {
-                        activeFlyItems.removeAll { it.id == item.id }
-                    },
-                )
-            }
-        }
     }
 }
 
@@ -505,85 +473,6 @@ private fun LuckyRewardTopBadge(
             )
         }
     }
-}
-
-@Composable
-private fun LuckyGiftFlyOverlayItem(
-    giftImage: String,
-    screenWidthPx: Float,
-    screenHeightPx: Float,
-    targetAvatarOffset: Offset?,
-    onFinished: () -> Unit,
-) {
-    val density = LocalDensity.current
-    val baseSizeDp = 52.dp
-    val baseSizePx = with(density) { baseSizeDp.toPx() }
-    val halfBasePx = baseSizePx / 2f
-
-    val startX = screenWidthPx * 0.5f
-    val startY = screenHeightPx - with(density) { 40.dp.toPx() }
-    val centerY = screenHeightPx * 0.5f
-
-    val posX = remember { Animatable(startX) }
-    val posY = remember { Animatable(startY) }
-    // Bottom se choti (0.35f) niklegi, center pe exact original size (1.0f = 52.dp) hogi
-    val scaleAnim = remember { Animatable(0.35f) }
-    val itemAlpha = remember { Animatable(0f) }
-
-    LaunchedEffect(Unit) {
-        // 1. Bottom se choti nikalkar 1.5 second (1500ms) mein screen center par apne original size (1.0f) mein aana
-        val fadeInJob = launch {
-            itemAlpha.animateTo(1f, animationSpec = tween(150))
-        }
-        val moveToCenterJob = launch {
-            posY.animateTo(centerY, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        val growToOriginalJob = launch {
-            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
-        }
-        fadeInJob.join()
-        moveToCenterJob.join()
-        growToOriginalJob.join()
-
-        // 2. Center par original size mein 0.8 second (800ms) show karna
-        delay(800L)
-
-        // 3. Same original size (1.0f) mein seedha user seat avatar par jaana
-        if (targetAvatarOffset != null) {
-            val flyXJob = launch {
-                posX.animateTo(targetAvatarOffset.x, animationSpec = tween(420, easing = FastOutSlowInEasing))
-            }
-            val flyYJob = launch {
-                posY.animateTo(targetAvatarOffset.y, animationSpec = tween(420, easing = FastOutSlowInEasing))
-            }
-            val fadeOutJob = launch {
-                delay(320L)
-                itemAlpha.animateTo(0f, animationSpec = tween(100))
-            }
-            flyXJob.join()
-            flyYJob.join()
-            fadeOutJob.join()
-        } else {
-            itemAlpha.animateTo(0f, animationSpec = tween(180))
-        }
-
-        onFinished()
-    }
-
-    AsyncImage(
-        model = luckyAnimationAssetUrl(giftImage),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = Modifier
-            .size(baseSizeDp)
-            .graphicsLayer {
-                translationX = posX.value - halfBasePx
-                translationY = posY.value - halfBasePx
-                scaleX = scaleAnim.value
-                scaleY = scaleAnim.value
-                alpha = itemAlpha.value
-            },
-    )
 }
 
 // ============================================================
