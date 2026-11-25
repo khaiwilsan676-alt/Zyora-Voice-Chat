@@ -178,7 +178,7 @@ fun LuckyAnimationNotificationSlider(
 
             if (notice.totalWinAmount > 0L) {
                 activeReward = LuckyRewardPopupState(
-                    id = "${notice.id}_${syncedMultiplier}_$flySpawnCounter",
+                    id = "${notice.id}_${syncedMultiplier}",
                     winAmount = notice.totalWinAmount,
                 )
             }
