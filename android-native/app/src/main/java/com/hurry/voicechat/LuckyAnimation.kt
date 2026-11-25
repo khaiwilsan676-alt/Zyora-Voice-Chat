@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -31,15 +30,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -48,13 +49,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.random.Random
 
 private const val LUCKY_REWARD_BADGE_URL =
@@ -71,6 +73,12 @@ private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
 private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
 private const val LUCKY_COMBO_PRESS_DURATION_MS = 50
+
+// Notification patti aur Combo button ka × count sync rakhne ke liye
+private object LuckyComboSyncState {
+    var displayMultiplier by mutableIntStateOf(1)
+    var pendingComboClicks by mutableIntStateOf(0)
+}
 
 private fun luckyAnimationAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
@@ -139,21 +147,52 @@ fun LuckyAnimationNotificationSlider(
     floatingWins: List<Pair<String, Long>> = emptyList(),
     targetAvatarOffset: Offset? = null,
 ) {
-    // Sirf ek hi image fly karegi ek time pe
-    var activeFlyItem by remember { mutableStateOf<LuckyFlyAnimItem?>(null) }
+    // Har × increase par naya gift fly karega, purana cancel nahi hoga
+    val activeFlyItems = remember { mutableStateListOf<LuckyFlyAnimItem>() }
     var lastAnimatedNoticeId by remember { mutableStateOf<String?>(null) }
+    var lastAnimatedMultiplier by remember { mutableIntStateOf(0) }
+    var flySpawnCounter by remember { mutableLongStateOf(0L) }
 
     // Reward badge state (3 sec ke liye, naya reward aate hi purana hat ke naya upar se aayega)
     var activeReward by remember { mutableStateOf<LuckyRewardPopupState?>(null) }
 
-    LaunchedEffect(notice?.id) {
-        if (notice != null && notice.id != lastAnimatedNoticeId) {
+    LaunchedEffect(notice?.id, notice?.multiplier) {
+        if (notice == null) {
+            lastAnimatedNoticeId = null
+            lastAnimatedMultiplier = 0
+            LuckyComboSyncState.pendingComboClicks = 0
+            return@LaunchedEffect
+        }
+
+        if (notice.id != lastAnimatedNoticeId || notice.multiplier != lastAnimatedMultiplier) {
             lastAnimatedNoticeId = notice.id
-            activeFlyItem = LuckyFlyAnimItem(id = notice.id, giftImage = notice.giftImage)
+            lastAnimatedMultiplier = notice.multiplier
+
+            // Combo button aur Notification patti dono ka × bilkul connected rahega
+            val syncedMultiplier = if (LuckyComboSyncState.pendingComboClicks > 0) {
+                LuckyComboSyncState.pendingComboClicks =
+                    (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
+                if (notice.multiplier > LuckyComboSyncState.displayMultiplier) {
+                    notice.multiplier
+                } else {
+                    LuckyComboSyncState.displayMultiplier + 1
+                }
+            } else {
+                notice.multiplier.coerceAtLeast(1)
+            }
+            LuckyComboSyncState.displayMultiplier = syncedMultiplier
+
+            flySpawnCounter += 1L
+            activeFlyItems.add(
+                LuckyFlyAnimItem(
+                    id = "${notice.id}_${syncedMultiplier}_$flySpawnCounter",
+                    giftImage = notice.giftImage,
+                )
+            )
 
             if (notice.totalWinAmount > 0L) {
                 activeReward = LuckyRewardPopupState(
-                    id = notice.id,
+                    id = "${notice.id}_${syncedMultiplier}_$flySpawnCounter",
                     winAmount = notice.totalWinAmount,
                 )
             }
@@ -174,12 +213,12 @@ fun LuckyAnimationNotificationSlider(
         val screenWidthPx = with(density) { maxWidth.toPx() }
         val screenHeightPx = with(density) { maxHeight.toPx() }
 
-        // Notification patti (20.dp niche + compact width + 69.dp trailing fade)
+        // Notification patti (thori niche + thori wide + trailing fade)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 12.dp)
-                .offset(y = 20.dp),
+                .offset(y = 48.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             AnimatedVisibility(
@@ -197,23 +236,12 @@ fun LuckyAnimationNotificationSlider(
                     else -> notice.senderName
                 }
                 val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
+                val shownMultiplier = LuckyComboSyncState.displayMultiplier.coerceAtLeast(1)
 
                 Box(contentAlignment = Alignment.CenterStart) {
-                    // Patti ke theek top par (jahan x1 hai wahan chipak ke) Reward Image + Sun Rays + Coins Amount
-                    activeReward?.let { reward ->
-                        key(reward.id) {
-                            LuckyRewardTopBadge(
-                                winAmount = reward.winAmount,
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(end = 44.dp)
-                                    .offset(y = (-54).dp),
-                            )
-                        }
-                    }
-
                     Row(
                         Modifier
+                            .widthIn(min = 244.dp)
                             .clip(RoundedCornerShape(50.dp))
                             .background(
                                 Brush.horizontalGradient(
@@ -229,7 +257,7 @@ fun LuckyAnimationNotificationSlider(
                                     endX = Float.POSITIVE_INFINITY,
                                 )
                             )
-                            .padding(start = 4.dp, end = 69.dp, top = 2.dp, bottom = 2.dp)
+                            .padding(start = 6.dp, end = 82.dp, top = 2.dp, bottom = 2.dp)
                             .height(38.dp)
                             .wrapContentWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -242,10 +270,10 @@ fun LuckyAnimationNotificationSlider(
                                 .size(32.dp)
                                 .clip(CircleShape),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
 
                         Column(
-                            modifier = Modifier.widthIn(max = 110.dp),
+                            modifier = Modifier.widthIn(min = 96.dp, max = 140.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)
                         ) {
                             Text(
@@ -272,7 +300,7 @@ fun LuckyAnimationNotificationSlider(
                                 ),
                             )
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
 
                         AsyncImage(
                             model = luckyAnimationAssetUrl(notice.giftImage),
@@ -281,7 +309,7 @@ fun LuckyAnimationNotificationSlider(
                             modifier = Modifier.size(26.dp),
                         )
                         Text(
-                            text = "×${notice.multiplier}",
+                            text = "×$shownMultiplier",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Black,
@@ -289,12 +317,28 @@ fun LuckyAnimationNotificationSlider(
                             modifier = Modifier.padding(start = 4.dp),
                         )
                     }
+
+                    // Patti ke top edge se ekdam chipak ke Reward Image + Sun Rays + Overlapping Coins
+                    activeReward?.let { reward ->
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-88).dp, y = 6.dp)
+                                .size(0.dp)
+                                .wrapContentSize(align = Alignment.BottomCenter, unbounded = true)
+                                .zIndex(2f),
+                        ) {
+                            key(reward.id) {
+                                LuckyRewardTopBadge(winAmount = reward.winAmount)
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // Lucky gift flying animation (sirf ek image, sirf seat avatar pe, GPU smooth):
-        activeFlyItem?.let { item ->
+        // Lucky gift flying animation (jaise × increase hoga waise hi har gift fly karega)
+        activeFlyItems.forEach { item ->
             key(item.id) {
                 LuckyGiftFlyOverlayItem(
                     giftImage = item.giftImage,
@@ -302,9 +346,7 @@ fun LuckyAnimationNotificationSlider(
                     screenHeightPx = screenHeightPx,
                     targetAvatarOffset = targetAvatarOffset,
                     onFinished = {
-                        if (activeFlyItem?.id == item.id) {
-                            activeFlyItem = null
-                        }
+                        activeFlyItems.removeAll { it.id == item.id }
                     },
                 )
             }
@@ -354,8 +396,11 @@ private fun LuckyRewardTopBadge(
         }
     }
 
+    // Outer Box exact Reward Image size (74.dp) ka hai taaki patti se ekdam chipke
+    // aur Coins icon + value exact image ke bottom par overlap ho
     Box(
         modifier = modifier
+            .size(74.dp)
             .graphicsLayer {
                 translationY = dropY.value
                 scaleX = popScale.value
@@ -364,8 +409,8 @@ private fun LuckyRewardTopBadge(
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Rotating Sun Rays Shining behind image
-        Canvas(modifier = Modifier.size(64.dp)) {
+        // Rotating Sun Rays Shining behind image (layout bounds inflate kiye bina)
+        Canvas(modifier = Modifier.requiredSize(96.dp)) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val outerRadius = size.minDimension / 2f
             val rayCount = 12
@@ -419,19 +464,19 @@ private fun LuckyRewardTopBadge(
             }
         }
 
-        // Main Reward Image
+        // Main Reward Image (increased size: 74.dp)
         AsyncImage(
             model = LUCKY_REWARD_BADGE_URL,
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(50.dp),
+            modifier = Modifier.fillMaxSize(),
         )
 
-        // Bottom par Coin Icon + Yellow Coins Amount
+        // Coin Icon + Yellow Coins Amount exact image ke bottom par overlap hokar
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-2).dp),
+                .offset(y = (-6).dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -439,18 +484,23 @@ private fun LuckyRewardTopBadge(
                 model = LUCKY_COIN_ICON_URL,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(13.dp),
+                modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(2.dp))
             Text(
                 text = winAmount.toString(),
                 color = Color(0xFFFFEB3B),
-                fontSize = 11.sp,
-                lineHeight = 12.sp,
+                fontSize = 13.sp,
+                lineHeight = 14.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
                 style = TextStyle(
-                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    shadow = Shadow(
+                        color = Color(0xCC000000),
+                        offset = Offset(0f, 1.5f),
+                        blurRadius = 4f,
+                    ),
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
                 ),
             )
         }
@@ -476,33 +526,30 @@ private fun LuckyGiftFlyOverlayItem(
 
     val posX = remember { Animatable(startX) }
     val posY = remember { Animatable(startY) }
-    // Scale relative to 52.dp: 18dp = 0.35f, 64dp = 1.23f, 52dp = 1.0f, 24dp = 0.46f
+    // Bottom se choti (0.35f) niklegi, center pe exact original size (1.0f = 52.dp) hogi
     val scaleAnim = remember { Animatable(0.35f) }
     val itemAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // 1. Niche se choti (18dp) hoke 1.5 second (1500ms) mein screen ke center par aana
+        // 1. Bottom se choti nikalkar 1.5 second (1500ms) mein screen center par apne original size (1.0f) mein aana
         val fadeInJob = launch {
             itemAlpha.animateTo(1f, animationSpec = tween(150))
         }
         val moveToCenterJob = launch {
             posY.animateTo(centerY, animationSpec = tween(1500, easing = FastOutSlowInEasing))
         }
+        val growToOriginalJob = launch {
+            scaleAnim.animateTo(1.0f, animationSpec = tween(1500, easing = FastOutSlowInEasing))
+        }
         fadeInJob.join()
         moveToCenterJob.join()
+        growToOriginalJob.join()
 
-        // 2. Center par aake original size (52dp) mein popup animation
-        scaleAnim.animateTo(1.23f, animationSpec = tween(140, easing = FastOutSlowInEasing))
-        scaleAnim.animateTo(1.0f, animationSpec = tween(110, easing = FastOutSlowInEasing))
-
-        // 3. Center mein 0.8 second (800ms) rukna
+        // 2. Center par original size mein 0.8 second (800ms) show karna
         delay(800L)
 
-        // 4. Sirf seat avatar par jaana (choti hoke, taaki avatar ke upar badi na dikhe)
+        // 3. Same original size (1.0f) mein seedha user seat avatar par jaana
         if (targetAvatarOffset != null) {
-            val shrinkJob = launch {
-                scaleAnim.animateTo(0.46f, animationSpec = tween(260, easing = FastOutSlowInEasing))
-            }
             val flyXJob = launch {
                 posX.animateTo(targetAvatarOffset.x, animationSpec = tween(420, easing = FastOutSlowInEasing))
             }
@@ -510,10 +557,9 @@ private fun LuckyGiftFlyOverlayItem(
                 posY.animateTo(targetAvatarOffset.y, animationSpec = tween(420, easing = FastOutSlowInEasing))
             }
             val fadeOutJob = launch {
-                delay(280L)
-                itemAlpha.animateTo(0f, animationSpec = tween(140))
+                delay(320L)
+                itemAlpha.animateTo(0f, animationSpec = tween(100))
             }
-            shrinkJob.join()
             flyXJob.join()
             flyYJob.join()
             fadeOutJob.join()
@@ -541,15 +587,25 @@ private fun LuckyGiftFlyOverlayItem(
 }
 
 // ============================================================
-// LUCKY COMBO BUTTON (FIXED: GPU-smooth, zero lag on rapid taps)
+// LUCKY COMBO BUTTON (Same to same image style + connected ×)
 // ============================================================
 @Composable
 fun LuckyAnimationComboButton(
     visible: Boolean,
     progress: Float, // Smooth timer progress (0f to 1f)
     onClick: () -> Unit,
+    comboCount: Int? = null,
 ) {
+    LaunchedEffect(visible) {
+        if (!visible) {
+            LuckyComboSyncState.displayMultiplier = 1
+            LuckyComboSyncState.pendingComboClicks = 0
+        }
+    }
+
     if (!visible) return
+
+    val shownCount = (comboCount ?: LuckyComboSyncState.displayMultiplier).coerceAtLeast(1)
     val comboInteraction = remember { MutableInteractionSource() }
     val isComboPressed by comboInteraction.collectIsPressedAsState()
     val comboPressScale by animateFloatAsState(
@@ -557,25 +613,14 @@ fun LuckyAnimationComboButton(
         animationSpec = tween(LUCKY_COMBO_PRESS_DURATION_MS, easing = FastOutSlowInEasing),
         label = "comboPressResponse",
     )
-    val infiniteTransition = rememberInfiniteTransition(label = "comboPulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(
-            tween(LUCKY_COMBO_PULSE_DURATION_MS, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
-            RepeatMode.Restart,
-        ),
-        label = "pulse",
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            tween(900, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
-            RepeatMode.Restart,
-        ),
-        label = "alpha",
-    )
+
+    val textShadow = remember {
+        Shadow(
+            color = Color(0x66B83200),
+            offset = Offset(1f, 2f),
+            blurRadius = 4f,
+        )
+    }
 
     Box(
         Modifier
@@ -583,58 +628,105 @@ fun LuckyAnimationComboButton(
             .padding(end = 24.dp, bottom = 50.dp),
         contentAlignment = Alignment.BottomEnd,
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(84.dp)) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        scaleX = pulseScale
-                        scaleY = pulseScale
-                        alpha = pulseAlpha
-                    }
-                    .background(
-                        Brush.radialGradient(
-                            listOf(
-                                Color(0x99FF3366),
-                                Color(0x1AFF3366),
-                            )
-                        ),
-                        CircleShape,
-                    ),
-            )
-
-            Box(
-                Modifier
-                    .size(76.dp)
-                    .clip(CircleShape)
-                    .graphicsLayer {
-                        scaleX = comboPressScale
-                        scaleY = comboPressScale
-                    }
-                    .background(
-                        Brush.radialGradient(
-                            listOf(Color(0xFFFF4D79), Color(0xFFFF1A4D))
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(84.dp)
+                .graphicsLayer {
+                    scaleX = comboPressScale
+                    scaleY = comboPressScale
+                }
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0x888C5432),
+                            Color(0x664A2F1F),
                         )
                     )
-                    .clickable(
-                        interactionSource = comboInteraction,
-                        indication = null,
-                    ) { onClick() },
+                )
+                .clickable(
+                    interactionSource = comboInteraction,
+                    indication = null,
+                ) {
+                    LuckyComboSyncState.pendingComboClicks += 1
+                    onClick()
+                },
+        ) {
+            // Inner vibrant orange-red to golden-orange circle
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFFFF4B24),
+                                Color(0xFFFF681E),
+                                Color(0xFFFF9F34),
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "Combo",
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "x$shownCount",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontStyle = FontStyle.Italic,
+                        style = TextStyle(
+                            shadow = textShadow,
+                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        ),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Combo",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        lineHeight = 19.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontStyle = FontStyle.Italic,
+                        style = TextStyle(
+                            shadow = textShadow,
+                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        ),
+                    )
+                }
+            }
+
+            // Rounded white circular progress arc around the orange circle
+            Canvas(modifier = Modifier.fillMaxSize().padding(4.5.dp)) {
+                val strokePx = 3.5.dp.toPx()
+                val arcSize = Size(size.width - strokePx, size.height - strokePx)
+                val topLeft = Offset(strokePx / 2f, strokePx / 2f)
+
+                drawArc(
+                    color = Color.White.copy(alpha = 0.16f),
+                    startAngle = 0f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round),
                 )
-                Canvas(Modifier.fillMaxSize().padding(8.dp)) {
-                    val stroke = Stroke(width = 3.5f)
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.35f),
-                        radius = size.minDimension / 2 - stroke.width / 2,
-                        style = stroke,
+
+                val clampedProgress = progress.coerceIn(0f, 1f)
+                if (clampedProgress > 0f) {
+                    drawArc(
+                        color = Color.White,
+                        startAngle = -90f,
+                        sweepAngle = 360f * clampedProgress,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = strokePx, cap = StrokeCap.Round),
                     )
                 }
             }
@@ -699,4 +791,3 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
         )
     }
 }
-
