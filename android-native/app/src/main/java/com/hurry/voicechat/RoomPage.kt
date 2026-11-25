@@ -2449,7 +2449,9 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
             }
             
             // Task Image reverted back to bottom right above games
-            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 12.dp).padding(top=1.dp).size(52.dp).clickable { showRoomTask=true })
+            if (accountId == roomOwnerAccountId) {
+                TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 12.dp).padding(top=1.dp).size(52.dp).clickable { showRoomTask=true })
+            }
             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(50.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
