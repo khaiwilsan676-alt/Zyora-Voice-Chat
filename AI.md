@@ -2256,3 +2256,10 @@ Current documentation does not certify that all historical features are build-, 
 - Gift video playback now uses Media3 ExoPlayer with the existing bounded disk cache used by seat emoji videos, shorter network timeouts, TextureView rendering, preserved fade/pure effects, and player release on dismissal/completion/error.
 - No gift artwork, video assets, animation styling, Lucky reward/debit rules, or room layout changes intended.
 - Status: code committed; APK build and on-device playback verification pending.
+
+
+## 2026-11-25 — Lucky Bag expiry and sender self-claim
+- The room's existing Lucky Bag image keeps its current top-right position; its tiny countdown remains directly beneath the image and counts down from the server-provided five-minute expiry. No room UI positions were changed.
+- The server refunds the full bag amount to the sender only when the five-minute window expires with zero claims; claimed rewards are not refunded.
+- Removed the server-side rule that blocked the sender from opening and claiming their own Lucky Bag. Normal duplicate-claim, expiry, and recipient-limit checks remain.
+- Server commit: `1f68a02f17c9496ac83bf7f4021357deb82df943`. Render deployment and APK/device verification remain pending.
