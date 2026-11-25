@@ -225,29 +225,40 @@ fun GiftPicker(
     }
 
     val parseMultiplier: (String) -> Int = { m -> m.toIntOrNull() ?: 1 }
-    val selectedGiftObj = currentGifts.find { it.id == selectedGift }
-    val totalCost = selectedGiftObj?.let { it.coins * parseMultiplier(selectedMultiplier) } ?: 0
+    // Keep the live gift amount derived directly from selection state. The
+    // recipient snapshots are memoized separately so changing the multiplier
+    // does not repeatedly rebuild room/user lookups on every rapid tap.
+    val selectedGiftObj = remember(currentGifts, selectedGift) {
+        currentGifts.firstOrNull { it.id == selectedGift }
+    }
+    val multiplierValue = remember(selectedMultiplier) { parseMultiplier(selectedMultiplier) }
+    val totalCost = remember(selectedGiftObj, multiplierValue) {
+        selectedGiftObj?.let { it.coins * multiplierValue } ?: 0
+    }
 
-    // Build one-pass lookups instead of repeatedly scanning the full user/seat
-    // lists for every recipient. These are rebuilt from the current snapshots so
-    // in-place room seat updates cannot leave stale cached recipients on screen.
-    val roomUsersById = roomUsers.associateBy { it.accountId }
-    val seatsById = seats.associateBy { it.accountId }
-    val recipientIds = when {
-        directMode && directRecipient != null -> listOf(directRecipient.accountId)
-        selectedTargets.isNotEmpty() -> selectedTargets
-        roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
-        else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
-    }.asSequence().filter { it.isNotBlank() }.distinct().toList()
+    val roomUsersById = remember(roomUsers) { roomUsers.associateBy { it.accountId } }
+    val seatsById = remember(seats) { seats.associateBy { it.accountId } }
+    val recipientIds = remember(directMode, directRecipient, selectedTargets, roomUsers, seats) {
+        when {
+            directMode && directRecipient != null -> listOf(directRecipient.accountId)
+            selectedTargets.isNotEmpty() -> selectedTargets
+            roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
+            else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
+        }.asSequence().filter { it.isNotBlank() }.distinct().toList()
+    }
     val recipientCount = recipientIds.size
-    val firstRecipient = if (directMode) directRecipient else recipientIds.firstNotNullOfOrNull { id ->
-        roomUsersById[id]?.let {
-            GiftPickerRoomUser(it.accountId, it.name, it.image)
-        } ?: seatsById[id]?.let {
-            GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
+    val firstRecipient = remember(directMode, directRecipient, recipientIds, roomUsersById, seatsById) {
+        if (directMode) directRecipient else recipientIds.firstNotNullOfOrNull { id ->
+            roomUsersById[id]?.let {
+                GiftPickerRoomUser(it.accountId, it.name, it.image)
+            } ?: seatsById[id]?.let {
+                GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
+            }
         }
     }
-    val totalSendCost = totalCost.toLong() * max(1, recipientCount)
+    val totalSendCost = remember(totalCost, recipientCount) {
+        totalCost.toLong() * max(1, recipientCount)
+    }
     val canAfford = totalCost > 0 && recipientCount > 0 && totalSendCost <= walletBalance
     val isLuckyGiftTab = activeTab == "Lucky"
 
