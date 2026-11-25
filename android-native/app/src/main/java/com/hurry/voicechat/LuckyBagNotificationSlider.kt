@@ -45,6 +45,38 @@ import io.socket.client.Socket
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 
+
+private fun luckyBagClaimName(claim: JSONObject): String {
+    val user = claim.optJSONObject("user") ?: claim.optJSONObject("profile") ?: JSONObject()
+    return listOf("userName", "name", "displayName", "username", "fullName")
+        .asSequence()
+        .map { key -> claim.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
+        .firstOrNull { it.isNotBlank() }
+        ?: listOf("name", "displayName", "username", "fullName")
+            .asSequence().map { key -> user.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
+            .firstOrNull { it.isNotBlank() }
+        ?: claim.optString("userId").takeIf { it.isNotBlank() && it != "null" }
+        ?: "Unknown user"
+}
+
+private fun luckyBagClaimImage(claim: JSONObject): String {
+    val user = claim.optJSONObject("user") ?: claim.optJSONObject("profile") ?: JSONObject()
+    return (listOf("userImage", "image", "avatar", "photoURL", "photoUrl", "dp", "picture", "profileImage")
+        .asSequence()
+        .map { key -> claim.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
+        .firstOrNull { it.isNotBlank() }
+        ?: listOf("image", "avatar", "photoURL", "photoUrl", "dp", "picture", "profileImage")
+            .asSequence().map { key -> user.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
+            .firstOrNull { it.isNotBlank() }
+        ?: "").let { value ->
+            when {
+                value.isBlank() -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png"
+                value.startsWith("/") -> "https://zyora-server.onrender.com$value"
+                else -> value
+            }
+        }
+}
+
 private const val LUCKY_BAG_SOCKET_URL = "https://zyora-server.onrender.com"
 private const val LUCKY_BAG_CARD_PNG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_182446.png"
 private const val LUCKY_BAG_COIN_PNG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png"
@@ -629,19 +661,19 @@ fun LuckyBagOpenConfirmCards(
                                                     val id = claim.optString("userId")
                                                     onOpenPublicProfile(RoomProfileUser(
                                                         id = id, uid = id, accountId = id,
-                                                        name = claim.optString("userName").ifBlank { "User" },
-                                                        image = claim.optString("userImage")
+                                                        name = luckyBagClaimName(claim),
+                                                        image = luckyBagClaimImage(claim)
                                                     ))
                                                 },
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             AsyncImage(
-                                                model = claim.optString("userImage").ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                                                model = luckyBagClaimImage(claim),
                                                 contentDescription = "Lucky Bag opener",
                                                 modifier = Modifier.size(34.dp).clip(CircleShape),
                                                 contentScale = ContentScale.Crop
                                             )
-                                            Text(claim.optString("userName").ifBlank { "User" }, color = Color(0xFF7B5738),
+                                            Text(luckyBagClaimName(claim), color = Color(0xFF7B5738),
                                                 fontSize = 12.sp, fontWeight = FontWeight.Medium,
                                                 modifier = Modifier.padding(start = 9.dp, end = 6.dp).weight(1f),
                                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
