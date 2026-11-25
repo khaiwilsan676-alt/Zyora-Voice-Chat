@@ -2277,3 +2277,9 @@ Current documentation does not certify that all historical features are build-, 
 - Daily reward durations are now explicit: Day 3 frame ×2 days, Day 5 frame ×1 day, Day 6 theme ×2 days, and Day 7 frame/theme ×3 days.
 - Server grants now calculate real expiry, do not extend expiry on duplicate same-day POST retries, migrate legacy permanent daily rewards using their original grant timestamp, and allow the same reward item ID to be granted again after expiry.
 - Native BagPage displays the stored duration and remaining days instead of claiming these rewards are permanent.
+
+
+## 2026-11-25 — Prevent repeated emoji sticker downloads
+- `android-native/app/src/main/java/com/hurry/voicechat/Emojipicker.kt`: added a persistent app-cache disk layer for emoji sticker image bytes, keyed by a SHA-256 URL hash. The existing 12 MiB thread-safe bitmap LRU remains the fast in-memory layer; after the first successful fetch, reopening the picker decodes from the local cache instead of requesting every GIF again.
+- Preserved the existing emoji catalog, picker dimensions/layout, click behavior, seat emoji/video renderer, and static-first-frame GIF behavior. Failed/empty downloads are not stored as valid cache entries.
+- Status: **Implemented in repository**. Native APK CI and repeated-open/offline behavior on Redmi 14C remain to be verified; no device test is claimed.
