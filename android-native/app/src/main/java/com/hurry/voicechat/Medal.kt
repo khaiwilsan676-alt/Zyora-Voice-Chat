@@ -1,5 +1,6 @@
 package com.hurry.voicechat
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -16,7 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -28,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val RAW_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val String.fullUrl: String get() = if (this.startsWith("http")) this else RAW_URL + this.removePrefix("/")
@@ -405,7 +410,7 @@ fun MedalScreen(onBack: () -> Unit) {
             }
         }
 
-        // FULL SCREEN MEDAL DETAIL DIALOG (PLAIN IMAGE, NO ANIMATION)
+        // FULL SCREEN MEDAL DETAIL DIALOG (GOLDEN SHINE BG + PLAIN IMAGE)
         if (selectedMedal != null && displayMedal != null) {
             MedalDetailDialog(
                 displayMedal = displayMedal,
@@ -617,11 +622,13 @@ fun MedalDetailDialog(
             ) {
                 Spacer(modifier = Modifier.height(64.dp))
 
-                // Medal Image (Bina kisi animation ke)
+                // Medal Image with Golden Shine behind (Image pe koi animation nahi)
                 Box(
                     modifier = Modifier.size(310.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    GoldenSunburstEffect(modifier = Modifier.fillMaxSize())
+
                     Box(
                         modifier = Modifier.size(215.dp),
                         contentAlignment = Alignment.Center
@@ -754,6 +761,77 @@ fun MedalDetailDialog(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
                     modifier = Modifier.padding(bottom = 26.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "sunburst")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 28000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sunburstRotation"
+    )
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.80f
+        val rayCount = 18
+
+        // Soft Golden Radial Glow
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFDF7A).copy(alpha = 0.45f),
+                    Color(0xFFD9A12B).copy(alpha = 0.20f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = radius * 0.85f
+            ),
+            radius = radius * 0.85f,
+            center = center
+        )
+
+        // Rotating Golden Rays
+        rotate(degrees = rotation, pivot = center) {
+            val stepAngle = 360f / rayCount
+            for (i in 0 until rayCount) {
+                val startDeg = i * stepAngle
+                val halfSpread = stepAngle * 0.28f
+                val rad1 = Math.toRadians((startDeg - halfSpread).toDouble())
+                val rad2 = Math.toRadians((startDeg + halfSpread).toDouble())
+
+                val path = Path().apply {
+                    moveTo(center.x, center.y)
+                    lineTo(
+                        center.x + (radius * cos(rad1)).toFloat(),
+                        center.y + (radius * sin(rad1)).toFloat()
+                    )
+                    lineTo(
+                        center.x + (radius * cos(rad2)).toFloat(),
+                        center.y + (radius * sin(rad2)).toFloat()
+                    )
+                    close()
+                }
+                drawPath(
+                    path = path,
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFE694).copy(alpha = 0.58f),
+                            Color(0xFFE0A82E).copy(alpha = 0.28f),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = radius
+                    )
                 )
             }
         }
