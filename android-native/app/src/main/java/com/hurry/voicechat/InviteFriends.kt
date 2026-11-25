@@ -179,7 +179,10 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     var helpRules by remember { mutableStateOf(false) }
 
     fun share(platform: String) {
-        inviteScope.launch { HurryApi.recordInviteShare(code, inviteIdToken, platform) }
+        inviteScope.launch {
+            val tracked = HurryApi.recordInviteShare(code, inviteIdToken, platform)
+            if (tracked?.optBoolean("success") == true) inviteShareCount = tracked.optInt("shareCount", inviteShareCount + 1)
+        }
         val trackedInviteLink = "$inviteLink&source=$platform"
         val shareText = "Join me on Zyora! Download using my invite link: $trackedInviteLink"
         try {
