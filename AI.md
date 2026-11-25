@@ -2231,3 +2231,10 @@ Current documentation does not certify that all historical features are build-, 
 - RoomPage `gift_video_play` receiver now resolves relative gift video paths to the Zyora GitHub `public/` Raw URL instead of the Vercel host, matching GiftPicker's asset resolver.
 - Preserved the existing gift video overlay, top/bottom fade, gift definitions, prices, and send flow.
 - The six Hot MP4 assets must exist in `public/` with their configured filenames for playback; code URL resolution alone cannot supply missing media files.
+
+
+## 2026-11-25 — Consolidate Lucky gift animation controller
+- `android-native/app/src/main/java/com/hurry/voicechat/LuckyAnimation.kt`: removed the second center-launching gift-flight implementation that was being spawned inside `LuckyAnimationNotificationSlider`.
+- The room now uses one seat-flight renderer: `LuckyGiftFlightOverlay`, with its duration, arc height, and image size controlled by the constants in `LuckyAnimation.kt`. `RoomPage.kt` remains responsible for detecting the gift event, resolving the recipient seat, and triggering that single animation.
+- Kept the notification strip, reward badge, combo button, combo timing, gift send flow, and room UI unchanged.
+- Status: code committed; native APK build and on-device animation verification are still pending.
