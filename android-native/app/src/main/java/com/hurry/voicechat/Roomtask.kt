@@ -121,7 +121,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val taskRoomId = remember(roomId) { roomId.trim() }
-    var taskStatuses by remember { mutableStateOf>(emptyMap()) }
+    var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
     var claimingTask by remember { mutableIntStateOf(0) }
     var pendingShareTask by remember { mutableIntStateOf(0) }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
@@ -177,8 +177,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                     item.optBoolean("complete"), item.optBoolean("claimed"),
                                     (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
                                 )
-                            }
-                        }.toMap()
+                            }                        }.toMap()
                     }
                     lastError = null
                     return@LaunchedEffect
@@ -357,8 +356,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                 Column(
                     modifier = Modifier.fillMaxWidth().offset(y = (-25).dp).zIndex(1f),
                     verticalArrangement = Arrangement.spacedBy((-60).dp)
-                ) {
-                    tasks.forEach { task ->
+                ) {                    tasks.forEach { task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)) {
 
                             AsyncImage(
@@ -537,8 +535,7 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = Color.Transparent,
                                                 disabledContainerColor = Color.Transparent,
-                                                disabledContentColor = Color(0xFFB8B8B8)
-                                            )
+                                                disabledContentColor = Color(0xFFB8B8B8)                                            )
                                         ) {
                                             if (isClaimed) {
                                                 Text("CLAIMED", color = Color.Unspecified, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
