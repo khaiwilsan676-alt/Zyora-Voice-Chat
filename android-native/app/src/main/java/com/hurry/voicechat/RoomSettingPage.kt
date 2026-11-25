@@ -436,9 +436,10 @@ fun RoomSettingPage(
         }
     }
 
-    val themeItems = remember(customTheme, storeRoomThemes) {
-        (if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) else emptyList()) +
-            roomThemeChoices + storeRoomThemes
+    // Phone-uploaded custom image is no longer listed as an applied room theme.
+    // Keep built-in/store themes and the Custom upload tile available.
+    val themeItems = remember(storeRoomThemes) {
+        roomThemeChoices + storeRoomThemes
     }
 
     LaunchedEffect(storeRoomThemes) {
@@ -649,9 +650,12 @@ fun RoomSettingPage(
         "theme" -> ThemeFullScreen(
             current = state.theme,
             items = themeItems,
-            hasCustom = customTheme.isNotBlank(),
             onBack = { sheet = "" },
-            onPick = { id -> performSave(state.copy(theme = id)); sheet = "" },
+            onPick = { id ->
+                customTheme = ""
+                performSave(state.copy(theme = id, customTheme = ""))
+                sheet = ""
+            },
             onUploadCustom = {
                 pendingCustomThemeImage = ""
                 pendingCustomThemeName = ""
@@ -1339,7 +1343,6 @@ private fun BottomSheetModal(
 private fun ThemeFullScreen(
     current: String,
     items: List<RoomThemeChoice>,
-    hasCustom: Boolean,
     onBack: () -> Unit,
     onPick: (String) -> Unit,
     onUploadCustom: () -> Unit
@@ -1404,27 +1407,25 @@ private fun ThemeFullScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                if (!hasCustom) {
-                    item {
-                        Box(
-                            Modifier.fillMaxWidth().aspectRatio(0.86f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .dashedBorder(gray300, 1.dp, 8.dp)
-                                .background(gray50)
-                                .clickable(onClick = onUploadCustom),
-                            contentAlignment = Alignment.Center
+                item {
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(0.86f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .dashedBorder(gray300, 1.dp, 8.dp)
+                            .background(gray50)
+                            .clickable(onClick = onUploadCustom),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text("+", color = gray400, fontSize = 24.sp)
-                                Text(
-                                    "Custom", color = gray500, fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(top = 2.dp)
-                                )
-                            }
+                            Text("+", color = gray400, fontSize = 24.sp)
+                            Text(
+                                "Custom", color = gray500, fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
                         }
                     }
                 }
