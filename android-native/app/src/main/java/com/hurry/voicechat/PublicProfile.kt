@@ -253,7 +253,7 @@ fun PublicProfileScreen(
     var selectedAvatarUri by remember(profileCacheKey, cachedProfile) {
         mutableStateOf<String?>(sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { key -> cachedProfile?.optString(key, "").orEmpty().trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" } ?: sequenceOf(targetUser?.image, targetUser?.photo).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" })
     }
-    var receivedGifts by remember { mutableStateOf(listOf<String>()) } 
+    var receivedGifts by remember { mutableStateOf(listOf<Pair<String, Int>>()) } 
 
     var showEditSheet by remember { mutableStateOf(false) }
     var showBackgroundLevelHint by remember { mutableStateOf(false) }
@@ -425,7 +425,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerImageTag", "ownerImageTagExpiresAt", "familyRewardTagImage", "familyRewardTagExpiresAt", "familyRewardTagRank", "familyRewardTagWeekStart", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerImageTag", "ownerImageTagExpiresAt", "familyRewardTagImage", "familyRewardTagExpiresAt", "familyRewardTagRank", "familyRewardTagWeekStart", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement", "receivedGifts")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -517,6 +517,17 @@ fun PublicProfileScreen(
         
         val albums = ProfilePersistence.stringList(merged.optString("albumImages", ""))
         albumImages = albums
+
+        receivedGifts = runCatching {
+            val giftArray = merged.optJSONArray("receivedGifts")
+                ?: org.json.JSONArray(merged.optString("receivedGifts", "[]"))
+            (0 until giftArray.length()).mapNotNull { index ->
+                val gift = giftArray.optJSONObject(index) ?: return@mapNotNull null
+                val image = gift.optString("image", "").trim()
+                val count = gift.optInt("count", 0)
+                if (image.isNotBlank() && count > 0) image to count else null
+            }.distinctBy { it.first }
+        }.getOrDefault(emptyList())
 
         val covers = ProfilePersistence.stringList(merged.optString("coverPhotos", ""))
         if (covers.isNotEmpty()) {
@@ -1016,9 +1027,34 @@ fun PublicProfileScreen(
                     Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Gift")
                         if (receivedGifts.isNotEmpty()) {
-                            LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val giftRowsHeight = ((receivedGifts.size + 2) / 3 * 88).coerceAtMost(264)
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(3),
+                                modifier = Modifier.fillMaxWidth().height(giftRowsHeight.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                userScrollEnabled = receivedGifts.size > 9
+                            ) {
                                 items(receivedGifts.size) { idx ->
-                                    AsyncImage(model = profileAsset(receivedGifts[idx]), contentDescription = "Gift", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                                    val (giftImage, giftCount) = receivedGifts[idx]
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = profileAsset(giftImage),
+                                            contentDescription = "Received gift",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.size(62.dp)
+                                        )
+                                        Text(
+                                            text = "×$giftCount",
+                                            color = Color.Black,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
                                 }
                             }
                         } else {
