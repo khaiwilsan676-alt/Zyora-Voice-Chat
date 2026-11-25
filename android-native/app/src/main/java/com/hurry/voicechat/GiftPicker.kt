@@ -151,7 +151,10 @@ private val standardGifts = listOf(
 
 private fun giftAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
-    return "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
+    // Resolve native gift media directly from the committed public assets.
+    // The previous Vercel host could serve a stale deployment for newly added files.
+    return "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" +
+        path.trimStart('/')
 }
 
 private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
