@@ -77,20 +77,44 @@ fun CustomStaticImage(url: String, contentDescription: String, modifier: Modifie
         if (bitmap == null) {
             val loadedBitmap = withContext(Dispatchers.IO) {
                 try {
-                    val connection = URL(url).openConnection().apply {
-                        connectTimeout = 7_000
-                        readTimeout = 9_000
-                        useCaches = true
+                    // Persist sticker bytes so reopening the picker does not download them again.
+                    val cacheDir = File(context.cacheDir, "emoji-sticker-images").apply { mkdirs() }
+                    val cacheName = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(url.toByteArray(Charsets.UTF_8))
+                        .joinToString("") { "%02x".format(it) }
+                    val cachedFile = File(cacheDir, cacheName)
+                    if (!cachedFile.isFile || cachedFile.length() == 0L) {
+                        val tempFile = File(cacheDir, cacheName + ".tmp")
+                        try {
+                            val connection = URL(url).openConnection().apply {
+                                connectTimeout = 7_000
+                                readTimeout = 9_000
+                                useCaches = true
+                            }
+                            connection.getInputStream().use { input ->
+                                tempFile.outputStream().buffered().use { output -> input.copyTo(output) }
+                            }
+                            if (tempFile.length() > 0L) {
+                                if (!tempFile.renameTo(cachedFile)) {
+                                    tempFile.copyTo(cachedFile, overwrite = true)
+                                    tempFile.delete()
+                                }
+                            }
+                        } finally {
+                            if (tempFile.exists()) tempFile.delete()
+                        }
                     }
-                    // Keep the existing static-first-frame behavior for GIF stickers.
-                    val decoded = connection.getInputStream().use { input ->
-                        BitmapFactory.decodeStream(input)
-                    }
+                    // Preserve the existing static-first-frame rendering for GIF stickers.
+                    val decoded = if (cachedFile.isFile && cachedFile.length() > 0L) {
+                        BitmapFactory.decodeFile(cachedFile.absolutePath)
+                    } else null
                     if (decoded != null) staticBitmapCache.put(url, decoded)
                     decoded
                 } catch (_: java.io.IOException) {
                     null
                 } catch (_: SecurityException) {
+                    null
+                } catch (_: java.security.NoSuchAlgorithmException) {
                     null
                 }
             }
