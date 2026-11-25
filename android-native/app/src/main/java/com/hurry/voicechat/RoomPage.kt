@@ -751,6 +751,7 @@ fun RoomPage(
     var showRoomCupOnline by remember { mutableStateOf(false) }
     var showSettings by remember{mutableStateOf(false)}
     var showGift by remember{mutableStateOf(false)}
+    var selectedGiftRecipient by remember { mutableStateOf<GiftPickerRoomUser?>(null) }
     var showEmoji by remember{mutableStateOf(false)}
     var showGames by remember{mutableStateOf(false)}
     var showRoomTask by remember{mutableStateOf(false)}
@@ -2977,7 +2978,9 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         }
         if(showGift) GiftPicker(
             open = true,
-            onClose = { showGift = false },
+            onClose = { showGift = false; selectedGiftRecipient = null },
+            directMode = selectedGiftRecipient != null,
+            directRecipient = selectedGiftRecipient,
             seats = seats,
             roomId = roomId,
             currentUserAccountId = accountId,
@@ -3066,6 +3069,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 isCurrentUser = profileId == accountId,
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
                 canModerate = currentUserSeatIds.any { it == roomId || it == roomOwnerAccountId || it in roomAdminIds },
+                onThirdAction = {
+                    selectedGiftRecipient = GiftPickerRoomUser(profileId, profileMessage.sender.ifBlank { "User" }, profileMessage.senderImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL })
+                    selectedChatProfile = null
+                    showGift = true
+                },
                 onClose = { selectedChatProfile = null },
                 onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
@@ -3256,6 +3264,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 isCurrentUser = profileSeat.accountId == accountId,
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
                 canModerate = currentUserSeatIds.any { it == roomId || it == roomOwnerAccountId || it in roomAdminIds },
+                onThirdAction = {
+                    selectedGiftRecipient = GiftPickerRoomUser(profileSeat.accountId, profileSeat.userName.ifBlank { "User" }, profileSeat.userImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL })
+                    selectedSeat = 0
+                    showGift = true
+                },
                 onClose = { selectedSeat = 0 },
                 onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
