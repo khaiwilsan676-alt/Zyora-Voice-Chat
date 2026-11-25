@@ -397,13 +397,13 @@ if (showRules) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     AsyncImage(
-                                        model = claim.optString("userImage").ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                                        model = luckyBagClaimImage(claim),
                                         contentDescription = null,
                                         modifier = Modifier.size(38.dp).clip(RoundedCornerShape(50)),
                                         contentScale = ContentScale.Crop
                                     )
                                     Text(
-                                        claim.optString("userName").ifBlank { "User" },
+                                        luckyBagClaimName(claim),
                                         color = Color(0xFF49413B), fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(start = 10.dp).weight(1f), maxLines = 1
                                     )
