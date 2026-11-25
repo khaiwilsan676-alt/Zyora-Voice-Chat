@@ -2271,3 +2271,9 @@ Current documentation does not certify that all historical features are build-, 
 - MainActivity: tapping the global kept-room mini avatar now dismisses an overlaid Public Profile (and other covering surfaces) before restoring the already-connected room, so the room opens immediately without requiring Back.
 - RoomPage: chat-opened Room Profile resolves a missing senderAccountId only when exactly one occupied seat has the same sender name; mute seat lookup is trimmed and case-insensitive. Existing owner/admin moderation permissions and seat mute socket actions are preserved.
 - No visual layout, colors, or existing seat-profile actions were changed. Native APK build and real-device verification remain pending.
+
+## 2026-11-25 — Daily Check-in frame/theme expiry
+- Root cause: Zyora-Server's daily-check-in grant wrote frame/theme inventory as `PERMANENT` with a year-2100 expiry, while native BagPage also hardcoded every reward label to `Permanent reward`.
+- Daily reward durations are now explicit: Day 3 frame ×2 days, Day 5 frame ×1 day, Day 6 theme ×2 days, and Day 7 frame/theme ×3 days.
+- Server grants now calculate real expiry, do not extend expiry on duplicate same-day POST retries, migrate legacy permanent daily rewards using their original grant timestamp, and allow the same reward item ID to be granted again after expiry.
+- Native BagPage displays the stored duration and remaining days instead of claiming these rewards are permanent.
