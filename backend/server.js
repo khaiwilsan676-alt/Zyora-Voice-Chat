@@ -40,6 +40,39 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "8mb" }));
 app.use(express.urlencoded({ extended: false, limit: "2mb" }));
 
+async function attachReceivedGifts(users) {
+  if (!Array.isArray(users) || users.length === 0 || !db) return users || [];
+  const identities = [...new Set(users.flatMap((user) =>
+    [user.uid, user.id, user.appLongId, user.accountId, user.accountNumber, user.displayUserNumber]
+      .map((value) => String(value || "").trim()).filter(Boolean)
+  ))];
+  if (identities.length === 0) return users;
+  const records = await db.collection("received_gifts").find({
+    recipientId: { $in: identities }
+  }).toArray();
+  const byRecipient = new Map();
+  for (const record of records) {
+    const key = String(record.recipientId || "");
+    if (!byRecipient.has(key)) byRecipient.set(key, []);
+    const count = Array.isArray(record.transferIds) ? record.transferIds.length : Number(record.count || 0);
+    if (count > 0 && String(record.giftImage || "").trim()) {
+      byRecipient.get(key).push({
+        name: String(record.giftName || "Gift"),
+        image: String(record.giftImage),
+        count
+      });
+    }
+  }
+  return users.map((user) => {
+    const ids = [user.uid, user.id, user.appLongId, user.accountId, user.accountNumber, user.displayUserNumber]
+      .map((value) => String(value || "").trim()).filter(Boolean);
+    const gifts = ids.flatMap((id) => byRecipient.get(id) || []);
+    const unique = new Map();
+    gifts.forEach((gift) => unique.set(gift.image, gift));
+    return { ...user, receivedGifts: [...unique.values()] };
+  });
+}
+
 const requestRate = new Map();
 app.use((req, res, next) => {
   const now = Date.now();
@@ -1029,8 +1062,9 @@ app.get("/api/users", async (req, res) => {
             );
           }
           if (exactUsers.length) {
-            res.set("Cache-Control", "private, max-age=5, stale-while-revalidate=15");
-            return res.json({ users: exactUsers, user: exactUsers[0] });
+            const enrichedUsers = await attachReceivedGifts(exactUsers);
+            res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+            return res.json({ users: enrichedUsers, user: enrichedUsers[0] });
           }
         }
       }
@@ -1102,9 +1136,11 @@ app.get("/api/users", async (req, res) => {
         return res.status(404).json({ error: "User not found" });
       }
 
+      const enrichedUsers = await attachReceivedGifts(filteredUsers);
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
       return res.json({
-        users: filteredUsers,
-        user: filteredUsers[0] || null,
+        users: enrichedUsers,
+        user: enrichedUsers[0] || null,
       });
     }
 
@@ -3357,6 +3393,36 @@ io.on("connection", (socket) => {
       for (const recipientId of validRecipients) {
         await applyCoinTransferDelta(recipientId, diamondCredit, eventId,
           "coinTransferDiamondCredits", "diamonds", 1);
+        const recipientProfile = await db.collection("users").findOne({
+          $or: [
+            { uid: recipientId }, { id: recipientId }, { appLongId: recipientId },
+            { accountId: recipientId }, { accountNumber: recipientId },
+            { displayUserNumber: recipientId }, { displayAccountNumber: recipientId }
+          ]
+        });
+        const giftOwnerId = String(recipientProfile?.uid || recipientProfile?.id ||
+          recipientProfile?.appLongId || recipientId);
+        const giftNameValue = String(giftName || "Gift").trim().slice(0, 100) || "Gift";
+        const giftImageValue = String(giftImage || "").trim().slice(0, 2048);
+        if (giftImageValue) {
+          const giftKey = crypto.createHash("sha256")
+            .update(giftOwnerId + ":" + giftNameValue + ":" + giftImageValue)
+            .digest("hex");
+          await db.collection("received_gifts").updateOne(
+            { _id: giftKey },
+            {
+              $setOnInsert: {
+                recipientId: giftOwnerId,
+                giftName: giftNameValue,
+                giftImage: giftImageValue,
+                createdAt: Date.now()
+              },
+              $addToSet: { transferIds: eventId },
+              $set: { updatedAt: Date.now() }
+            },
+            { upsert: true }
+          );
+        }
       }
       if (luckyReturnAmount > 0) {
         await applyCoinTransferDelta(sender, luckyReturnAmount, eventId,
