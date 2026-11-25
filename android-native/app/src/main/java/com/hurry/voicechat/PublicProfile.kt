@@ -256,6 +256,13 @@ fun PublicProfileScreen(
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } 
 
     var showEditSheet by remember { mutableStateOf(false) }
+    var showBackgroundLevelHint by remember { mutableStateOf(false) }
+    LaunchedEffect(showBackgroundLevelHint) {
+        if (showBackgroundLevelHint) {
+            kotlinx.coroutines.delay(1800)
+            showBackgroundLevelHint = false
+        }
+    }
     var showNameScreen by remember { mutableStateOf(false) }
     var showAgeScreen by remember { mutableStateOf(false) }
     var showBioScreen by remember { mutableStateOf(false) }
@@ -321,9 +328,6 @@ fun PublicProfileScreen(
     }
     val albumPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { picked -> if (albumImages.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); albumImages = albumImages + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("albumImages" to org.json.JSONArray(albumImages).toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } } }
-    }
-    val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { picked -> if (coverPhotos.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); coverPhotos = coverPhotos + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString(), "coverPhoto" to saved); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } } }
     }
     
     val followers = followersCount
@@ -1442,7 +1446,7 @@ fun PublicProfileScreen(
                                     modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Box(Modifier.fillMaxSize().clickable { backgroundPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
+                                    Box(Modifier.fillMaxSize().clickable { showBackgroundLevelHint = true }, contentAlignment = Alignment.Center) {
                                         Text("+", fontSize = 30.sp, color = Color.Gray, fontWeight = FontWeight.Light)
                                     }
                                 }
@@ -1476,6 +1480,17 @@ fun PublicProfileScreen(
                                         Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(12.dp))
                                     }
                                 }
+                            }
+                        }
+                        if (showBackgroundLevelHint) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.Start)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color.Black.copy(alpha = 0.3f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("Reach Level 25", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
