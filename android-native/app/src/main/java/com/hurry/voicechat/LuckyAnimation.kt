@@ -57,6 +57,14 @@ private const val LUCKY_REWARD_BADGE_URL =
 private const val LUCKY_COIN_ICON_URL =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png"
 
+// ============================================================
+// LUCKY GIFT ANIMATION CONTROLS — keep all Lucky motion tuning here
+// ============================================================
+private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 430
+private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
+private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
+private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
+
 private fun luckyAnimationAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
     return "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
@@ -540,7 +548,7 @@ fun LuckyAnimationComboButton(
         initialValue = 1f,
         targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
-            tween(900, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
+            tween(LUCKY_COMBO_PULSE_DURATION_MS, easing = CubicBezierEasing(0.2f, 0.8f, 0.4f, 1f)),
             RepeatMode.Restart,
         ),
         label = "pulse",
@@ -612,3 +620,62 @@ fun LuckyAnimationComboButton(
         }
     }
 }
+
+// ============================================================
+// LUCKY GIFT SEAT FLIGHT — animation implementation lives here
+// ============================================================
+data class LuckyGiftFlight(
+    val id: String,
+    val image: String,
+    val start: Offset,
+    val target: Offset,
+    val rootCenter: Offset
+)
+
+@Composable
+fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
+    val progress = remember(flight.id) { Animatable(0f) }
+    val density = LocalDensity.current
+    val imageSizeDp = LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP.dp
+    val imageSizePx = with(density) { imageSizeDp.toPx() }
+    val arcHeightPx = with(density) { LUCKY_SEAT_FLIGHT_ARC_DP.dp.toPx() }
+
+    // One continuous curved flight directly to the recipient's seat.
+    LaunchedEffect(flight.id) {
+        progress.animateTo(
+            1f,
+            animationSpec = tween(
+                durationMillis = LUCKY_SEAT_FLIGHT_DURATION_MS,
+                easing = FastOutSlowInEasing
+            )
+        )
+        onFinished()
+    }
+
+    val p = progress.value.coerceIn(0f, 1f)
+    val x = flight.start.x + (flight.target.x - flight.start.x) * p
+    val y = flight.start.y + (flight.target.y - flight.start.y) * p -
+        sin(p * Math.PI).toFloat() * arcHeightPx
+    val scale = when {
+        p < 0.18f -> 0.28f + (0.82f * (p / 0.18f))
+        p > 0.78f -> 1.10f - (0.62f * ((p - 0.78f) / 0.22f))
+        else -> 1.10f
+    }
+
+    Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
+        AsyncImage(
+            model = flight.image,
+            contentDescription = "Lucky gift animation",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .offset { IntOffset((x - imageSizePx / 2f).roundToInt(), (y - imageSizePx / 2f).roundToInt()) }
+                .size(imageSizeDp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = if (p < 0.04f) p / 0.04f else if (p > 0.94f) (1f - p) / 0.06f else 1f
+                }
+        )
+    }
+}
+
