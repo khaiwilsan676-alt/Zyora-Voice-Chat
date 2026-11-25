@@ -157,6 +157,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     var showDetailsPage by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     var inviteCount by remember { mutableIntStateOf(0) }
+    var inviteShareCount by remember { mutableIntStateOf(0) }
     var inviteTotalRewards by remember { mutableLongStateOf(0L) }
     var invitePendingCoins by remember { mutableLongStateOf(0L) }
     val inviteScope = rememberCoroutineScope()
@@ -165,6 +166,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             val stats = HurryApi.inviteStats(code, inviteIdToken)
             if (stats != null && !stats.has("error")) {
                 inviteCount = stats.optInt("invitationCount", 0)
+                inviteShareCount = stats.optInt("shareCount", 0)
                 inviteTotalRewards = stats.optLong("totalRewards", 0L)
                 invitePendingCoins = stats.optLong("pendingCoins", 0L)
             }
@@ -177,7 +179,9 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     var helpRules by remember { mutableStateOf(false) }
 
     fun share(platform: String) {
-        val shareText = "Join me on Zyora! Download using my invite link: $inviteLink"
+        inviteScope.launch { HurryApi.recordInviteShare(code, inviteIdToken, platform) }
+        val trackedInviteLink = "$inviteLink&source=$platform"
+        val shareText = "Join me on Zyora! Download using my invite link: $trackedInviteLink"
         try {
             when (platform) {
                 "whatsapp" -> {
@@ -185,12 +189,12 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                     context.startActivity(intent)
                 }
                 "facebook" -> {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/sharer/sharer.php?u=" + Uri.encode(inviteLink)))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/sharer/sharer.php?u=" + Uri.encode(trackedInviteLink)))
                     context.startActivity(intent)
                 }
                 "copy" -> {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Invite link", inviteLink))
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Invite link", trackedInviteLink))
                     copied = true
                     Toast.makeText(context, "Link copied!", Toast.LENGTH_SHORT).show()
                 }
@@ -339,7 +343,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                             Modifier.align(Alignment.BottomStart).padding(start = 84.dp, bottom = vh * 10f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(inviteCount.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(inviteShareCount.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                             Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
                         }
 
@@ -453,11 +457,13 @@ private fun InviteDetailsCard(userId: String, idToken: String) {
     var inviteEvents by remember { mutableStateOf<List<org.json.JSONObject>>(emptyList()) }
     var weekStart by remember { mutableLongStateOf(0L) }
     var weeklyInvitations by remember { mutableIntStateOf(0) }
+    var weeklyShares by remember { mutableIntStateOf(0) }
     var weeklyRewards by remember { mutableLongStateOf(0L) }
     LaunchedEffect(userId, idToken) {
         val stats = HurryApi.inviteStats(userId, idToken) ?: return@LaunchedEffect
         weekStart = stats.optLong("weekStart", 0L)
         weeklyInvitations = stats.optInt("weeklyInvitationCount", 0)
+        weeklyShares = stats.optInt("weeklyShareCount", 0)
         weeklyRewards = stats.optLong("weeklyRewards", 0L)
         val array = stats.optJSONArray("events") ?: org.json.JSONArray()
         inviteEvents = (0 until array.length()).mapNotNull { array.optJSONObject(it) }
@@ -722,7 +728,7 @@ private fun InviteDetailsCard(userId: String, idToken: String) {
 
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Invitations: $weeklyInvitations", color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Shared: $weeklyShares", color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text("Weekly coins: $weeklyRewards", color = goldBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(12.dp))
