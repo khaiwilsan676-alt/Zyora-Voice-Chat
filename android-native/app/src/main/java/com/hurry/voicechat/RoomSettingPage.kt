@@ -436,8 +436,9 @@ fun RoomSettingPage(
         }
     }
 
-    val themeItems = remember(storeRoomThemes) {
-        roomThemeChoices + storeRoomThemes
+    val themeItems = remember(customTheme, storeRoomThemes) {
+        (if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) else emptyList()) +
+            roomThemeChoices + storeRoomThemes
     }
 
     LaunchedEffect(storeRoomThemes) {
@@ -648,8 +649,14 @@ fun RoomSettingPage(
         "theme" -> ThemeFullScreen(
             current = state.theme,
             items = themeItems,
+            hasCustom = customTheme.isNotBlank(),
             onBack = { sheet = "" },
-            onPick = { id -> customTheme = ""; performSave(state.copy(theme = id, customTheme = "")); sheet = "" }
+            onPick = { id -> performSave(state.copy(theme = id)); sheet = "" },
+            onUploadCustom = {
+                pendingCustomThemeImage = ""
+                pendingCustomThemeName = ""
+                sheet = "customized-theme"
+            }
         )
 
         "customized-theme" -> Dialog(
@@ -1332,12 +1339,12 @@ private fun BottomSheetModal(
 private fun ThemeFullScreen(
     current: String,
     items: List<RoomThemeChoice>,
+    hasCustom: Boolean,
     onBack: () -> Unit,
-    onPick: (String) -> Unit
+    onPick: (String) -> Unit,
+    onUploadCustom: () -> Unit
 ) {
-    var selectedTheme by remember(current, items) {
-        mutableStateOf(items.firstOrNull { it.id == current }?.id ?: items.firstOrNull()?.id.orEmpty())
-    }
+    var selectedTheme by remember(current) { mutableStateOf(current) }
     val expiringThemes = remember(items) { items.filter { it.expiresAt > 0L } }
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(expiringThemes) {
@@ -1397,6 +1404,30 @@ private fun ThemeFullScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
+                if (!hasCustom) {
+                    item {
+                        Box(
+                            Modifier.fillMaxWidth().aspectRatio(0.86f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .dashedBorder(gray300, 1.dp, 8.dp)
+                                .background(gray50)
+                                .clickable(onClick = onUploadCustom),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text("+", color = gray400, fontSize = 24.sp)
+                                Text(
+                                    "Custom", color = gray500, fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
                 gridItems(visibleThemes) { theme ->
                     Column(
                         Modifier.fillMaxWidth()
