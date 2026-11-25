@@ -2961,7 +2961,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
                                 val image = comboTransfer.optString("giftImage").ifBlank { comboTransfer.optString("luckyImage") }
                                 val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
-                                luckyAnimation.launchToRecipients(nextTransferId, resolvedImage, recipientIds)
+                                luckyAnimation.launchToRecipients(nextTransferId, resolvedImage, recipientIds, popupAtCenter = true)
                                 // Optimistically reflect the tap; the server echo confirms the
                                 // same combo without adding a second multiplier increment.
                                 luckyGiftNotice = luckyGiftNotice?.copy(
