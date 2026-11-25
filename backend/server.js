@@ -68,7 +68,12 @@ async function attachReceivedGifts(users) {
       .map((value) => String(value || "").trim()).filter(Boolean);
     const gifts = ids.flatMap((id) => byRecipient.get(id) || []);
     const unique = new Map();
-    gifts.forEach((gift) => unique.set(gift.image, gift));
+    gifts.forEach((gift) => {
+      const previous = unique.get(gift.image);
+      unique.set(gift.image, previous
+        ? { ...previous, count: previous.count + gift.count }
+        : gift);
+    });
     return { ...user, receivedGifts: [...unique.values()] };
   });
 }
