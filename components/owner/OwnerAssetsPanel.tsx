@@ -31,6 +31,7 @@ const ASSETS: Asset[] = [
   { id: 'a6', name: 'Love Beat', tab: 'Avatar Frame', type: 'Frame', image: 'file_00000000445482119241b60988ca201a.png' },
   { id: 'a7', name: 'Golden Aura', tab: 'Avatar Frame', type: 'Frame', image: 'file_00000000406482119e4e67fbbe323a54.png' },
   { id: 'a8', name: 'Happy birthday', tab: 'Avatar Frame', type: 'Frame', image: 'file_00000000c21482118a018264cecee76c.png', video: 'gemini_generated_video_c02dfa3d~2.mp4' },
+  { id: 'a9', name: 'Official Frame', tab: 'Avatar Frame', type: 'Frame', image: 'IMG_20261126_214336.png', video: 'VID_20261126_065126_533_bsl.mp4', source: 'zyora' },
   { id: 'v1', name: 'Leopard Roar', tab: 'Vehicle', type: 'Vehicle', image: 'IMG_20261023_124625.png', video: 'VID_20260905_095157_269_bsl.mp4' },
   { id: 'v10', name: 'Shadow Beast', tab: 'Vehicle', type: 'Vehicle', image: 'file_0000000009a482118ab17c8d0629d193.png', video: 'Screenrecorder-2026-10-23-16-01-27-317~2.mp4' },
   { id: 'v2', name: 'Speedster', tab: 'Vehicle', type: 'Vehicle', image: 'IMG_20261023_125302.png', video: 'alioss_19_2025090317293759938~2.mp4' },
