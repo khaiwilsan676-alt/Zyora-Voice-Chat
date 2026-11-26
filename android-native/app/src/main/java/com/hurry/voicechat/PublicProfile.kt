@@ -6,6 +6,8 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -199,23 +201,40 @@ fun PublicProfileScreen(
             reconnection = true
             reconnectionAttempts = Int.MAX_VALUE
         })
+        val mainHandler = Handler(Looper.getMainLooper())
         val statusListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val id = payload.optString("accountId", payload.optString("userId"))
             val loginId = payload.optString("userId")
             if (id in targetPresenceIds || loginId in targetPresenceIds) {
-                liveRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else ""
+                mainHandler.post {
+                    liveRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else ""
+                }
+            }
+        }
+        val frameListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val changedUserId = payload.optString("userId").trim()
+            if (changedUserId.isNotBlank() && changedUserId in targetPresenceIds) {
+                mainHandler.post {
+                    targetPresenceIds.forEach { id ->
+                        nativeAvatarFrameRefreshVersions[id] = (nativeAvatarFrameRefreshVersions[id] ?: 0L) + 1L
+                    }
+                }
             }
         }
         presenceSocket.on("user_room_status", statusListener)
         presenceSocket.on("user_room_status_updated", statusListener)
+        presenceSocket.on("avatar_frame_updated", frameListener)
         presenceSocket.on(Socket.EVENT_CONNECT) {
             presenceSocket.emit("user_room_status_request", JSONObject().put("userId", targetPresenceId).put("accountId", targetPresenceId))
+            presenceSocket.emit("watch_avatar_frame", JSONObject().put("userId", targetPresenceId))
         }
         presenceSocket.connect()
         onDispose {
             presenceSocket.off("user_room_status", statusListener)
             presenceSocket.off("user_room_status_updated", statusListener)
+            presenceSocket.off("avatar_frame_updated", frameListener)
             presenceSocket.disconnect()
             presenceSocket.close()
         }
