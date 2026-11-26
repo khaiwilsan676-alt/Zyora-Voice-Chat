@@ -66,7 +66,7 @@ fun RoomBroadcastNotification(notice: RoomBroadcastNotice, onDismiss: () -> Unit
             // A shorter source video must not dismiss the notification early.
             RoomGiftVideoOverlay(src = notice.video, onFinished = {})
             Row(
-                Modifier.fillMaxSize().background(Color(0x66000000)).padding(horizontal = 10.dp),
+                Modifier.fillMaxSize().background(Color(0x22000000)).padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
