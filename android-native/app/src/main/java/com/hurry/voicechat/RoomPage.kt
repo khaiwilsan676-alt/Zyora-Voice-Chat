@@ -1712,7 +1712,26 @@ fun RoomPage(
                         showRoomSettingsAnnouncementInChat = if (payload.has("announcementChatVisible")) payload.optBoolean("announcementChatVisible") else updatedAnnouncement.isNotBlank()
                         appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply()
                     }
-                    if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
+                    if (payload.has("publicMsgOff")) {
+                        val updatedPublicMsgOff = payload.optBoolean("publicMsgOff", true)
+                        if (updatedPublicMsgOff != publicMsgOff) {
+                            publicMsgOff = updatedPublicMsgOff
+                            val noticeId = "public-message-setting-$roomId-${payload.optLong("publicMsgUpdatedAt", payload.optLong("updatedAt", System.currentTimeMillis()))}-$updatedPublicMsgOff"
+                            if (messages.none { it.id == noticeId }) {
+                                messages.add(
+                                    NativeRoomMessage(
+                                        id = noticeId,
+                                        text = if (updatedPublicMsgOff) "Public Message OFF" else "Public message ON",
+                                        sender = "System",
+                                        senderImage = "",
+                                        senderAccountId = roomId,
+                                        timestamp = payload.optLong("publicMsgUpdatedAt", payload.optLong("updatedAt", System.currentTimeMillis())),
+                                        type = "message"
+                                    )
+                                )
+                            }
+                        }
+                    }
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
                     if (payload.has("addedAdminId")) {
                         val addedAdminId = payload.optString("addedAdminId").trim()
