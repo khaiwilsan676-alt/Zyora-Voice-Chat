@@ -521,12 +521,24 @@ fun PublicProfileScreen(
         receivedGifts = runCatching {
             val giftArray = merged.optJSONArray("receivedGifts")
                 ?: org.json.JSONArray(merged.optString("receivedGifts", "[]"))
-            (0 until giftArray.length()).mapNotNull { index ->
-                val gift = giftArray.optJSONObject(index) ?: return@mapNotNull null
+            val grouped = linkedMapOf<String, Pair<String, Int>>()
+            for (index in 0 until giftArray.length()) {
+                val gift = giftArray.optJSONObject(index) ?: continue
                 val image = gift.optString("image", "").trim()
                 val count = gift.optInt("count", 0)
-                if (image.isNotBlank() && count > 0) image to count else null
-            }.distinctBy { it.first }
+                if (image.isBlank() || count <= 0) continue
+                // Merge the same gift asset even if records use different hosts or public/ paths.
+                val key = runCatching {
+                    val path = URL(image).path
+                    path.substringAfterLast("/public/", path).trimStart('/').removePrefix("public/").lowercase()
+                }.getOrElse {
+                    image.substringAfterLast("/public/", image).trimStart('/').removePrefix("public/").lowercase()
+                }
+                if (key.isBlank()) continue
+                val previous = grouped[key]
+                grouped[key] = (previous?.first ?: image) to ((previous?.second ?: 0) + count)
+            }
+            grouped.values.toList()
         }.getOrDefault(emptyList())
 
         val covers = ProfilePersistence.stringList(merged.optString("coverPhotos", ""))
