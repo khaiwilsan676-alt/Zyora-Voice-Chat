@@ -123,7 +123,7 @@ private fun parseDurationSeconds(label: String): Int {
     }
 }
 
-private data class PkUser(val accountId: String, val name: String, val image: String)
+data class PkUser(val accountId: String, val name: String, val image: String)
 
 @Composable
 fun PKBattlePage(
