@@ -1589,7 +1589,12 @@ private fun VideoEffectOverlay(
                 .fillMaxWidth()
                 .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.fillMaxSize())
                 .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
+                    // Offscreen compositing can hide TextureView-backed ExoPlayer output
+                    // inside small room notification banners. Only use it for effects
+                    // that actually need Compose blending/masking.
+                    if (isFade || style == "pure") {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
                     if (style == "pure") blendMode = BlendMode.Plus
                 }
                 .drawWithContent {
@@ -1637,7 +1642,9 @@ fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
     val resolved = giftAssetUrl(src)
     VideoEffectOverlay(
         src = resolved,
-        style = "fade",
+        // Room banners need a direct TextureView surface; the fade-mask offscreen
+        // layer can prevent the video surface from appearing in this overlay.
+        style = "plain",
         greenRemove = isGreenScreenGiftVideo(resolved),
         onFinished = onFinished,
         onStarted = {},
