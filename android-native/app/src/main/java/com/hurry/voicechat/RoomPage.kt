@@ -1245,6 +1245,12 @@ fun RoomPage(
                 }
             }
         }
+        val pkStartedRoomListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId) {
+                mainHandler.post { showPkPage = true }
+            }
+        }
         val pkSystemMessageListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
@@ -1844,6 +1850,7 @@ fun RoomPage(
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_kick_announcement",kickAnnouncementListener)
         roomSocket.on("pk_system_message",pkSystemMessageListener)
+        roomSocket.on("pk_started",pkStartedRoomListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("coin_transfer_received", luckyGiftReceivedListener)
         roomSocket.on("coin_transfer_failed", coinTransferFailedListener)
@@ -1906,6 +1913,7 @@ fun RoomPage(
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_kick_announcement",kickAnnouncementListener)
             roomSocket.off("pk_system_message",pkSystemMessageListener)
+            roomSocket.off("pk_started",pkStartedRoomListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("coin_transfer_received", luckyGiftReceivedListener)
             roomSocket.off("coin_transfer_failed", coinTransferFailedListener)
