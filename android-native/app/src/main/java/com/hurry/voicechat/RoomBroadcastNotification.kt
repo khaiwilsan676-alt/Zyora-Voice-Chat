@@ -62,7 +62,9 @@ fun RoomBroadcastNotification(notice: RoomBroadcastNotice, onDismiss: () -> Unit
     ) {
         Box(Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(14.dp))) {
-            RoomGiftVideoOverlay(src = notice.video, onFinished = onDismiss)
+            // The banner lifetime is controlled by the five-second countdown below.
+            // A shorter source video must not dismiss the notification early.
+            RoomGiftVideoOverlay(src = notice.video, onFinished = {})
             Row(
                 Modifier.fillMaxSize().background(Color(0x66000000)).padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
