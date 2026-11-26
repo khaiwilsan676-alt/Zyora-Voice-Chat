@@ -515,9 +515,16 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                         }
                                     }
                                     cdKeyBusy = false
-                                    result.onSuccess {
+                                    result.onSuccess { responseJson ->
                                         cdKeyAction = "Exchange"
-                                        Toast.makeText(context, "Unique CD-Key sent by Zyora System message", Toast.LENGTH_LONG).show()
+                                        val issuedCode = responseJson.optString("code")
+                                        val messageDelivered = responseJson.optBoolean("messageDelivered")
+                                        val notice = if (messageDelivered) {
+                                            "Unique CD-Key sent by Zyora System message"
+                                        } else {
+                                            "CD-Key: $issuedCode (System message unavailable)"
+                                        }
+                                        Toast.makeText(context, notice, Toast.LENGTH_LONG).show()
                                     }.onFailure {
                                         Toast.makeText(context, it.message ?: "Could not generate CD-Key", Toast.LENGTH_LONG).show()
                                     }
