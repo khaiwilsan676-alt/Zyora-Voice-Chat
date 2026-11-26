@@ -53,9 +53,13 @@ private data class MeMenu(val label: String, val asset: String)
 @Composable
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val uid = prefs.getString("uid", "") ?: ""
     var showCdKeySheet by remember { mutableStateOf(false) }
     var cdKeyInput by remember { mutableStateOf("") }
-    var cdKeyAction by remember { mutableStateOf("Apply") }
+    var cdKeyAction by remember(uid) {
+        mutableStateOf(if (prefs.getBoolean("cd_key_apply_used_$uid", false)) "Exchange" else "Apply")
+    }
     var cdKeyBusy by remember { mutableStateOf(false) }
     val cdKeyScope = rememberCoroutineScope()
 
@@ -70,8 +74,6 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         }
     }
     
-    val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
-    val uid = prefs.getString("uid", "") ?: ""
     val email = prefs.getString("email", "") ?: ""
     // Never read the on-device profile database during composition: disk I/O here
     // blocks the main thread on every first Me-tab composition.
@@ -516,6 +518,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     }
                                     cdKeyBusy = false
                                     result.onSuccess { responseJson ->
+                                        prefs.edit().putBoolean("cd_key_apply_used_$uid", true).apply()
                                         cdKeyAction = "Exchange"
                                         val issuedCode = responseJson.optString("code")
                                         val messageDelivered = responseJson.optBoolean("messageDelivered")
@@ -570,7 +573,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                             }
                                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                                             cdKeyInput = ""
-                                            cdKeyAction = "Apply"
+                                            // Once Apply has issued a key, this account stays in Exchange mode.
+                                            prefs.edit().putBoolean("cd_key_apply_used_$uid", true).apply()
+                                            cdKeyAction = "Exchange"
                                             showCdKeySheet = false
                                         }.onFailure {
                                             Toast.makeText(context, it.message ?: "CD-Key exchange failed", Toast.LENGTH_LONG).show()
