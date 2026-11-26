@@ -156,13 +156,15 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         launchedFlightIds.add(id)
         if (launchedFlightIds.size > 200) launchedFlightIds.remove(launchedFlightIds.first())
         val center = Offset(rootSize.width / 2f, rootSize.height / 2f)
+        // Hamesha direct center se start hoga — koi delay ya origin shift nahi
         flights.add(
             LuckyGiftFlight(
-                id, image,
-                if (popupAtCenter) center else origin ?: Offset(rootSize.width / 2f, rootSize.height * 0.88f),
-                target,
-                center,
-                popupAtCenter
+                id = id,
+                image = image,
+                start = center,
+                target = target,
+                rootCenter = center,
+                popupAtCenter = true
             )
         )
     }
@@ -180,9 +182,21 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun optimisticCombo() {
         notice = notice?.copy(multiplier = (notice?.multiplier ?: 1) + 1, isExiting = false)
         noticeGeneration++
+        if (showComboButton) {
+            comboTimeLeft = 5
+            comboGeneration++
+        }
     }
     fun tickCombo(value: Int) { comboTimeLeft = value.coerceIn(0, 5) }
-    fun hideCombo() { showComboButton = false; comboTimeLeft = 0 }
+    fun hideCombo() {
+        showComboButton = false
+        comboTimeLeft = 0
+        comboPending = false
+        lastComboPayload = null
+        LuckyComboSyncState.displayMultiplier = 1
+        LuckyComboSyncState.pendingComboClicks = 0
+        notice = notice?.copy(multiplier = 1)
+    }
 }
 
 @Composable
@@ -191,15 +205,17 @@ fun rememberLuckyAnimationController(roomId: String): LuckyAnimationController =
 
 @Composable
 fun LuckyAnimationControllerEffects(controller: LuckyAnimationController) {
-    LaunchedEffect(controller.roomId, controller.comboGeneration) {
+    LaunchedEffect(controller.roomId, controller.showComboButton, controller.comboGeneration) {
         if (!controller.showComboButton) return@LaunchedEffect
         val generation = controller.comboGeneration
         for (second in 1..5) {
             delay(1000L)
-            if (controller.comboGeneration != generation) return@LaunchedEffect
+            if (controller.comboGeneration != generation || !controller.showComboButton) return@LaunchedEffect
             controller.tickCombo(5 - second)
         }
-        if (controller.comboGeneration == generation) controller.hideCombo()
+        if (controller.comboGeneration == generation) {
+            controller.hideCombo()
+        }
     }
     LaunchedEffect(controller.roomId, controller.noticeGeneration) {
         val generation = controller.noticeGeneration
@@ -295,12 +311,12 @@ fun LuckyAnimationNotificationSlider(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Notification patti (thori niche + thori wide + trailing fade)
+        // Notification patti (thori niche + 10.dp height increase + avatar & name thoda bada)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 12.dp)
-                .offset(y = 48.dp),
+                .offset(y = 66.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             AnimatedVisibility(
@@ -340,7 +356,7 @@ fun LuckyAnimationNotificationSlider(
                                 )
                             )
                             .padding(start = 6.dp, end = 82.dp, top = 2.dp, bottom = 2.dp)
-                            .height(38.dp)
+                            .height(48.dp)
                             .wrapContentWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -349,7 +365,7 @@ fun LuckyAnimationNotificationSlider(
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(40.dp)
                                 .clip(CircleShape),
                         )
                         Spacer(Modifier.width(8.dp))
@@ -361,8 +377,8 @@ fun LuckyAnimationNotificationSlider(
                             Text(
                                 text = topText,
                                 color = Color.White,
-                                fontSize = 10.sp,
-                                lineHeight = 12.sp,
+                                fontSize = 12.sp,
+                                lineHeight = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -373,8 +389,8 @@ fun LuckyAnimationNotificationSlider(
                             Text(
                                 text = bottomText,
                                 color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 9.sp,
-                                lineHeight = 11.sp,
+                                fontSize = 11.sp,
+                                lineHeight = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = TextStyle(
@@ -400,7 +416,7 @@ fun LuckyAnimationNotificationSlider(
                         )
                     }
 
-                    // Name ke right-side top corner par (20.dp niche + bigger winner image)
+                    // Name ke right-side top corner par (position untouched)
                     activeReward?.let { reward ->
                         Box(
                             modifier = Modifier
@@ -464,10 +480,10 @@ private fun LuckyRewardTopBadge(
         }
     }
 
-    // Bigger winning image (96.dp) — Coins icon & value untouched at bottom
+    // Bigger winning image (114.dp), choti shining (84.dp), coins icon & value 15.dp upar
     Box(
         modifier = modifier
-            .size(96.dp)
+            .size(114.dp)
             .graphicsLayer {
                 translationY = dropY.value
                 scaleX = popScale.value
@@ -476,8 +492,8 @@ private fun LuckyRewardTopBadge(
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Rotating Sun Rays Shining behind image (layout bounds inflate kiye bina)
-        Canvas(modifier = Modifier.requiredSize(122.dp)) {
+        // Rotating Sun Rays Shining behind image (chota size: 84.dp)
+        Canvas(modifier = Modifier.requiredSize(84.dp)) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val outerRadius = size.minDimension / 2f
             val rayCount = 12
@@ -531,7 +547,7 @@ private fun LuckyRewardTopBadge(
             }
         }
 
-        // Main Reward Image (increased size: 96.dp)
+        // Main Reward Image (increased size: 114.dp)
         AsyncImage(
             model = LUCKY_REWARD_BADGE_URL,
             contentDescription = null,
@@ -539,11 +555,11 @@ private fun LuckyRewardTopBadge(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // Coin Icon + Yellow Coins Amount exact image ke bottom par overlap hokar (untouched)
+        // Coin Icon + Yellow Coins Amount exact 15.dp upar (-6.dp -> -21.dp)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-6).dp),
+                .offset(y = (-21).dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -720,7 +736,7 @@ fun LuckyAnimationComboButton(
 }
 
 // ============================================================
-// LUCKY GIFT SEAT FLIGHT — Fast bottom -> center -> seat
+// LUCKY GIFT SEAT FLIGHT — Instant center small -> popup original size -> seat
 // ============================================================
 data class LuckyGiftFlight(
     val id: String,
@@ -737,26 +753,31 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
     val imageSizeDp = LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP.dp
     val halfImagePx = with(density) { imageSizeDp.toPx() } / 2f
 
-    val posX = remember(flight.id) { Animatable(flight.start.x) }
-    val posY = remember(flight.id) { Animatable(flight.start.y) }
-    val scaleAnim = remember(flight.id) { Animatable(0.35f) }
-    val itemAlpha = remember(flight.id) { Animatable(0f) }
+    // Direct screen center par choti image se start, zero delay
+    val posX = remember(flight.id) { Animatable(flight.rootCenter.x) }
+    val posY = remember(flight.id) { Animatable(flight.rootCenter.y) }
+    val scaleAnim = remember(flight.id) { Animatable(0.25f) }
+    val itemAlpha = remember(flight.id) { Animatable(1f) }
 
     LaunchedEffect(flight.id) {
-        itemAlpha.snapTo(1f)
-        // Every Lucky image appears at screen center first, then flies straight
-        // to the recipient seat. No slow bottom-to-center pre-animation or hold.
-        posX.snapTo(flight.rootCenter.x)
-        posY.snapTo(flight.rootCenter.y)
-        scaleAnim.snapTo(0.88f)
-        scaleAnim.animateTo(1.08f, animationSpec = tween(75, easing = FastOutSlowInEasing))
-        scaleAnim.animateTo(1.0f, animationSpec = tween(65, easing = FastOutSlowInEasing))
+        // Center par choti se popup hoke seedha original size (1.0f) me aayegi
+        scaleAnim.animateTo(
+            targetValue = 1.0f,
+            animationSpec = tween(durationMillis = 130, easing = FastOutSlowInEasing)
+        )
 
+        // Turant seat par fly hogi
         val flyXJob = launch {
-            posX.animateTo(flight.target.x, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
+            posX.animateTo(
+                flight.target.x,
+                animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing)
+            )
         }
         val flyYJob = launch {
-            posY.animateTo(flight.target.y, animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing))
+            posY.animateTo(
+                flight.target.y,
+                animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing)
+            )
         }
         val fadeOutJob = launch {
             delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 100).coerceAtLeast(0).toLong())
