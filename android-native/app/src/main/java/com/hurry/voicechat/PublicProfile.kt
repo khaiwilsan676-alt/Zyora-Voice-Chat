@@ -425,7 +425,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerImageTag", "ownerImageTagExpiresAt", "familyRewardTagImage", "familyRewardTagExpiresAt", "familyRewardTagRank", "familyRewardTagWeekStart", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement", "receivedGifts")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerImageTag", "ownerImageTagExpiresAt", "familyRewardTagImage", "familyRewardTagExpiresAt", "familyRewardTagRank", "familyRewardTagWeekStart", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -435,6 +435,19 @@ fun PublicProfileScreen(
                         merged.put(key, value)
                     }
                 }
+            }
+
+            // receivedGifts is an array, not a scalar profile string.
+            // Preserve the server's array (including an empty array) so stale
+            // cached gifts cannot reappear after a user has no received gifts.
+            if (latest.has("receivedGifts")) {
+                val serverGifts = latest.opt("receivedGifts")
+                val normalizedGifts = when (serverGifts) {
+                    is org.json.JSONArray -> serverGifts
+                    is String -> runCatching { org.json.JSONArray(serverGifts) }.getOrElse { org.json.JSONArray() }
+                    else -> org.json.JSONArray()
+                }
+                merged.put("receivedGifts", normalizedGifts)
             }
         }
 
