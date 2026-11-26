@@ -194,6 +194,18 @@ private data class WalletAgentSeller(
     val whatsapp: String
 )
 
+
+private fun formatSellerCoins(value: Long): String {
+    val amount = value.coerceAtLeast(0L)
+    val (scaled, suffix) = when {
+        amount >= 1_000_000L -> amount / 1_000_000.0 to "M"
+        amount >= 1_000L -> amount / 1_000.0 to "K"
+        else -> return amount.toString()
+    }
+    val formatted = String.format(java.util.Locale.US, "%.1f", scaled).trimEnd('0').trimEnd('.')
+    return formatted + suffix
+}
+
 private fun JSONObject.firstAgentValue(vararg keys: String): String =
     keys.firstNotNullOfOrNull { key ->
         if (!has(key) || isNull(key)) null else opt(key)?.toString()?.trim()?.takeIf {
@@ -397,7 +409,6 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         DetailsNativePage(type = showDetails!!, onBack = { showDetails = null })
         return
     }
-
     val banner = if (tab == 1) "file_0000000085a482088fb089cb76f3d1af.png"
                  else "file_00000000f3d88211964f0057da4bc797.png"
 
@@ -447,7 +458,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                         }
                     )
                 }
-                .verticalScroll(rememberScrollState())
+                .then(if (tab == 2) Modifier else Modifier.verticalScroll(rememberScrollState()))
             ) {
 
                 // ─── Banner ───
@@ -558,7 +569,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                             }
                         }
                     )
-                    2 -> AgentContent(onChat = onChat, currentUserId = walletUserId)
+                    2 -> AgentContent(onChat = onChat, currentUserId = walletUserId, modifier = Modifier.weight(1f))
                 }
 
                 Spacer(Modifier.height(if (tab == 1) 100.dp else 24.dp))
@@ -804,7 +815,7 @@ private fun DiamondsContent(
 // UI UPDATED AGENT CONTENT (COMPACT LIKE IMAGE) 
 // ═══════════════════════════════════════════════════════
 @Composable
-private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId: String) {
+private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val sellerCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_agent_cache", Context.MODE_PRIVATE) }
     var sellers by remember(context) {
@@ -922,8 +933,8 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
         }
     }
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        sellers.forEach { seller ->
+    LazyColumn(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 12.dp)) {
+        items(sellers, key = { it.uid }) { seller ->
             val isOnline = onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online
             
             Column(
@@ -991,7 +1002,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                                 contentScale = ContentScale.Fit
                             )
                             Text(
-                                String.format(java.util.Locale.US, "%,d", seller.coins),
+                                formatSellerCoins(seller.coins),
                                 fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1
                             )
                         }
@@ -1056,8 +1067,10 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
             }
         }
         if (loaded && sellers.isEmpty()) {
-            Text("No sellers available", Modifier.fillMaxWidth().padding(vertical = 28.dp),
-                textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
+            item {
+                Text("No sellers available", Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                    textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
+            }
         }
     }
 }
