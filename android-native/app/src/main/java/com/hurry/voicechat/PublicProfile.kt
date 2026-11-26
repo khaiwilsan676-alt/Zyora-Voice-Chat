@@ -241,9 +241,15 @@ fun PublicProfileScreen(
     }
     val profileCacheKeys = listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber).filter { !it.isNullOrBlank() }.map { it!! }.distinct()
     val profileCacheKey = profileCacheKeys.firstOrNull().orEmpty()
-    val cachedProfile = remember(profileCacheKeys) {
-        val db = NativeIndexDatabase(context)
-        profileCacheKeys.firstNotNullOfOrNull { db.loadProfile(it) }
+    var cachedProfile by remember(profileCacheKeys) { mutableStateOf<JSONObject?>(null) }
+    // SQLite profile-cache reads must never run during composition on the UI thread.
+    // Start with the caller's already-available TargetUser data, then hydrate the
+    // richer cached profile asynchronously so the profile opens without disk stalls.
+    LaunchedEffect(profileCacheKeys) {
+        cachedProfile = withContext(Dispatchers.IO) {
+            val db = NativeIndexDatabase(context)
+            profileCacheKeys.firstNotNullOfOrNull { key -> runCatching { db.loadProfile(key) }.getOrNull() }
+        }
     }
 
     val profileAsset: (String) -> String = { path ->
