@@ -2670,7 +2670,7 @@ export default function StaffPanel() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-                  <div className="text-xs font-bold text-slate-500">Users credited</div>
+                  <div className="text-xs font-bold text-slate-500">Seller Wallets credited</div>
                   <div className="mt-2 text-2xl font-black text-slate-900">{new Set(masterWalletHistory.map(item => item.userId)).size.toLocaleString()}</div>
                   <div className="mt-1 text-[11px] text-slate-400">Saved on this Owner Panel device</div>
                 </div>
@@ -2688,8 +2688,8 @@ export default function StaffPanel() {
 
               <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm md:p-6">
                 <div className="mb-5">
-                  <h2 className="text-lg font-black text-slate-900">Transfer Coins</h2>
-                  <p className="mt-1 text-xs text-slate-500">Find any Zyora user and prepare an official credit</p>
+                  <h2 className="text-lg font-black text-slate-900">Add Seller Wallet Coins</h2>
+                  <p className="mt-1 text-xs text-slate-500">Credit coins only to the selected user’s separate Seller Wallet</p>
                 </div>
                 <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Search by Zyora ID</label>
                 <div className="relative">
@@ -2750,7 +2750,7 @@ export default function StaffPanel() {
                       });
                       setMasterWalletHistory(await loadMasterWalletHistory());
                       setMasterWalletAmount('');
-                      alert(`Successfully transferred ${amount.toLocaleString()} coins.`);
+                      alert(`Successfully added ${amount.toLocaleString()} coins to Seller Wallet.`);
                     } catch (error: any) {
                       alert(error?.message || 'Coin transfer failed. Please try again.');
                     } finally {
@@ -2759,13 +2759,13 @@ export default function StaffPanel() {
                   }}
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#197477] px-5 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-[#17696c] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Send className="h-4 w-4" /> {masterWalletTransferring ? 'Transferring...' : 'Transfer Coins'}
+                  <Send className="h-4 w-4" /> {masterWalletTransferring ? 'Adding...' : 'Add to Seller Wallet'}
                 </button>
               </section>
 
               <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
                 <div className="border-b border-slate-100 px-5 py-5 md:px-6">
-                  <h2 className="text-lg font-black text-slate-900">User Transfer History</h2>
+                  <h2 className="text-lg font-black text-slate-900">Seller Wallet Credit History</h2>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse text-left">
