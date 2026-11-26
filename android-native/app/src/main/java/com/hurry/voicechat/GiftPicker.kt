@@ -1645,7 +1645,10 @@ fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
         // Room banners need a direct TextureView surface; the fade-mask offscreen
         // layer can prevent the video surface from appearing in this overlay.
         style = "plain",
-        greenRemove = isGreenScreenGiftVideo(resolved),
+        // Keep notification playback on ExoPlayer's direct TextureView path.
+        // The custom GL chroma SurfaceTexture renderer is not reliable in this
+        // short-lived room banner and can leave the video completely invisible.
+        greenRemove = false,
         onFinished = onFinished,
         onStarted = {},
     )
