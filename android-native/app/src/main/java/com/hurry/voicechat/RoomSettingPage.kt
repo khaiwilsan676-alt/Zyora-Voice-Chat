@@ -58,6 +58,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.tasks.Tasks
+import java.util.concurrent.TimeUnit
 import io.socket.client.IO
 import io.socket.emitter.Emitter
 import kotlinx.coroutines.Dispatchers
@@ -817,11 +820,15 @@ fun RoomSettingPage(
                                 scope.launch {
                                     val result = withContext(Dispatchers.IO) {
                                         runCatching {
+                                            val firebaseUser = FirebaseAuth.getInstance().currentUser ?: error("Please sign in again")
+                                            val token = Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
+                                                ?: error("Authentication token unavailable")
                                             val connection = (URL("$SETTINGS_API/api/room/custom-themes").openConnection() as HttpURLConnection).apply {
                                                 requestMethod = "POST"
                                                 connectTimeout = 15000
                                                 readTimeout = 30000
                                                 doOutput = true
+                                                setRequestProperty("Authorization", "Bearer $token")
                                                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
                                                 setRequestProperty("Accept", "application/json")
                                             }
