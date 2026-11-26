@@ -1387,7 +1387,9 @@ fun RoomPage(
         }
         val luckyBagBannerListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") == roomId && payload.optString("senderId") !in setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }) {
+            // Sender must receive the same room banner as every other member.
+            // Excluding senderId here hid the Lucky Bag from the person who sent it.
+            if (payload.optString("roomId") == roomId) {
                 mainHandler.post {
                     luckyBagId = payload.optString("bagId")
                     luckyBagSenderName = payload.optString("senderName", "User")
