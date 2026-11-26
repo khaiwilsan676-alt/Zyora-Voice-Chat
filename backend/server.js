@@ -2331,26 +2331,41 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       // Resolve the claimant from the canonical MongoDB profile. The native
       // room cache can still be loading when the user taps Open, so client
       // supplied "User" / blank avatar must never overwrite the real profile.
-      const profile = db ? await db.collection("users").findOne({ $or: [
+      const accountId = String(req.body?.accountId || "").trim();
+      const identityConditions = [
         { uid: userId }, { firebaseUid: userId }, { firebaseUID: userId },
-        { id: userId }, { appLongId: userId }, { accountId: userId },
-        { accountNumber: userId }, { displayUserNumber: userId },
-        { displayAccountNumber: userId }, { userId: userId }
-      ] }) : null;
+        { firebaseUserId: userId }, { authUid: userId }, { id: userId },
+        { appLongId: userId }, { userId: userId },
+        { accountId: userId }, { accountNumber: userId },
+        { displayUserNumber: userId }, { displayAccountNumber: userId }
+      ];
+      if (accountId && accountId !== userId) {
+        identityConditions.push(
+          { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
+          { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
+        );
+        if (/^\\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
+          identityConditions.push({ accountId: Number(accountId) }, { accountNumber: Number(accountId) });
+        }
+      }
+      const profile = db ? await db.collection("users").findOne({ $or: identityConditions }) : null;
       const userName = String(
         profile?.name || profile?.displayName || profile?.userName ||
         profile?.profile?.name || profile?.profile?.displayName ||
-        profile?.nickname || profile?.username || profile?.fullName || profile?.userData?.name ||
+        profile?.nickname || profile?.username || profile?.fullName ||
+        profile?.profile?.username || profile?.userData?.name ||
         req.body?.userName || "User"
       ).trim().slice(0, 80) || "User";
       const userImage = String(
         profile?.image || profile?.dp || profile?.photoURL || profile?.photoUrl ||
-        profile?.avatar || profile?.avatarUrl || profile?.profileImage ||
-        profile?.profile?.image || profile?.profile?.avatar ||
+        profile?.avatar || profile?.avatarUrl || profile?.profileImage || profile?.profileImageUrl ||
+        profile?.profile_image || profile?.imageUrl || profile?.picture ||
+        profile?.profile?.image || profile?.profile?.avatar || profile?.profile?.photo ||
+        profile?.userData?.image || profile?.userData?.avatar ||
         req.body?.userImage || ""
       ).slice(0, 1000);
       const claimedAt = Date.now();
-      bag.claims.push({ userId, userName, userImage, amount, status: "pending_confirmation", claimedAt });
+      bag.claims.push({ userId, accountId, userName, userImage, amount, status: "pending_confirmation", claimedAt });
       if (bag.claimedCount >= bag.recipients) {
         bag.status = "claimed";
         bag.completedAt = Date.now();
@@ -2399,12 +2414,24 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
 });
 async function resolveLuckyBagClaimDisplay(claim) {
   const userId = String(claim?.userId || "").trim();
-  const profile = db && userId ? await db.collection("users").findOne({ $or: [
+  const accountId = String(claim?.accountId || "").trim();
+  const identityConditions = [
     { uid: userId }, { firebaseUid: userId }, { firebaseUID: userId },
-    { id: userId }, { appLongId: userId }, { accountId: userId },
-    { accountNumber: userId }, { displayUserNumber: userId },
-    { displayAccountNumber: userId }, { userId: userId }
-  ] }) : null;
+    { firebaseUserId: userId }, { authUid: userId }, { id: userId },
+    { appLongId: userId }, { userId: userId },
+    { accountId: userId }, { accountNumber: userId },
+    { displayUserNumber: userId }, { displayAccountNumber: userId }
+  ];
+  if (accountId && accountId !== userId) {
+    identityConditions.push(
+      { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
+      { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
+    );
+    if (/^\\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
+      identityConditions.push({ accountId: Number(accountId) }, { accountNumber: Number(accountId) });
+    }
+  }
+  const profile = db && userId ? await db.collection("users").findOne({ $or: identityConditions }) : null;
   const profileName = [
     profile?.name, profile?.displayName, profile?.userName, profile?.username,
     profile?.nickname, profile?.fullName, profile?.profile?.name,
@@ -2414,13 +2441,16 @@ async function resolveLuckyBagClaimDisplay(claim) {
   const profileImage = [
     profile?.image, profile?.dp, profile?.photo, profile?.photoURL, profile?.photoUrl,
     profile?.avatar, profile?.avatarUrl, profile?.profileImage, profile?.profileImageUrl,
-    profile?.profile?.image, profile?.profile?.avatar, profile?.userData?.image
+    profile?.profile_image, profile?.imageUrl, profile?.picture,
+    profile?.profile?.image, profile?.profile?.avatar, profile?.profile?.photo,
+    profile?.userData?.image, profile?.userData?.avatar
   ].map(value => String(value || "").trim())
     .find(value => value && !["null", "undefined"].includes(value.toLowerCase()));
   const storedName = String(claim?.userName || "").trim();
   const validStoredName = storedName && !["user", "null", "undefined", userId].includes(storedName.toLowerCase());
   return {
     userId,
+    accountId,
     userName: profileName || (validStoredName ? storedName : "User"),
     userImage: profileImage || String(claim?.userImage || "").trim(),
     amount: Number(claim?.amount || 0),
