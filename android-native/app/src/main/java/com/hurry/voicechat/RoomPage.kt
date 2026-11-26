@@ -3574,6 +3574,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             claimantName = roomDisplayName,
             claimantImage = roomDisplayImage,
             canonicalWalletUserId = canonicalWalletUserId,
+            claimantAccountId = accountId,
             roomWalletBalance = roomWalletBalance,
             showFloatingLuckyBag = showFloatingLuckyBag,
             onShowLuckyBagCenterRevealChange = { showLuckyBagCenterReveal = it },
