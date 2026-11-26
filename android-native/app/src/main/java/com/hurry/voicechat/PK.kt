@@ -203,8 +203,8 @@ fun PKBattlePage(
         val finished = Emitter.Listener { args ->
             val p = args.firstOrNull() as? JSONObject ?: return@Listener
             if (p.optString("roomId") != roomId || p.optString("battleId") != battleId) return@Listener
-            blueScore = p.optInt("blueScore", blueScore)
-            redScore = p.optInt("redScore", redScore)
+            blueScore = p.optLong("blueScore", blueScore)
+            redScore = p.optLong("redScore", redScore)
             remainingSeconds = 0
             battleFinished = true
         }
@@ -569,7 +569,7 @@ private fun PkActiveBattleOverlay(
 
     val targetBlueFraction = remember(blueScore, redScore) {
         when {
-            blueScore == 0 && redScore == 0 -> 0.5f
+            blueScore == 0L && redScore == 0L -> 0.5f
             else -> (blueScore.toFloat() / (blueScore + redScore).toFloat()).coerceIn(0.18f, 0.82f)
         }
     }
