@@ -341,6 +341,8 @@ private fun PkMainBattleSheet(
     onModeSelect: (String) -> Unit,
     selectedTime: String,
     onTimeSelect: (String) -> Unit,
+    selectedBlueUser: PkUser?,
+    selectedRedUser: PkUser?,
     onBlueCardClick: () -> Unit,
     onRedCardClick: () -> Unit,
     onHelpClick: () -> Unit,
@@ -414,11 +416,13 @@ private fun PkMainBattleSheet(
         ) {
             PkSelectPersonCard(
                 imageUrl = BLUE_CARD_URL,
+                selectedUser = selectedBlueUser,
                 modifier = Modifier.weight(1f),
                 onClick = onBlueCardClick
             )
             PkSelectPersonCard(
                 imageUrl = RED_CARD_URL,
+                selectedUser = selectedRedUser,
                 modifier = Modifier.weight(1f),
                 onClick = onRedCardClick
             )
@@ -1287,66 +1291,46 @@ private fun PkSelectPeopleBottomSheet(
     fallbackBgColor: Color,
     plusTint: Color,
     activeBorderColor: Color,
-    selectedSlotIndex: Int?,
-    onSlotClick: (Int) -> Unit,
+    seats: List<NativeRoomSeat>,
+    selectedAccountId: String,
+    onSeatClick: (NativeRoomSeat) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sheetShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
-
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(sheetShape)
-            .background(fallbackBgColor)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { }
+        modifier = modifier.fillMaxWidth().heightIn(min = 220.dp, max = 340.dp)
+            .clip(sheetShape).background(fallbackBgColor)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
     ) {
-        PkRemoteImage(
-            url = bgImageUrl,
-            contentDescription = null,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.FillBounds,
-            fallbackColor = fallbackBgColor
-        )
-
+        PkRemoteImage(bgImageUrl, null, Modifier.matchParentSize(), ContentScale.FillBounds, fallbackBgColor)
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(start = 18.dp, end = 18.dp, top = 42.dp, bottom = 14.dp),
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             for (row in 0 until 3) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     for (col in 0 until 5) {
-                        val index = row * 5 + col
-                        val isSelected = selectedSlotIndex == index
+                        val seat = seats.getOrNull(row * 5 + col) ?: NativeRoomSeat(row * 5 + col + 1)
+                        val selected = seat.occupied && seat.accountId.isNotBlank() && seat.accountId == selectedAccountId
                         Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
+                            Modifier.size(44.dp).clip(CircleShape)
                                 .background(Color.Black.copy(alpha = 0.32f))
-                                .then(
-                                    if (isSelected) {
-                                        Modifier.border(1.4.dp, activeBorderColor, CircleShape)
-                                    } else {
-                                        Modifier
-                                    }
-                                )
-                                .clickable { onSlotClick(index) },
+                                .then(if (selected) Modifier.border(1.6.dp, activeBorderColor, CircleShape) else Modifier)
+                                .clickable(enabled = seat.occupied && seat.accountId.isNotBlank()) { onSeatClick(seat) },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Person",
-                                tint = if (isSelected) Color.White else plusTint,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            if (seat.occupied && seat.userImage.isNotBlank()) {
+                                PkRemoteImage(seat.userImage, seat.userName, Modifier.fillMaxSize().clip(CircleShape), ContentScale.Crop)
+                                if (selected) {
+                                    Box(Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape)
+                                        .background(Color.White).border(1.dp, activeBorderColor, CircleShape), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color(0xFF111827), modifier = Modifier.size(13.dp))
+                                    }
+                                }
+                            } else {
+                                Icon(Icons.Default.Add, contentDescription = "Empty seat", tint = plusTint, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                 }
@@ -1456,6 +1440,7 @@ private fun PkRulesBottomSheet(
 @Composable
 private fun PkSelectPersonCard(
     imageUrl: String,
+    selectedUser: PkUser?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -1477,19 +1462,18 @@ private fun PkSelectPersonCard(
             fallbackColor = Color.Transparent
         )
 
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.28f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
+        if (selectedUser == null) {
+            Box(
+                modifier = Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.28f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White, modifier = Modifier.size(24.dp))
+            }
+        } else {
+            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                PkRemoteImage(selectedUser.image, selectedUser.name, Modifier.size(44.dp).clip(CircleShape).border(1.5.dp, Color.White, CircleShape), ContentScale.Crop)
+                Text(selectedUser.name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            }
         }
     }
 }
