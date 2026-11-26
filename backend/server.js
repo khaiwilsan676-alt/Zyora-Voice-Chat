@@ -2814,6 +2814,17 @@ io.on("connection", (socket) => {
       profile?.avatar || payload.avatar || payload.photo || payload.image ||
       payload.photoUrl || payload.photoURL || payload.profilePhoto || "/default-avatar.png"
     ).trim() || "/default-avatar.png";
+    if ((gameName === "wildparty" || gameName === "dragonbattle") && win >= 5000000) {
+      io.emit("zyora_game_big_win_notification", {
+        id: `${gameName}:${round}:${identity || name}:${win}`,
+        game: gameName,
+        name,
+        avatar,
+        win,
+        video: "gemini_generated_video_87dc00f7~2.mp4",
+        timestamp: Date.now()
+      });
+    }
     const userKey = identity || `${name.toLowerCase()}|${avatar}`;
     const redisKey = `game:winners:${gameName}:${round}`;
 
@@ -3568,6 +3579,22 @@ io.on("connection", (socket) => {
           "coinTransferReturnCredits", "coins", 1);
       }
       io.to("room:" + room).emit("coin_transfer_received", transferPayload);
+      const normalizedGiftName = String(giftName || "").trim().toLowerCase();
+      const normalizedGiftType = String(giftType || "").trim().toLowerCase();
+      if (normalizedGiftType.includes("luxury") ||
+          normalizedGiftName === "myalo princess" ||
+          normalizedGiftName === "dragon flames") {
+        io.emit("zyora_luxury_gift_notification", {
+          id: String(eventId || "gift") + ":luxury",
+          senderName: transferPayload.senderName,
+          senderImage: transferPayload.senderImage,
+          recipientName: transferPayload.recipientName,
+          giftName: transferPayload.giftName,
+          giftImage: transferPayload.giftImage,
+          video: "gemini_generated_video_9da434d9~2.mp4",
+          timestamp: transferPayload.timestamp
+        });
+      }
       socket.emit("wallet_balance_updated", {
         userId: sender, balance: await walletBalance(sender), transferId: eventId
       });
