@@ -532,8 +532,13 @@ private fun PkActiveBattleOverlay(
     blueScore: Int,
     redScore: Int,
     votedSide: String?,
+    blueUser: PkUser?,
+    redUser: PkUser?,
+    scoreMode: String,
     onBlueVote: () -> Unit,
     onRedVote: () -> Unit,
+    onBlueSend: () -> Unit,
+    onRedSend: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Draw hone par bhi dono LOSS ho jayenge (No Draw text)
@@ -818,22 +823,28 @@ private fun PkActiveBattleOverlay(
                 PkActiveBattleCard(
                     cardImageUrl = BATTLE_LEFT_CARD_URL,
                     voteButtonImageUrl = VOTE_BLUE_BTN_URL,
-                    userName = "Shubh",
+                    userName = blueUser?.name ?: "User",
+                    avatarUrl = blueUser?.image.orEmpty(),
                     isLeftAvatar = true,
                     isVoted = votedSide == "BLUE",
+                    scoreMode = scoreMode,
                     result = leftResult,
                     onVoteClick = onBlueVote,
+                    onSendClick = onBlueSend,
                     modifier = Modifier.weight(1f)
                 )
 
                 PkActiveBattleCard(
                     cardImageUrl = BATTLE_RIGHT_CARD_URL,
                     voteButtonImageUrl = VOTE_RED_BTN_URL,
-                    userName = "Demoon \uD83C\uDF1D",
+                    userName = redUser?.name ?: "User",
+                    avatarUrl = redUser?.image.orEmpty(),
                     isLeftAvatar = false,
                     isVoted = votedSide == "RED",
+                    scoreMode = scoreMode,
                     result = rightResult,
                     onVoteClick = onRedVote,
+                    onSendClick = onRedSend,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -871,10 +882,13 @@ private fun PkActiveBattleCard(
     cardImageUrl: String,
     voteButtonImageUrl: String,
     userName: String,
+    avatarUrl: String,
     isLeftAvatar: Boolean,
     isVoted: Boolean,
+    scoreMode: String,
     result: PkCardResult,
     onVoteClick: () -> Unit,
+    onSendClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isLoss = result == PkCardResult.LOSS
@@ -929,10 +943,13 @@ private fun PkActiveBattleCard(
                 .padding(top = topPad, bottom = bottomPad, start = 8.dp, end = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Fake User Circular Avatar (Bilkul dim nahi hoga)
-            PkFakeUserAvatar(
-                isLeft = isLeftAvatar,
-                modifier = Modifier.size(avatarSize)
+            // Real room participant avatar from the authoritative seat snapshot.
+            PkRemoteImage(
+                url = avatarUrl,
+                contentDescription = userName,
+                modifier = Modifier.size(avatarSize).clip(CircleShape).border(1.2.dp, Color.White.copy(alpha = 0.75f), CircleShape),
+                contentScale = ContentScale.Crop,
+                fallbackColor = Color(0xFF29343A)
             )
 
             Spacer(Modifier.height((cardHeight * 0.045f).coerceIn(6.dp, 12.dp)))
@@ -986,7 +1003,7 @@ private fun PkActiveBattleCard(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = onVoteClick
+                                onClick = if (scoreMode == "Coins") onSendClick else onVoteClick
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -999,7 +1016,7 @@ private fun PkActiveBattleCard(
                         )
 
                         Text(
-                            text = if (isVoted) "Voted" else "Vote",
+                            text = if (scoreMode == "Coins") "Send" else if (isVoted) "Voted" else "Vote",
                             color = Color(0xFFFFE7A3),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
