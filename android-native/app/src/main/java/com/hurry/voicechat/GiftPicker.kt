@@ -536,7 +536,11 @@ fun GiftPicker(
                                                         .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
                                                         .clickable {
                                                             recipientSelectionTouched = true
-                                                            val nextTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
+                                                            val nextTargets = when {
+                                                                recipientMode == RecipientMode.MIC && selectedTargets.size > 1 -> listOf(uid)
+                                                                selected -> selectedTargets.filter { it != uid }
+                                                                else -> selectedTargets + uid
+                                                            }
                                                             selectedTargets = nextTargets
                                                             recipientMode = if (nextTargets.size > 1) RecipientMode.MIC else RecipientMode.SINGLE
                                                         },
