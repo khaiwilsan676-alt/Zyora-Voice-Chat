@@ -266,6 +266,8 @@ const memoryRoundWinners = {
 // Serialize each Dragon Battle round write so a page refresh cannot read before save completes.
 const dragonBattleWinnerWrites = new Map();
 const gameWinnerWrites = new Map();
+const sentBigWinNotifications = new Map();
+
 
 /*
  * roomId -> Map(userId -> socket count)
@@ -2815,15 +2817,22 @@ io.on("connection", (socket) => {
       payload.photoUrl || payload.photoURL || payload.profilePhoto || "/default-avatar.png"
     ).trim() || "/default-avatar.png";
     if ((gameName === "wildparty" || gameName === "dragonbattle") && win >= 5000000) {
-      io.emit("zyora_game_big_win_notification", {
-        id: `${gameName}:${round}:${identity || name}:${win}`,
-        game: gameName,
-        name,
-        avatar,
-        win,
-        video: "gemini_generated_video_87dc00f7~2.mp4",
-        timestamp: Date.now()
-      });
+      const notificationKey = `${gameName}:${round}:${identity || name}`;
+      if (!sentBigWinNotifications.has(notificationKey)) {
+        sentBigWinNotifications.set(notificationKey, Date.now());
+        while (sentBigWinNotifications.size > 5000) {
+          sentBigWinNotifications.delete(sentBigWinNotifications.keys().next().value);
+        }
+        io.emit("zyora_game_big_win_notification", {
+          id: notificationKey,
+          game: gameName,
+          name,
+          avatar,
+          win,
+          video: "gemini_generated_video_87dc00f7~2.mp4",
+          timestamp: Date.now()
+        });
+      }
     }
     const userKey = identity || `${name.toLowerCase()}|${avatar}`;
     const redisKey = `game:winners:${gameName}:${round}`;
