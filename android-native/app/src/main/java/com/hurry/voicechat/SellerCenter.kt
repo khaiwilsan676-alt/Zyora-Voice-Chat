@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
@@ -92,6 +93,11 @@ fun SellerCenter(
     val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_seller_wallet_cache", android.content.Context.MODE_PRIVATE) }
     val walletAccountKey = accountId.ifBlank { userId }
     var showingDetails by remember { mutableStateOf(false) }
+    var showWhatsappDialog by remember { mutableStateOf(false) }
+    var showPaymentMethodSheet by remember { mutableStateOf(false) }
+    var whatsappNumber by remember(userId) { mutableStateOf("") }
+    var paymentMethod by remember(userId) { mutableStateOf("") }
+    var isSavingContact by remember { mutableStateOf(false) }
     var targetId by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var owner by remember { mutableStateOf(SellerUser(userId, accountId, ownerName.ifBlank { "User" }, ownerAvatar, "")) }
@@ -151,6 +157,8 @@ fun SellerCenter(
                     avatar = profile.optString("image", ownerAvatar),
                     idImage = profile.optString("idImage", profile.optString("idCardImage"))
                 )
+                whatsappNumber = profile.optString("whatsapp", profile.optString("whatsApp", profile.optString("whatsappNumber")))
+                paymentMethod = profile.optString("paymentMethod", profile.optString("payment_method", profile.optString("sellerPaymentMethod")))
             }
             balance = sellerRequest("/api/seller/wallet/$encoded").optLong("balance", 0L).coerceAtLeast(0L)
             walletCachePrefs.edit().putLong("balance_$userId", balance).apply()
@@ -241,15 +249,16 @@ fun SellerCenter(
                         }
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(SellerLine))
-                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { showWhatsappDialog = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("WhatsApp", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = SellerText)
                         Spacer(Modifier.weight(1f))
-                        Text("   ›", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = SellerText)
+                        Text(whatsappNumber.ifBlank { "—" } + "   ›", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SellerText)
                     }
-                    Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { showPaymentMethodSheet = true }.padding(top = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Payment Method", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = SellerText)
                         Spacer(Modifier.weight(1f))
-                        Text("🇮🇳   ›", fontSize = 17.sp, color = SellerText)
+                        SellerPaymentMethodValue(paymentMethod)
+                        Text("   ›", fontSize = 17.sp, color = SellerText)
                     }
                 }
                 Box(Modifier.fillMaxWidth().height(8.dp).background(Color(0xFFF9FAFB), RoundedCornerShape(8.dp)))
@@ -350,6 +359,62 @@ fun SellerCenter(
                 }
             }
         }
+    }
+
+    if (showWhatsappDialog) {
+        Dialog(onDismissRequest = { if (!isSavingContact) showWhatsappDialog = false }) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White).padding(18.dp)) {
+                Text("WhatsApp", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = SellerText)
+                Spacer(Modifier.height(16.dp))
+                Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFF1F2F4)).padding(horizontal = 13.dp), contentAlignment = Alignment.CenterStart) {
+                    if (whatsappNumber.isEmpty()) Text("Enter WhatsApp number", fontSize = 14.sp, color = SellerMuted)
+                    BasicTextField(value = whatsappNumber,
+                        onValueChange = { whatsappNumber = it.filter { ch -> ch.isDigit() || ch == '+' || ch == ' ' || ch == '-' }.take(20) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = SellerText))
+                }
+                Spacer(Modifier.height(18.dp))
+                Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(8.dp)).background(SellerBlue)
+                    .clickable(enabled = !isSavingContact) {
+                        scope.launch {
+                            isSavingContact = true
+                            runCatching {
+                                sellerRequest("/api/users", "PUT", JSONObject().put("uid", userId).put("id", userId)
+                                    .put("appLongId", userId).put("accountId", accountId).put("whatsapp", whatsappNumber.trim()))
+                                showWhatsappDialog = false
+                            }.onFailure { statusMessage = it.message ?: "Could not save WhatsApp number" }
+                            isSavingContact = false
+                        }
+                    }, contentAlignment = Alignment.Center) {
+                    Text(if (isSavingContact) "Saving..." else "Save", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
+    }
+    if (showPaymentMethodSheet) {
+        SellerPaymentMethodSheet(onClose = { showPaymentMethodSheet = false }, onSelect = { selected ->
+            scope.launch {
+                isSavingContact = true
+                runCatching {
+                    sellerRequest("/api/users", "PUT", JSONObject().put("uid", userId).put("id", userId)
+                        .put("appLongId", userId).put("accountId", accountId).put("paymentMethod", selected))
+                    paymentMethod = selected
+                    showPaymentMethodSheet = false
+                }.onFailure { statusMessage = it.message ?: "Could not save payment method" }
+                isSavingContact = false
+            }
+        })
+    }
+}
+
+@Composable
+private fun SellerPaymentMethodValue(method: String) {
+    when (method.trim().lowercase()) {
+        "gpay", "google pay", "googlepay" -> AsyncImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261030_135231.jpg", null, Modifier.size(22.dp), contentScale = ContentScale.Fit)
+        "phonepe", "phone pe" -> AsyncImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261030_135211.jpg", null, Modifier.size(22.dp), contentScale = ContentScale.Fit)
+        "paytm" -> AsyncImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261030_135245.jpg", null, Modifier.size(22.dp), contentScale = ContentScale.Fit)
+        else -> Text(method.ifBlank { "—" }, fontSize = 13.sp, color = SellerText)
     }
 }
 
