@@ -55,8 +55,7 @@ private fun luckyBagClaimName(claim: JSONObject): String {
         ?: listOf("name", "displayName", "username", "fullName")
             .asSequence().map { key -> user.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
             .firstOrNull { it.isNotBlank() }
-        ?: claim.optString("userId").takeIf { it.isNotBlank() && it != "null" }
-        ?: "Unknown user"
+        ?: "User"
 }
 
 private fun luckyBagClaimImage(claim: JSONObject): String {
