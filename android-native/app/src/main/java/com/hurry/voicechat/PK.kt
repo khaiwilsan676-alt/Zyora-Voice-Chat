@@ -218,6 +218,7 @@ fun PKBattlePage(
         roomSocket?.on("pk_finished", finished)
         roomSocket?.on("pk_start_failed", failed)
         roomSocket?.on("pk_vote_rejected", voteRejected)
+        roomSocket?.emit("pk_state_request", JSONObject().put("roomId", roomId))
         onDispose {
             roomSocket?.off("pk_started", started)
             roomSocket?.off("pk_score_update", score)
