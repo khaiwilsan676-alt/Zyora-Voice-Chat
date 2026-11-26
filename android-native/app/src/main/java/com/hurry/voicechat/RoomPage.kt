@@ -1461,8 +1461,12 @@ fun RoomPage(
                     name = payload.optString("name").ifBlank { "User" },
                     detail = "Win " + amount.toString() + " • " +
                         if (payload.optString("game") == "dragonbattle") "Dragon Battle" else "Wild Party",
-                    giftImage = "",
-                    giftName = ""
+                    giftImage = if (payload.optString("game") == "dragonbattle") {
+                        "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261121_020906.png"
+                    } else {
+                        "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png"
+                    },
+                    giftName = if (payload.optString("game") == "dragonbattle") "Dragon Battle" else "Wild Party"
                 )
             }
         }
