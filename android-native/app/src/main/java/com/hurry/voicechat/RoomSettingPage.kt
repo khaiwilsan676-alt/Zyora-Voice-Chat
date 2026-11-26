@@ -198,6 +198,7 @@ fun RoomSettingPage(
     var customTheme by remember(roomOwnerId) { mutableStateOf(context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).getString("customTheme_$roomOwnerId", "").orEmpty()) }
     var pendingCustomThemeImage by remember { mutableStateOf("") }
     var pendingCustomThemeName by remember { mutableStateOf("") }
+    var customThemeUploading by remember { mutableStateOf(false) }
     var pendingPicker by remember { mutableStateOf("photo") }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
@@ -418,7 +419,12 @@ fun RoomSettingPage(
                         val expiry = item.optLong("expiresAt")
                         if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
                             val image = item.optString("image")
-                            if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), STORE_THEME_ASSET_BASE + image, expiry) else null
+                            val resolvedImage = when {
+                                image.startsWith("data:image/") || image.startsWith("https://") || image.startsWith("http://") -> image
+                                image.isNotBlank() -> STORE_THEME_ASSET_BASE + image
+                                else -> ""
+                            }
+                            if (resolvedImage.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), resolvedImage, expiry) else null
                         } else null
                     }
                 } finally { conn.disconnect() }
@@ -803,18 +809,57 @@ fun RoomSettingPage(
                         .height(50.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (isUploadActive) blue500 else blue500.copy(alpha = 0.45f))
-                        .clickable(enabled = isUploadActive) {
-                            customTheme = pendingCustomThemeImage
-                            performSave(state.copy(theme = "custom", customTheme = pendingCustomThemeImage))
-                            pendingCustomThemeImage = ""
-                            pendingCustomThemeName = ""
-                            sheet = ""
+                        .clickable(enabled = isUploadActive && !customThemeUploading) {
+                            if (currentUserId.isBlank() || pendingCustomThemeName.isBlank()) {
+                                saveError = "Theme name and account are required"
+                            } else {
+                                customThemeUploading = true
+                                saveError = ""
+                                scope.launch {
+                                    val result = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            val connection = (URL("$SETTINGS_API/api/room/custom-themes").openConnection() as HttpURLConnection).apply {
+                                                requestMethod = "POST"
+                                                connectTimeout = 15000
+                                                readTimeout = 30000
+                                                doOutput = true
+                                                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                                                setRequestProperty("Accept", "application/json")
+                                            }
+                                            try {
+                                                val body = JSONObject()
+                                                    .put("userId", currentUserId)
+                                                    .put("name", pendingCustomThemeName.trim())
+                                                    .put("image", pendingCustomThemeImage)
+                                                    .toString()
+                                                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                                val code = connection.responseCode
+                                                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                                                val response = JSONObject(stream?.bufferedReader()?.use { it.readText() }.orEmpty())
+                                                if (code !in 200..299 || !response.optBoolean("success")) {
+                                                    error(response.optString("error").ifBlank { "Theme upload failed" })
+                                                }
+                                                response
+                                            } finally {
+                                                connection.disconnect()
+                                            }
+                                        }
+                                    }
+                                    customThemeUploading = false
+                                    result.onSuccess {
+                                        pendingCustomThemeImage = ""
+                                        pendingCustomThemeName = ""
+                                        sheet = ""
+                                        saveError = "Theme submitted for official approval"
+                                    }.onFailure { saveError = it.message ?: "Theme upload failed" }
+                                }
+                            }
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "Upload",
+                            if (customThemeUploading) "Uploading..." else "Upload",
                             color = if (isUploadActive) Color.White else Color.White.copy(alpha = 0.85f),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold
@@ -828,7 +873,7 @@ fun RoomSettingPage(
                         )
                         Spacer(Modifier.width(5.dp))
                         Text(
-                            "5,00,000/7Days",
+                            "5,00,000 Coins",
                             color = if (isUploadActive) Color.White else Color.White.copy(alpha = 0.85f),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold
