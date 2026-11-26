@@ -89,7 +89,7 @@ fun SellerCenter(
     ownerAvatar: String = ""
 ) {
     val context = LocalContext.current
-    val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
+    val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_seller_wallet_cache", android.content.Context.MODE_PRIVATE) }
     val walletAccountKey = accountId.ifBlank { userId }
     var showingDetails by remember { mutableStateOf(false) }
     var targetId by remember { mutableStateOf("") }
@@ -128,11 +128,11 @@ fun SellerCenter(
             }
         }
         walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
-        walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
+        walletSocket?.on("seller_wallet_balance_updated", onBalanceUpdated)
         if (walletSocket?.connected() == true) registerWallet() else walletSocket?.connect()
         onDispose {
             walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
-            walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
+            walletSocket?.off("seller_wallet_balance_updated", onBalanceUpdated)
             walletSocket?.disconnect(); walletSocket?.close()
         }
     }
@@ -152,7 +152,7 @@ fun SellerCenter(
                     idImage = profile.optString("idImage", profile.optString("idCardImage"))
                 )
             }
-            balance = sellerRequest("/api/lucky-bag/wallet/$encoded").optLong("balance", 0L).coerceAtLeast(0L)
+            balance = sellerRequest("/api/seller/wallet/$encoded").optLong("balance", 0L).coerceAtLeast(0L)
             walletCachePrefs.edit().putLong("balance_$userId", balance).apply()
         }.onFailure { statusMessage = it.message ?: "Could not load wallet" }
     }
