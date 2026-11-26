@@ -63,6 +63,40 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     var cdKeyBusy by remember { mutableStateOf(false) }
     val cdKeyScope = rememberCoroutineScope()
 
+    // Restore Apply/Exchange from the server, so uninstalling/reinstalling
+    // the app cannot reset an already-issued key back to Apply.
+    LaunchedEffect(uid) {
+        if (uid.isBlank()) return@LaunchedEffect
+        val statusResult = withContext(Dispatchers.IO) {
+            runCatching {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                val token = if (firebaseUser != null) {
+                    Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
+                } else {
+                    prefs.getString("idToken", null)
+                }?.takeIf { it.isNotBlank() } ?: error("No auth token")
+                val connection = (URL("https://zyora-server.onrender.com/api/cd-key/status").openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 15000
+                    setRequestProperty("Authorization", "Bearer $token")
+                    setRequestProperty("Cache-Control", "no-store")
+                }
+                val response = connection.responseCode
+                val stream = if (response in 200..299) connection.inputStream else connection.errorStream
+                val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                connection.disconnect()
+                val json = JSONObject(body)
+                if (response !in 200..299 || !json.optBoolean("success")) error("CD-Key status unavailable")
+                json.optBoolean("alreadyIssued")
+            }
+        }
+        if (statusResult.getOrNull() == true) {
+            prefs.edit().putBoolean("cd_key_apply_used_$uid", true).apply()
+            cdKeyAction = "Exchange"
+        }
+    }
+
     SideEffect {
         var currentContext: Context = context
         while (currentContext !is Activity && currentContext is ContextWrapper) {
