@@ -644,6 +644,66 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: (token: string) => void
 // ==============================================================
 // MAIN PAGE
 // ==============================================================
+
+function OwnerCustomRoomThemes({ ownerKey }: { ownerKey: string }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string>("");
+  const [error, setError] = useState("");
+  const load = async () => {
+    try {
+      const response = await fetch(apiUrl("/api/owner/custom-room-themes"), { headers: { "x-owner-key": ownerKey }, cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load theme requests");
+      setItems(Array.isArray(data.items) ? data.items : []);
+      setError("");
+    } catch (e: any) { setError(e?.message || "Theme requests unavailable"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, []);
+  const approve = async (id: string) => {
+    if (busy) return;
+    setBusy(id);
+    try {
+      const response = await fetch(apiUrl("/api/owner/custom-room-themes/" + encodeURIComponent(id) + "/approve"), {
+        method: "POST", headers: { "Content-Type": "application/json", "x-owner-key": ownerKey }, body: "{}"
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Approval failed");
+      setItems(previous => previous.filter(item => item.id !== id));
+    } catch (e: any) { setError(e?.message || "Approval failed"); }
+    finally { setBusy(""); }
+  };
+  return (
+    <section className="mt-8">
+      <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+        <h3 className="text-lg font-bold text-slate-800">Custom Room Theme Requests</h3>
+        <button onClick={() => { setLoading(true); void load(); }} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Refresh</button>
+      </div>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {loading ? <p className="py-8 text-center text-sm text-slate-400">Loading requests...</p> :
+        items.length === 0 ? <p className="rounded-xl border border-slate-100 bg-white py-8 text-center text-sm text-slate-400">No pending custom themes</p> :
+        <div className="flex flex-col gap-2">
+          <div className="hidden md:flex items-center gap-4 rounded-xl bg-slate-100 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+            <span className="w-10">Image</span><span className="flex-1">User / Theme</span><span className="w-32">Coins</span><span className="w-28 text-right">Action</span>
+          </div>
+          {items.map(item => (
+            <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white px-4 py-4 md:flex-row md:items-center md:gap-4 md:px-5">
+              <img src={item.image} alt={item.name} className="h-16 w-12 rounded-lg border border-slate-200 object-cover" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-slate-800">{item.name}</p>
+                <p className="text-xs text-slate-500">ID: {item.userId} · {new Date(item.createdAt).toLocaleString()}</p>
+              </div>
+              <div className="w-32 text-sm font-bold text-slate-700">🪙 {Number(item.price || 0).toLocaleString("en-IN")}</div>
+              <button disabled={busy !== ""} onClick={() => void approve(item.id)} className="rounded-lg bg-[#197477] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{busy === item.id ? "Approving..." : "Approve"}</button>
+            </div>
+          ))}
+        </div>
+      }
+    </section>
+  );
+}
+
 export default function StaffPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -2282,6 +2342,7 @@ export default function StaffPanel() {
                 </div>
               )}
             </div>
+            <OwnerCustomRoomThemes ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
         )}
 
