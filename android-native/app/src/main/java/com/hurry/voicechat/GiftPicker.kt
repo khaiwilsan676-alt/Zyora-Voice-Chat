@@ -1161,7 +1161,9 @@ private fun isGreenScreenGiftVideo(url: String): Boolean {
         url.contains("gemini_generated_video_e1f4d16e~2") ||
         url.contains("gemini_generated_video_b14f3d64~2") ||
         url.contains("gemini_generated_video_ab36b2de~2") ||
-        url.contains("gemini_generated_video_60f28193~2")
+        url.contains("gemini_generated_video_60f28193~2") ||
+        url.contains("gemini_generated_video_9da434d9~2") ||
+        url.contains("gemini_generated_video_87dc00f7~2")
 }
 
 private class ChromaKeyVideoRenderer(
