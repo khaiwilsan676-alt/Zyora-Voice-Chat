@@ -62,7 +62,7 @@ import kotlin.math.sin
 private const val BASE_IMAGE_URL =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/"
 
-private const val BATTLE_ICON_URL = "${BASE_IMAGE_URL}public/IMG_20261028_182422.png"
+private const val BATTLE_ICON_URL = "${BASE_IMAGE_URL}public/IMG_20261126_214316.png"
 private const val BLUE_CARD_URL = "${BASE_IMAGE_URL}public/IMG_20261126_011922.png"
 private const val RED_CARD_URL = "${BASE_IMAGE_URL}public/IMG_20261126_011946.png"
 
