@@ -316,7 +316,7 @@ fun PublicProfileScreen(
 
     var userName by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
     var userBio by remember(profileCacheKey, cachedProfile, targetUser?.bio) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: targetUser?.bio ?: "") }
-    var userAge by remember(profileCacheKey, cachedProfile, targetUser?.age) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", targetUser?.age ?: 0) else targetUser?.age ?: 0) }
+    var userAge by remember(profileCacheKey, cachedProfile, targetUser?.age) { mutableIntStateOf(cachedProfile?.let { profile -> if (profile.has("age")) profile.optInt("age", targetUser?.age ?: 0) else targetUser?.age ?: 0 } ?: targetUser?.age ?: 0) }
     
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
