@@ -2332,13 +2332,15 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       // room cache can still be loading when the user taps Open, so client
       // supplied "User" / blank avatar must never overwrite the real profile.
       const profile = db ? await db.collection("users").findOne({ $or: [
-        { uid: userId }, { id: userId }, { appLongId: userId },
-        { accountId: userId }, { accountNumber: userId },
-        { displayUserNumber: userId }, { displayAccountNumber: userId }
+        { uid: userId }, { firebaseUid: userId }, { firebaseUID: userId },
+        { id: userId }, { appLongId: userId }, { accountId: userId },
+        { accountNumber: userId }, { displayUserNumber: userId },
+        { displayAccountNumber: userId }, { userId: userId }
       ] }) : null;
       const userName = String(
         profile?.name || profile?.displayName || profile?.userName ||
         profile?.profile?.name || profile?.profile?.displayName ||
+        profile?.nickname || profile?.username || profile?.fullName || profile?.userData?.name ||
         req.body?.userName || "User"
       ).trim().slice(0, 80) || "User";
       const userImage = String(
@@ -2395,6 +2397,38 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
     return res.status(503).json({ error: "Could not confirm Lucky Bag reward" });
   }
 });
+async function resolveLuckyBagClaimDisplay(claim) {
+  const userId = String(claim?.userId || "").trim();
+  const profile = db && userId ? await db.collection("users").findOne({ $or: [
+    { uid: userId }, { firebaseUid: userId }, { firebaseUID: userId },
+    { id: userId }, { appLongId: userId }, { accountId: userId },
+    { accountNumber: userId }, { displayUserNumber: userId },
+    { displayAccountNumber: userId }, { userId: userId }
+  ] }) : null;
+  const profileName = [
+    profile?.name, profile?.displayName, profile?.userName, profile?.username,
+    profile?.nickname, profile?.fullName, profile?.profile?.name,
+    profile?.profile?.displayName, profile?.userData?.name
+  ].map(value => String(value || "").trim())
+    .find(value => value && !["user", "null", "undefined", userId].includes(value.toLowerCase()));
+  const profileImage = [
+    profile?.image, profile?.dp, profile?.photo, profile?.photoURL, profile?.photoUrl,
+    profile?.avatar, profile?.avatarUrl, profile?.profileImage, profile?.profileImageUrl,
+    profile?.profile?.image, profile?.profile?.avatar, profile?.userData?.image
+  ].map(value => String(value || "").trim())
+    .find(value => value && !["null", "undefined"].includes(value.toLowerCase()));
+  const storedName = String(claim?.userName || "").trim();
+  const validStoredName = storedName && !["user", "null", "undefined", userId].includes(storedName.toLowerCase());
+  return {
+    userId,
+    userName: profileName || (validStoredName ? storedName : "User"),
+    userImage: profileImage || String(claim?.userImage || "").trim(),
+    amount: Number(claim?.amount || 0),
+    status: claim?.status,
+    claimedAt: claim?.claimedAt
+  };
+}
+
 app.get("/api/lucky-bag/room/:roomId", async (req, res) => {
   try {
     const roomId = String(req.params.roomId || "");
@@ -2404,14 +2438,12 @@ app.get("/api/lucky-bag/room/:roomId", async (req, res) => {
     const bag = bags.filter(item => item && item.roomId === roomId && ["open", "claimed"].includes(item.status) && item.expiresAt > Date.now())
       .sort((a, b) => b.createdAt - a.createdAt)[0];
     if (!bag) return res.json({ bag: null });
+    const claims = await Promise.all((bag.claims || []).map(resolveLuckyBagClaimDisplay));
     return res.json({ bag: {
       bagId: bag.bagId, senderId: bag.senderId, senderName: bag.senderName, senderImage: bag.senderImage,
       roomId: bag.roomId, roomName: bag.roomName, amount: bag.amount, recipients: bag.recipients,
       claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, status: bag.status,
-      expiresAt: bag.expiresAt, claims: (bag.claims || []).map(claim => ({
-        userId: claim.userId, userName: claim.userName || "User", userImage: claim.userImage || "",
-        amount: Number(claim.amount || 0), status: claim.status, claimedAt: claim.claimedAt
-      }))
+      expiresAt: bag.expiresAt, claims
     } });
   } catch (err) {
     console.error("GET Lucky Bag room failed:", err.message);
