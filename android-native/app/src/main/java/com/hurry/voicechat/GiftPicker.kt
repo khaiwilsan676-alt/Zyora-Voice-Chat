@@ -183,7 +183,7 @@ private val hotGifts = listOf(
 )
 
 private val luxuryGifts = listOf(
-    GiftPickerGift(3001, "Golden tiger", 1_000_000, "${GITHUB_PUBLIC_BASE_URL}file_000000008a8c821186f5941d97193ee7.png",
+    GiftPickerGift(3001, "Golden tiger", 40_000_000, "${GITHUB_PUBLIC_BASE_URL}file_000000008a8c821186f5941d97193ee7.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025121214091492750~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(3002, "Fairy Fox", 7_000_000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131020.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523213229566~2.mp4", videoStyle = "fade", sideFade = true),
