@@ -319,7 +319,7 @@ fun NativeAvatarFrameOverlay(
                     }.getOrNull()
                 }
             }
-            if (equippedFrame != null) frame = equippedFrame
+            frame = equippedFrame
         }
     }
     LaunchedEffect(frame) {
