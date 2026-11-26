@@ -2121,9 +2121,9 @@ export default function StaffPanel() {
               .filter(Boolean)
               .some((value: any) => [seller.uid, seller.accountId, seller.id].filter(Boolean).includes(String(value)))
           );
-          setSelectedManageUser(matched || {
+          setSelectedManageUser(matched ? { ...matched, coins: seller.coins } : {
             id: seller.id, uid: seller.uid, accountId: seller.accountId,
-            name: seller.name, image: seller.image, username: '', email: '',
+            name: seller.name, image: seller.image, username: '', email: '', coins: seller.coins,
             accountStatus: seller.active ? 'Active' : 'Inactive'
           });
           setActiveTab('manage_users');
