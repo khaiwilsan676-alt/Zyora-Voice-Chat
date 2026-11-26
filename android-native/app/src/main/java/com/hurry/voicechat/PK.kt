@@ -23,11 +23,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -68,6 +71,8 @@ private const val BATTLE_RIGHT_CARD_URL = "${BASE_IMAGE_URL}public/IMG_20261126_
 private const val VOTE_BLUE_BTN_URL = "${BASE_IMAGE_URL}public/IMG_20261126_144743.png"
 private const val VOTE_RED_BTN_URL = "${BASE_IMAGE_URL}public/IMG_20261126_144805.png"
 private const val TICKET_ICON_URL = "${BASE_IMAGE_URL}public/IMG_20261126_145343.png"
+private const val WIN_IMAGE_URL = "${BASE_IMAGE_URL}public/IMG_20261126_144416.png"
+private const val LOSS_IMAGE_URL = "${BASE_IMAGE_URL}public/IMG_20261126_144432.png"
 
 // Exact Image Colors (Matte Dark Green Start + Image Chips)
 private val PkSheetBg = Color.Black
@@ -87,6 +92,13 @@ private enum class PkSheetView {
     SELECT_RED,
     RULES,
     BATTLE_ACTIVE
+}
+
+private enum class PkCardResult {
+    NONE,
+    WIN,
+    LOSS,
+    DRAW
 }
 
 private fun parseDurationSeconds(label: String): Int {
@@ -153,14 +165,14 @@ fun PKBattlePage(onClose: () -> Unit) {
                 redScore = redScore,
                 votedSide = votedSide,
                 onBlueVote = {
-                    if (votedSide != "BLUE") {
+                    if (remainingSeconds > 0 && votedSide != "BLUE") {
                         if (votedSide == "RED" && redScore > 0) redScore -= 1
                         votedSide = "BLUE"
                         blueScore += 1
                     }
                 },
                 onRedVote = {
-                    if (votedSide != "RED") {
+                    if (remainingSeconds > 0 && votedSide != "RED") {
                         if (votedSide == "BLUE" && blueScore > 0) blueScore -= 1
                         votedSide = "RED"
                         redScore += 1
@@ -412,7 +424,7 @@ private fun PkMainBattleSheet(
 
         Spacer(Modifier.height(14.dp))
 
-        // Matte Dark Green Start Button (No brightness/glow, Gold Border same as Image)
+        // Matte Dark Green Start Button (No brightness/glow, Gold Border)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -447,6 +459,20 @@ private fun PkActiveBattleOverlay(
     onRedVote: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isBattleFinished = remainingSeconds <= 0
+    val leftResult = when {
+        !isBattleFinished -> PkCardResult.NONE
+        blueScore > redScore -> PkCardResult.WIN
+        blueScore < redScore -> PkCardResult.LOSS
+        else -> PkCardResult.DRAW
+    }
+    val rightResult = when {
+        !isBattleFinished -> PkCardResult.NONE
+        redScore > blueScore -> PkCardResult.WIN
+        redScore < blueScore -> PkCardResult.LOSS
+        else -> PkCardResult.DRAW
+    }
+
     val targetBlueFraction = remember(blueScore, redScore) {
         when {
             blueScore == 0 && redScore == 0 -> 0.5f
@@ -490,11 +516,9 @@ private fun PkActiveBattleOverlay(
                     shape = RoundedCornerShape(4.dp)
                 )
         ) {
-            // Dynamic Blue / Red Bar + Center Glow Sparkles
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val splitX = size.width * animatedBlueFraction
 
-                // Left Blue/Teal Bar
                 drawRect(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
@@ -509,7 +533,6 @@ private fun PkActiveBattleOverlay(
                     size = Size(splitX, size.height)
                 )
 
-                // Right Red/Crimson Bar
                 drawRect(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
@@ -524,7 +547,6 @@ private fun PkActiveBattleOverlay(
                     size = Size((size.width - splitX).coerceAtLeast(0f), size.height)
                 )
 
-                // Soft Center Glow Beam
                 drawRect(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
@@ -539,7 +561,6 @@ private fun PkActiveBattleOverlay(
                     size = Size(36f, size.height)
                 )
 
-                // Crisp White Center Line
                 drawLine(
                     color = Color.White,
                     start = Offset(splitX, 0f),
@@ -547,7 +568,6 @@ private fun PkActiveBattleOverlay(
                     strokeWidth = 3f
                 )
 
-                // Tiny Sparkle Dots on both sides of split
                 val leftSparkles = listOf(
                     Offset(-10f, 0.22f), Offset(-22f, 0.48f), Offset(-14f, 0.74f),
                     Offset(-30f, 0.30f), Offset(-26f, 0.82f), Offset(-8f, 0.56f)
@@ -639,6 +659,7 @@ private fun PkActiveBattleOverlay(
                     userName = "Shubh",
                     isLeftAvatar = true,
                     isVoted = votedSide == "BLUE",
+                    result = leftResult,
                     onVoteClick = onBlueVote,
                     modifier = Modifier.weight(1f)
                 )
@@ -650,12 +671,12 @@ private fun PkActiveBattleOverlay(
                     userName = "Demoon \uD83C\uDF1D",
                     isLeftAvatar = false,
                     isVoted = votedSide == "RED",
+                    result = rightResult,
                     onVoteClick = onRedVote,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // Center Countdown Timer Pill overlapping top center
             PkTimerTrapezoidBadge(
                 formattedTime = formattedTime,
                 modifier = Modifier.align(Alignment.TopCenter)
@@ -671,18 +692,29 @@ private fun PkActiveBattleCard(
     userName: String,
     isLeftAvatar: Boolean,
     isVoted: Boolean,
+    result: PkCardResult,
     onVoteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isLoss = result == PkCardResult.LOSS
+    val dimColorFilter = if (isLoss) {
+        ColorFilter.tint(Color.Black.copy(alpha = 0.45f), BlendMode.SrcAtop)
+    } else {
+        null
+    }
+
     Box(
-        modifier = modifier.height(252.dp)
+        modifier = modifier
+            .height(252.dp)
+            .alpha(if (isLoss) 0.58f else 1f)
     ) {
         PkRemoteImage(
             url = cardImageUrl,
             contentDescription = userName,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds,
-            fallbackColor = if (isLeftAvatar) Color(0xFF0E3D43) else Color(0xFF4B0F1A)
+            fallbackColor = if (isLeftAvatar) Color(0xFF0E3D43) else Color(0xFF4B0F1A),
+            colorFilter = dimColorFilter
         )
 
         Column(
@@ -692,51 +724,106 @@ private fun PkActiveBattleCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Fake User Circular Avatar
-            PkFakeUserAvatar(
-                isLeft = isLeftAvatar,
-                modifier = Modifier.size(72.dp)
-            )
+            Box(contentAlignment = Alignment.Center) {
+                PkFakeUserAvatar(
+                    isLeft = isLeftAvatar,
+                    modifier = Modifier.size(72.dp)
+                )
+                if (isLoss) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.42f))
+                    )
+                }
+            }
 
             Spacer(Modifier.height(14.dp))
 
             // Fake User Name
             Text(
                 text = userName,
-                color = Color.White,
+                color = if (isLoss) Color.White.copy(alpha = 0.70f) else Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Serif,
                 maxLines = 1
             )
 
-            Spacer(Modifier.weight(1f))
+            when (result) {
+                PkCardResult.WIN -> {
+                    // Win image user ke name ke theek neeche (Vote button hata diya)
+                    Spacer(Modifier.height(10.dp))
+                    PkRemoteImage(
+                        url = WIN_IMAGE_URL,
+                        contentDescription = "Win",
+                        modifier = Modifier
+                            .fillMaxWidth(0.76f)
+                            .height(62.dp),
+                        contentScale = ContentScale.Fit,
+                        fallbackColor = Color.Transparent
+                    )
+                }
 
-            // Vote / Voted Button Image with Exact Centered Text
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.84f)
-                    .height(42.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onVoteClick
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                PkRemoteImage(
-                    url = voteButtonImageUrl,
-                    contentDescription = if (isVoted) "Voted" else "Vote",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                    fallbackColor = Color.Transparent
-                )
+                PkCardResult.LOSS -> {
+                    // Loss image user ke name ke theek neeche aur dim (Vote button hata diya)
+                    Spacer(Modifier.height(10.dp))
+                    PkRemoteImage(
+                        url = LOSS_IMAGE_URL,
+                        contentDescription = "Loss",
+                        modifier = Modifier
+                            .fillMaxWidth(0.76f)
+                            .height(62.dp)
+                            .alpha(0.72f),
+                        contentScale = ContentScale.Fit,
+                        fallbackColor = Color.Transparent,
+                        colorFilter = dimColorFilter
+                    )
+                }
 
-                Text(
-                    text = if (isVoted) "Voted" else "Vote",
-                    color = Color(0xFFFFE7A3),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                PkCardResult.DRAW -> {
+                    // Draw case mein bhi vote button hata diya
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Draw",
+                        color = Color(0xFFFFE7A3),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                PkCardResult.NONE -> {
+                    Spacer(Modifier.weight(1f))
+
+                    // Vote / Voted Button Image with Exact Centered Text
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.84f)
+                            .height(42.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onVoteClick
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PkRemoteImage(
+                            url = voteButtonImageUrl,
+                            contentDescription = if (isVoted) "Voted" else "Vote",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                            fallbackColor = Color.Transparent
+                        )
+
+                        Text(
+                            text = if (isVoted) "Voted" else "Vote",
+                            color = Color(0xFFFFE7A3),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
@@ -815,7 +902,6 @@ private fun PkStopwatchMiniIcon(modifier: Modifier = Modifier) {
         val stroke = w * 0.11f
         val tint = Color(0xFFFFEAB5)
 
-        // Top button bar
         drawLine(
             color = tint,
             start = Offset(w * 0.36f, h * 0.10f),
@@ -823,7 +909,6 @@ private fun PkStopwatchMiniIcon(modifier: Modifier = Modifier) {
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
-        // Small stem
         drawLine(
             color = tint,
             start = Offset(w * 0.50f, h * 0.10f),
@@ -831,14 +916,12 @@ private fun PkStopwatchMiniIcon(modifier: Modifier = Modifier) {
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
-        // Watch circle
         drawCircle(
             color = tint,
             radius = w * 0.34f,
             center = Offset(w * 0.50f, h * 0.58f),
             style = Stroke(width = stroke)
         )
-        // Clock hands
         drawLine(
             color = tint,
             start = Offset(w * 0.50f, h * 0.58f),
@@ -870,19 +953,16 @@ private fun PkFakeUserAvatar(
         val h = size.height
 
         if (isLeft) {
-            // Left Fake Avatar (Cool Outdoor Portrait Style)
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(Color(0xFFCDE5F0), Color(0xFF9AC5A8))
                 )
             )
-            // Suit shoulders
             drawOval(
                 color = Color(0xFF1D2228),
                 topLeft = Offset(w * 0.14f, h * 0.68f),
                 size = Size(w * 0.72f, h * 0.48f)
             )
-            // White shirt V
             val shirtPath = Path().apply {
                 moveTo(w * 0.42f, h * 0.68f)
                 lineTo(w * 0.58f, h * 0.68f)
@@ -890,25 +970,21 @@ private fun PkFakeUserAvatar(
                 close()
             }
             drawPath(shirtPath, color = Color.White)
-            // Neck
             drawRect(
                 color = Color(0xFFD8A888),
                 topLeft = Offset(w * 0.43f, h * 0.56f),
                 size = Size(w * 0.14f, h * 0.15f)
             )
-            // Face
             drawOval(
                 color = Color(0xFFE3B594),
                 topLeft = Offset(w * 0.31f, h * 0.24f),
                 size = Size(w * 0.38f, h * 0.40f)
             )
-            // Turban / Hair crown
             drawOval(
                 color = Color(0xFF16191D),
                 topLeft = Offset(w * 0.26f, h * 0.10f),
                 size = Size(w * 0.48f, h * 0.30f)
             )
-            // Sunglasses
             drawRoundRect(
                 color = Color(0xFF111317),
                 topLeft = Offset(w * 0.34f, h * 0.39f),
@@ -919,45 +995,38 @@ private fun PkFakeUserAvatar(
                 topLeft = Offset(w * 0.53f, h * 0.39f),
                 size = Size(w * 0.13f, h * 0.08f)
             )
-            // Beard
             drawOval(
                 color = Color(0xFF1E1E22),
                 topLeft = Offset(w * 0.34f, h * 0.50f),
                 size = Size(w * 0.32f, h * 0.16f)
             )
         } else {
-            // Right Fake Avatar (Minimal Studio Aesthetic Portrait)
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(Color(0xFFD6CEC2), Color(0xFFBDB3A5))
                 )
             )
-            // Crisp white shirt shoulders
             drawOval(
                 color = Color(0xFFF3F1EE),
                 topLeft = Offset(w * 0.14f, h * 0.58f),
                 size = Size(w * 0.76f, h * 0.54f)
             )
-            // Subtle shadow fold on shirt
             drawLine(
                 color = Color(0xFFD6CFC6),
                 start = Offset(w * 0.46f, h * 0.66f),
                 end = Offset(w * 0.40f, h * 0.96f),
                 strokeWidth = 3f
             )
-            // Neck
             drawRect(
                 color = Color(0xFFE0B89E),
                 topLeft = Offset(w * 0.41f, h * 0.48f),
                 size = Size(w * 0.14f, h * 0.15f)
             )
-            // Face
             drawOval(
                 color = Color(0xFFEAC5AC),
                 topLeft = Offset(w * 0.30f, h * 0.20f),
                 size = Size(w * 0.36f, h * 0.36f)
             )
-            // Stylish dark hair
             drawOval(
                 color = Color(0xFF1D1A18),
                 topLeft = Offset(w * 0.27f, h * 0.12f),
@@ -1064,7 +1133,6 @@ private fun PkSelectPeopleBottomSheet(
             fallbackColor = fallbackBgColor
         )
 
-        // Smaller +15 circles shifted slightly lower toward bottom
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1283,7 +1351,8 @@ private fun PkRemoteImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
-    fallbackColor: Color = Color.Transparent
+    fallbackColor: Color = Color.Transparent,
+    colorFilter: ColorFilter? = null
 ) {
     var bitmap by remember(url) { mutableStateOf(pkImageCache[url]) }
 
@@ -1315,7 +1384,8 @@ private fun PkRemoteImage(
             bitmap = bitmap!!,
             contentDescription = contentDescription,
             modifier = modifier,
-            contentScale = contentScale
+            contentScale = contentScale,
+            colorFilter = colorFilter
         )
     } else {
         Box(modifier = modifier.background(fallbackColor))
