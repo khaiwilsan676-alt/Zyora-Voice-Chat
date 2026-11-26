@@ -629,7 +629,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
 
         if (showPayUsingSheet) {
             PaySheet(onClose = { showPayUsingSheet = false },
-                onSelect = {
+                onSelect = { _ ->
                     scope.launch {
                         val credit = selectedCoins + selectedBonus
                         val requestGeneration = walletEventGeneration
@@ -1242,33 +1242,33 @@ private fun PaymentSheet(price: Int, coins: Long, onClose: () -> Unit, onRecharg
 }
 
 @Composable
-private fun PaySheet(onClose: () -> Unit, onSelect: () -> Unit) {
+private fun PaySheet(onClose: () -> Unit, onSelect: (String) -> Unit, title: String = "Pay Using") {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .background(Color.White).padding(bottom = 8.dp)) {
 
             Box(Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 16.dp)) {
-                Text("Pay Using", Modifier.align(Alignment.Center),
+                Text(title, Modifier.align(Alignment.Center),
                     fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
             }
             HorizontalDivider(color = Color(0xFFF9FAFB))
 
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                PayRow("GPay", onSelect) {
+                PayRow("GPay", { onSelect("GPay") }) {
                     AsyncImage(GPAY_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
-                PayRow("PhonePe", onSelect) {
+                PayRow("PhonePe", { onSelect("PhonePe") }) {
                     AsyncImage(PHONEPE_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
-                PayRow("Paytm", onSelect) {
+                PayRow("Paytm", { onSelect("Paytm") }) {
                     AsyncImage(PAYTM_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
                 
-                PayRow("Other", onSelect) {
+                PayRow("Other", { onSelect("Other") }) {
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(50)).background(Color(0xFFF3F4F6)), contentAlignment = Alignment.Center) {
                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(4.5.dp).clip(RoundedCornerShape(50)).background(Color(0xFF9CA3AF)))
@@ -1280,6 +1280,11 @@ private fun PaySheet(onClose: () -> Unit, onSelect: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+internal fun SellerPaymentMethodSheet(onClose: () -> Unit, onSelect: (String) -> Unit) {
+    PaySheet(onClose = onClose, onSelect = onSelect, title = "Method")
 }
 
 @Composable
