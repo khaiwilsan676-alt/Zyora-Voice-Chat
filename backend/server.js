@@ -2314,9 +2314,41 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       const bag = await getLuckyBag(bagId);
       if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
       const prior = (bag.claims || []).find(claim => claim.userId === userId);
-      if (prior) return res.json({ success: true, pending: prior.status !== "confirmed", alreadyClaimed: true,
-        alreadyConfirmed: prior.status === "confirmed", amount: Number(prior.amount || 0),
-        claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, recipients: bag.recipients });
+      if (prior) {
+        const accountId = String(req.body?.accountId || prior.accountId || "").trim();
+        if (accountId) prior.accountId = accountId;
+        const identityConditions = [
+          { uid: userId }, { firebaseUid: userId }, { firebaseUID: userId },
+          { firebaseUserId: userId }, { authUid: userId }, { id: userId },
+          { appLongId: userId }, { userId: userId }, { accountId: userId },
+          { accountNumber: userId }, { displayUserNumber: userId }, { displayAccountNumber: userId }
+        ];
+        if (accountId && accountId !== userId) identityConditions.push(
+          { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
+          { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
+        );
+        const profile = db ? await db.collection("users").findOne({ $or: identityConditions }) : null;
+        const resolvedName = [
+          profile?.name, profile?.displayName, profile?.userName, profile?.nickname,
+          profile?.username, profile?.fullName, profile?.profile?.name,
+          profile?.profile?.displayName, profile?.userData?.name
+        ].map(value => String(value || "").trim())
+          .find(value => value && !["user", "null", "undefined", userId.toLowerCase()].includes(value.toLowerCase()));
+        const resolvedImage = [
+          profile?.image, profile?.dp, profile?.photo, profile?.photoURL, profile?.photoUrl,
+          profile?.avatar, profile?.avatarUrl, profile?.profileImage, profile?.profileImageUrl,
+          profile?.profile_image, profile?.imageUrl, profile?.picture,
+          profile?.profile?.image, profile?.profile?.avatar, profile?.profile?.photo,
+          profile?.userData?.image, profile?.userData?.avatar
+        ].map(value => String(value || "").trim())
+          .find(value => value && !["null", "undefined", "/default-avatar.png", "default-avatar.png"].includes(value.toLowerCase()));
+        if (resolvedName) prior.userName = resolvedName;
+        if (resolvedImage) prior.userImage = resolvedImage;
+        await saveLuckyBag(bag);
+        return res.json({ success: true, pending: prior.status !== "confirmed", alreadyClaimed: true,
+          alreadyConfirmed: prior.status === "confirmed", amount: Number(prior.amount || 0),
+          claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, recipients: bag.recipients });
+      }
       if (bag.status !== "open" || Date.now() >= bag.expiresAt) {
         if (bag.status === "open" && bag.claimedCount === 0) await refundLuckyBag(bagId);
         return res.status(410).json({ error: "Lucky Bag expired or closed" });
@@ -2357,7 +2389,7 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
         req.body?.userName || "User"
       ).trim().slice(0, 80) || "User";
       const userImage = String(
-        profile?.image || profile?.dp || profile?.photoURL || profile?.photoUrl ||
+        profile?.image || profile?.dp || profile?.photo || profile?.photoURL || profile?.photoUrl ||
         profile?.avatar || profile?.avatarUrl || profile?.profileImage || profile?.profileImageUrl ||
         profile?.profile_image || profile?.imageUrl || profile?.picture ||
         profile?.profile?.image || profile?.profile?.avatar || profile?.profile?.photo ||
