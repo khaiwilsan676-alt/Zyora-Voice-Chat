@@ -369,6 +369,7 @@ fun LuckyBagOpenConfirmCards(
     claimantName: String,
     claimantImage: String,
     canonicalWalletUserId: String,
+    claimantAccountId: String,
     roomWalletBalance: Long,
     showFloatingLuckyBag: Boolean,
     onShowLuckyBagCenterRevealChange: (Boolean) -> Unit,
@@ -470,6 +471,7 @@ fun LuckyBagOpenConfirmCards(
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val result = runCatching {
                                             val payload = JSONObject().put("bagId", luckyBagId).put("userId", canonicalWalletUserId)
+                                                .put("accountId", claimantAccountId)
                                                 .put("userName", claimantName).put("userImage", claimantImage)
                                             val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/claim").openConnection() as java.net.HttpURLConnection).apply {
                                                 requestMethod = "POST"
