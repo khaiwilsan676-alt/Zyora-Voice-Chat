@@ -2901,7 +2901,6 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 onSendGift = { target ->
                     selectedGiftRecipient = GiftPickerRoomUser(target.accountId, target.name, target.image)
                     showGift = true
-                    showPkPage = false
                 }
             )
         }
