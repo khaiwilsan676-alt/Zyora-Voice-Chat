@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.drawWithCache
@@ -212,7 +213,7 @@ data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L,val gifScale:Float=0.8f)
 data class NativeMention(val accountId: String, val name: String)
-data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="",val giftName:String="")
+data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="",val giftName:String="",val giftMultiplier:Int=1)
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="",val vehicleItemId:String="")
 data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String,val timestamp:Long=System.currentTimeMillis())
 
@@ -1436,8 +1437,36 @@ fun RoomPage(
                 }
                 val chatGiftName = payload.optString("giftName", "Gift").ifBlank { "Gift" }
                 val chatTimestamp = payload.optLong("timestamp", System.currentTimeMillis())
+                val chatMultiplier = payload.optInt("multiplier", 1).coerceAtLeast(1)
+                val isLuckyComboChat = payload.optBoolean("luckyGift", false) && payload.optBoolean("comboReplay", false)
                 mainHandler.post {
-                    if (messages.none { it.id == "gift-" + chatTransferId }) {
+                    if (isLuckyComboChat) {
+                        val previousIndex = messages.indexOfLast {
+                            it.type == "gift" && it.senderAccountId == senderId && it.imageUrl == giftImage
+                        }
+                        if (previousIndex >= 0) {
+                            val previous = messages[previousIndex]
+                            messages[previousIndex] = previous.copy(
+                                giftMultiplier = maxOf(previous.giftMultiplier + 1, chatMultiplier),
+                                timestamp = chatTimestamp
+                            )
+                        } else if (messages.none { it.id == "gift-" + chatTransferId }) {
+                            messages.add(
+                                NativeRoomMessage(
+                                    id = "gift-" + chatTransferId,
+                                    text = chatLabel,
+                                    sender = senderName,
+                                    senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                                    senderAccountId = senderId,
+                                    timestamp = chatTimestamp,
+                                    type = "gift",
+                                    imageUrl = giftImage,
+                                    giftName = chatGiftName,
+                                    giftMultiplier = chatMultiplier
+                                )
+                            )
+                        }
+                    } else if (messages.none { it.id == "gift-" + chatTransferId }) {
                         messages.add(
                             NativeRoomMessage(
                                 id = "gift-" + chatTransferId,
@@ -1448,7 +1477,8 @@ fun RoomPage(
                                 timestamp = chatTimestamp,
                                 type = "gift",
                                 imageUrl = giftImage,
-                                giftName = chatGiftName
+                                giftName = chatGiftName,
+                                giftMultiplier = chatMultiplier
                             )
                         )
                     }
@@ -3000,6 +3030,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("transferId", nextTransferId)
                                     .put("eventId", nextTransferId)
                                     .put("comboReplay", true)
+                                    .put("multiplier", (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + 1)
                                     .put("timestamp", System.currentTimeMillis())
                                 val recipientJson = comboTransfer.optJSONArray("recipientIds") ?: JSONArray()
                                 val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
@@ -4060,14 +4091,40 @@ private object NativeRoomMessageProfileRefresh {
                 ) {
                     Column(Modifier.padding(horizontal=10.dp, vertical=8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(m.text, color=Color.White.copy(alpha=.92f), fontSize=11.sp, fontWeight=FontWeight.SemiBold)
-                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(7.dp)) {
                             AsyncImage(
                                 model = m.imageUrl,
-                                contentDescription = m.giftName,
-                                modifier = Modifier.size(54.dp),
+                                contentDescription = "Gift",
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                    .drawWithContent {
+                                        drawContent()
+                                        val edgeFade = 0.12f
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                0f to Color.Transparent,
+                                                edgeFade to Color.White,
+                                                (1f - edgeFade) to Color.White,
+                                                1f to Color.Transparent
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                edgeFade to Color.White,
+                                                (1f - edgeFade) to Color.White,
+                                                1f to Color.Transparent
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    },
                                 contentScale = ContentScale.Fit
                             )
-                            Text(m.giftName, color=Color.White, fontSize=12.sp, fontWeight=FontWeight.Medium)
+                            if (m.giftMultiplier > 1) {
+                                Text("×${m.giftMultiplier}", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Bold)
+                            }
                         }
                     }
                 }
