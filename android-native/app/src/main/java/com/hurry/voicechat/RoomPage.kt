@@ -1245,6 +1245,24 @@ fun RoomPage(
                 }
             }
         }
+        val pkSystemMessageListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val messageId = payload.optString("id").ifBlank { "pk-system-" + payload.optLong("timestamp", System.currentTimeMillis()) }
+            mainHandler.post {
+                if (messages.none { it.id == messageId }) {
+                    messages.add(NativeRoomMessage(
+                        id = messageId,
+                        text = payload.optString("text"),
+                        sender = payload.optString("actorName").ifBlank { "System" },
+                        senderImage = payload.optString("actorImage"),
+                        senderAccountId = payload.optString("actorId"),
+                        timestamp = payload.optLong("timestamp", System.currentTimeMillis()),
+                        type = "pk_system"
+                    ))
+                }
+            }
+        }
         val kickAnnouncementListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
@@ -1825,6 +1843,7 @@ fun RoomPage(
         roomSocket.on("room_chat_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_kick_announcement",kickAnnouncementListener)
+        roomSocket.on("pk_system_message",pkSystemMessageListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("coin_transfer_received", luckyGiftReceivedListener)
         roomSocket.on("coin_transfer_failed", coinTransferFailedListener)
@@ -1886,6 +1905,7 @@ fun RoomPage(
             roomSocket.off("room_chat_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_kick_announcement",kickAnnouncementListener)
+            roomSocket.off("pk_system_message",pkSystemMessageListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("coin_transfer_received", luckyGiftReceivedListener)
             roomSocket.off("coin_transfer_failed", coinTransferFailedListener)
@@ -2862,7 +2882,20 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         )
         
         if (showPkPage) {
-            PKBattlePage(onClose = { showPkPage = false })
+            PKBattlePage(
+                onClose = { showPkPage = false },
+                roomId = roomId,
+                accountId = accountId,
+                userName = roomDisplayName,
+                userImage = roomDisplayImage,
+                roomSocket = roomSocketRef.value,
+                roomSeats = seats.toList(),
+                onSendGift = { target ->
+                    selectedGiftRecipient = GiftPickerRoomUser(target.accountId, target.name, target.image)
+                    showGift = true
+                    showPkPage = false
+                }
+            )
         }
 
         // Block all room controls while a full-screen Store/Bag/Games/Lucky Bag
@@ -3685,6 +3718,24 @@ private fun RoomChatMessages(
                                             }
                                         }
                                         Text("Enter the room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
+                                    }
+                                } else if (message.type == "pk_system") {
+                                    Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 82.dp, bottom = 2.dp)) {
+                                        Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp))
+                                            .background(Color.Black.copy(alpha = 0.30f))
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment = Alignment.Center) {
+                                                    Icon(Icons.Default.Notifications, contentDescription = "System", tint = Color.White, modifier = Modifier.size(15.dp))
+                                                }
+                                                Text("System", color = Color(0xFFD1D1D1), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                            }
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text(message.sender, color = Color(0xFFFFD54F), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                Text(message.text, color = Color.White, fontSize = 13.sp, lineHeight = 17.sp)
+                                            }
+                                        }
                                     }
                                 } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, isCovered = isCovered, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention, onCopyMessage = onCopyMessage)
                             }
