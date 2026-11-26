@@ -442,9 +442,8 @@ fun RoomSettingPage(
         }
     }
 
-    val themeItems = remember(customTheme, storeRoomThemes) {
-        (if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) else emptyList()) +
-            roomThemeChoices + storeRoomThemes
+    val themeItems = remember(storeRoomThemes) {
+        roomThemeChoices + storeRoomThemes
     }
 
     LaunchedEffect(storeRoomThemes) {
@@ -655,7 +654,7 @@ fun RoomSettingPage(
         "theme" -> ThemeFullScreen(
             current = state.theme,
             items = themeItems,
-            hasCustom = customTheme.isNotBlank(),
+            hasCustom = false,
             onBack = { sheet = "" },
             onPick = { id -> performSave(state.copy(theme = id)); sheet = "" },
             onUploadCustom = {
