@@ -257,7 +257,18 @@ fun GiftPicker(
     var insufficientText by remember { mutableStateOf("Insufficient Balance") }
 
     var selectedTargets by remember { mutableStateOf<List<String>>(emptyList()) }
-    var recipientMode by remember { mutableStateOf(RecipientMode.MIC) }
+    var recipientSelectionTouched by remember(directMode, directRecipient) { mutableStateOf(false) }
+    var recipientMode by remember(directMode, directRecipient) {
+        mutableStateOf(if (directMode && directRecipient != null) RecipientMode.SINGLE else RecipientMode.MIC)
+    }
+
+    LaunchedEffect(open, seats, directMode, directRecipient) {
+        if (open && !directMode && !recipientSelectionTouched) {
+            selectedTargets = seats.filter { it.occupied && it.accountId.isNotBlank() }
+                .map { it.accountId }.distinct()
+            recipientMode = RecipientMode.MIC
+        }
+    }
 
     var playingVideo by remember { mutableStateOf<Triple<String, String, Boolean>?>(null) }
 
@@ -284,12 +295,12 @@ fun GiftPicker(
 
     val roomUsersById = remember(roomUsers) { roomUsers.associateBy { it.accountId } }
     val seatsById = remember(seats) { seats.associateBy { it.accountId } }
-    val recipientIds = remember(directMode, directRecipient, selectedTargets, roomUsers, seats) {
+    val recipientIds = remember(directMode, directRecipient, recipientMode, selectedTargets, roomUsers, seats) {
         when {
             directMode && directRecipient != null -> listOf(directRecipient.accountId)
-            selectedTargets.isNotEmpty() -> selectedTargets
-            roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
-            else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
+            recipientMode == RecipientMode.ROOM ->
+                roomUsers.map { it.accountId } + seats.filter { it.occupied }.map { it.accountId }
+            else -> selectedTargets
         }.asSequence().filter { it.isNotBlank() }.distinct().toList()
     }
     val recipientCount = recipientIds.size
@@ -321,7 +332,7 @@ fun GiftPicker(
     fun handleSend() {
         if (isWalletOpen) return
         if (selectedGiftObj == null || sending) return
-        if (recipientCount == 0) { triggerInsufficient("Select Recipient", false); return }
+        if (recipientCount == 0) { triggerInsufficient("Select the user", false); return }
         if (totalSendCost > walletBalance) { triggerInsufficient("Insufficient Balance", true); return }
         if (!canAfford) return
 
@@ -524,8 +535,10 @@ fun GiftPicker(
                                                     modifier = Modifier.size(38.dp).clip(CircleShape)
                                                         .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
                                                         .clickable {
-                                                            selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
-                                                            recipientMode = RecipientMode.SINGLE
+                                                            recipientSelectionTouched = true
+                                                            val nextTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
+                                                            selectedTargets = nextTargets
+                                                            recipientMode = if (nextTargets.size > 1) RecipientMode.MIC else RecipientMode.SINGLE
                                                         },
                                                 )
                                                 if (roleLabel != null) {
@@ -561,11 +574,14 @@ fun GiftPicker(
                                     modifier = Modifier.padding(start = 2.dp)
                                 ) {
                                     RecipientButton(isActive = recipientMode == RecipientMode.MIC, onClick = {
-                                        selectedTargets = seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
+                                        recipientSelectionTouched = true
+                                        selectedTargets = seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }.distinct()
                                         recipientMode = RecipientMode.MIC
                                     }, iconType = RecipientIconType.MIC)
                                     RecipientButton(isActive = recipientMode == RecipientMode.ROOM, onClick = {
-                                        selectedTargets = emptyList()
+                                        recipientSelectionTouched = true
+                                        selectedTargets = (roomUsers.map { it.accountId } + seats.filter { it.occupied }.map { it.accountId })
+                                            .filter { it.isNotBlank() }.distinct()
                                         recipientMode = RecipientMode.ROOM
                                     }, iconType = RecipientIconType.HOUSE)
                                 }
@@ -830,16 +846,16 @@ fun GiftPicker(
             if (showInsufficient) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Surface(
-                        color = Color.Black.copy(alpha = 0.75f),
+                        color = Color.Black.copy(alpha = if (insufficientText == "Select the user") 0.30f else 0.75f),
                         shape = RoundedCornerShape(50),
                     ) {
                         Text(
                             text = insufficientText,
                             color = Color.White,
-                            fontSize = 13.sp,
+                            fontSize = if (insufficientText == "Select the user") 11.sp else 13.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                         )
                     }
                 }
