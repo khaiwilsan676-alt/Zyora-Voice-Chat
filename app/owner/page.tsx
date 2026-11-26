@@ -2047,7 +2047,8 @@ export default function StaffPanel() {
                     ["Avatar", selectedManageUser.image || ""],
                     ["Gender Type", selectedManageUser.genderType ?? selectedManageUser.gender ?? ""],
                     ["Position", selectedManageUser.position || selectedManageUser.role || "User"],
-                    ["State", selectedManageUser.accountStatus || selectedManageUser.state || "Active"]
+                    ["State", selectedManageUser.accountStatus || selectedManageUser.state || "Active"],
+                    ...(selectedManageUser.coins !== undefined ? [["Seller Wallet Balance", Number(selectedManageUser.coins).toLocaleString("en-IN") + " Coins"]] : [])
                   ].map(([label, value]) => (
                     <label key={label} className="block min-w-0 text-[11px] font-medium text-slate-600">
                       <span className="mb-1 block">{label}</span>
