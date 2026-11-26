@@ -785,7 +785,7 @@ fun PublicProfileScreen(
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = 8.dp).offset(y = 3.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp).offset(y = 2.dp)
                                 )
                             }
                         }
