@@ -77,6 +77,7 @@ private val StoreBg = Color(0xFFF5F6F8)
 private val StoreCyan = Color(0xFF00B4D8)
 private val CardGrey = Color(0xFF242424) // Halka grey for cards
 private const val StoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+private const val ZyoraStoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 internal val nativeAvatarFrameRefreshVersions = mutableStateMapOf<String, Long>()
 
 private const val NativeStoreCachePrefs = "zyora_store_inventory_cache"
@@ -218,6 +219,8 @@ private data class NativeStoreItem(
     val stars: Int, val price: Int, val duration: String, val video: String? = null,
     val ownedByDefault: Boolean = false
 )
+private fun nativeStoreAssetUrl(item: NativeStoreItem, path: String): String =
+    (if (item.id == "a9") ZyoraStoreAssetBase else StoreAssetBase) + path
 
 private val nativeStoreTabs = listOf(
     NativeStoreTab("Vehicle", "Vehicle", "IMG_20260913_090019.png"),
@@ -332,7 +335,7 @@ fun NativeAvatarFrameOverlay(
         if (video.isNotBlank()) {
             val frameId = selected.optString("itemId", "")
             val frameMute = frameId == "a8"
-            val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video else StoreAssetBase + video
+            val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video else nativeStoreAssetUrl(NativeStoreItem(frameId, "", "", "Avatar Frame", 0, 0, ""), video)
             StoreVideoPreview(
                 url = videoUrl,
                 modifier = modifier.graphicsLayer {
@@ -350,7 +353,7 @@ fun NativeAvatarFrameOverlay(
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
-            if (image.isNotBlank()) AsyncImage(model = StoreAssetBase + image, contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { scaleX = 1.28f; scaleY = 1.28f }, contentScale = ContentScale.Fit)
+            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { scaleX = 1.28f; scaleY = 1.28f }, contentScale = ContentScale.Fit)
         }
     }
 }
@@ -397,7 +400,17 @@ fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
         }
     }
     val validFrames = frames.mapNotNull { owned ->
-        val item = nativeStoreItems.firstOrNull { it.id == owned.optString("itemId") } ?: return@mapNotNull null
+        val item = nativeStoreItems.firstOrNull { it.id == owned.optString("itemId") }
+            ?: NativeStoreItem(
+                owned.optString("itemId"),
+                owned.optString("name", "Owned Frame"),
+                owned.optString("image"),
+                "Avatar Frame",
+                owned.optInt("stars", 5).coerceIn(1, 5),
+                0,
+                owned.optString("duration", "30D"),
+                owned.optString("video").takeIf { it.isNotBlank() }
+            )
         owned to item
     }
     if (validFrames.isNotEmpty()) {
@@ -419,7 +432,7 @@ fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
                             // Catalogue still image only; equipped videos play only over avatars.
                             val frameImage = owned.optString("image").ifBlank { item.image }
                             AsyncImage(
-                                model = StoreAssetBase + frameImage,
+                                model = nativeStoreAssetUrl(item, frameImage),
                                 contentDescription = "Owned avatar frame",
                                 modifier = Modifier.fillMaxWidth().height(92.dp),
                                 contentScale = ContentScale.Fit
@@ -930,7 +943,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     ) {
                         if (theme) {
                             AsyncImage(
-                                model = StoreAssetBase + item.image,
+                                model = nativeStoreAssetUrl(item, item.image),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -960,7 +973,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         }
                                     } else 0f
                                     StoreVideoPreview(
-                                        url = StoreAssetBase + previewVideo,
+                                        url = nativeStoreAssetUrl(item, previewVideo),
                                         modifier = mediaModifier,
                                         pause = true,
                                         topFade = if (isVehicle) 0.1f else 0f,
@@ -1373,7 +1386,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             val source = item.video ?: item.image
                             if (source.endsWith(".mp4", true)) {
                                 StoreVideoPreview(
-                                    url = StoreAssetBase + source,
+                                    url = nativeStoreAssetUrl(item, source),
                                     modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                                     pause = false,
                                     topFade = topFadeVal,
