@@ -1,10 +1,5 @@
 package com.hurry.voicechat
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,13 +51,7 @@ fun RoomBroadcastNotification(notice: RoomBroadcastNotice, onDismiss: () -> Unit
         }
         onDismiss()
     }
-    AnimatedVisibility(
-        visible = true,
-        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-        exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
-    ) {
-        Box(Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))) {
+    Box(Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)) {
             // The banner lifetime is controlled by the five-second countdown below.
             // A shorter source video must not dismiss the notification early.
             key(notice.id) {
@@ -71,7 +60,7 @@ fun RoomBroadcastNotification(notice: RoomBroadcastNotice, onDismiss: () -> Unit
                 RoomGiftVideoOverlay(src = notice.video, onFinished = {})
             }
             Row(
-                Modifier.fillMaxSize().background(Color(0x22000000)).padding(horizontal = 10.dp),
+                Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(Color(0x22000000)).padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
