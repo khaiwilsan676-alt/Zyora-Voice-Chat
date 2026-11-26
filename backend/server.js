@@ -2323,10 +2323,15 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
           { appLongId: userId }, { userId: userId }, { accountId: userId },
           { accountNumber: userId }, { displayUserNumber: userId }, { displayAccountNumber: userId }
         ];
-        if (accountId && accountId !== userId) identityConditions.push(
-          { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
-          { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
-        );
+        if (accountId && accountId !== userId) {
+          identityConditions.push(
+            { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
+            { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
+          );
+          if (/^\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
+            identityConditions.push({ accountId: Number(accountId) }, { accountNumber: Number(accountId) });
+          }
+        }
         const profile = db ? await db.collection("users").findOne({ $or: identityConditions }) : null;
         const resolvedName = [
           profile?.name, profile?.displayName, profile?.userName, profile?.nickname,
