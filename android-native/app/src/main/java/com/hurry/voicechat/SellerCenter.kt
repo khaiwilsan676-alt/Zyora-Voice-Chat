@@ -381,7 +381,7 @@ fun SellerCenter(
                             isSavingContact = true
                             runCatching {
                                 sellerRequest("/api/users", "PUT", JSONObject().put("uid", userId).put("id", userId)
-                                    .put("appLongId", userId).put("accountId", accountId).put("whatsapp", whatsappNumber.trim()))
+                                    .put("appLongId", userId).put("accountId", walletAccountKey).put("whatsapp", whatsappNumber.trim()))
                                 showWhatsappDialog = false
                             }.onFailure { statusMessage = it.message ?: "Could not save WhatsApp number" }
                             isSavingContact = false
@@ -398,7 +398,7 @@ fun SellerCenter(
                 isSavingContact = true
                 runCatching {
                     sellerRequest("/api/users", "PUT", JSONObject().put("uid", userId).put("id", userId)
-                        .put("appLongId", userId).put("accountId", accountId).put("paymentMethod", selected))
+                        .put("appLongId", userId).put("accountId", walletAccountKey).put("paymentMethod", selected))
                     paymentMethod = selected
                     showPaymentMethodSheet = false
                 }.onFailure { statusMessage = it.message ?: "Could not save payment method" }
