@@ -212,7 +212,7 @@ data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L,val gifScale:Float=0.8f)
 data class NativeMention(val accountId: String, val name: String)
-data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
+data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="",val giftName:String="")
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="",val vehicleItemId:String="")
 data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String,val timestamp:Long=System.currentTimeMillis())
 
@@ -490,6 +490,7 @@ fun RoomPage(
     var luckyComboPending by luckyAnimation::comboPending
     var lastLuckyComboPayload by luckyAnimation::lastComboPayload
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
+    val seenRoomGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
@@ -1407,7 +1408,7 @@ fun RoomPage(
         }
         val luckyGiftReceivedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") != roomId || !payload.optBoolean("luckyGift", false)) return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
             val senderId = payload.optString("senderId")
             val senderName = payload.optString("senderName", "User")
             val senderImageRaw = payload.optString("senderImage")
@@ -1415,8 +1416,45 @@ fun RoomPage(
             val giftImage = when {
                 giftImageRaw.isBlank() -> ""
                 giftImageRaw.startsWith("http", true) -> giftImageRaw
-                else -> "https://zyora-voice-chat.vercel.app/" + giftImageRaw.trimStart('/')
+                else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + giftImageRaw.trimStart('/')
             }
+            val chatTransferId = payload.optString("transferId").ifBlank {
+                "gift-" + payload.optLong("timestamp", System.currentTimeMillis())
+            }
+            if (seenRoomGiftTransferIds.add(chatTransferId)) {
+                if (seenRoomGiftTransferIds.size > 250) {
+                    synchronized(seenRoomGiftTransferIds) {
+                        while (seenRoomGiftTransferIds.size > 200) seenRoomGiftTransferIds.remove(seenRoomGiftTransferIds.first())
+                    }
+                }
+                val chatRecipientMode = payload.optString("recipientMode").lowercase()
+                val chatRecipientName = payload.optString("recipientName", "User").ifBlank { "User" }
+                val chatLabel = when (chatRecipientMode) {
+                    "mic" -> "Sent All mic"
+                    "room" -> "Sent All in Room"
+                    else -> "Sent to " + chatRecipientName
+                }
+                val chatGiftName = payload.optString("giftName", "Gift").ifBlank { "Gift" }
+                val chatTimestamp = payload.optLong("timestamp", System.currentTimeMillis())
+                mainHandler.post {
+                    if (messages.none { it.id == "gift-" + chatTransferId }) {
+                        messages.add(
+                            NativeRoomMessage(
+                                id = "gift-" + chatTransferId,
+                                text = chatLabel,
+                                sender = senderName,
+                                senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                                senderAccountId = senderId,
+                                timestamp = chatTimestamp,
+                                type = "gift",
+                                imageUrl = giftImage,
+                                giftName = chatGiftName
+                            )
+                        )
+                    }
+                }
+            }
+            if (!payload.optBoolean("luckyGift", false)) return@Listener
             val recipientIdsJson = payload.optJSONArray("recipientIds") ?: JSONArray()
             val recipientIds = (0 until recipientIdsJson.length()).map { recipientIdsJson.optString(it) }.toSet()
             val multiplier = payload.optInt("multiplier", 1).coerceAtLeast(1)
@@ -4012,7 +4050,28 @@ private object NativeRoomMessageProfileRefresh {
                     if(coinSellerTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_110222.png",contentDescription="Coin Seller",contentScale=ContentScale.Fit,modifier=Modifier.height(16.dp).widthIn(max=56.dp))
                 }
             }
-            if (m.type == "image" && m.imageUrl.isNotBlank()) {
+            if (m.type == "gift" && m.imageUrl.isNotBlank()) {
+                NativeChatBubbleMessage(
+                    userId = m.senderAccountId,
+                    modifier = Modifier.align(Alignment.Start)
+                        .twoSecondLongPress { if (m.text.isNotBlank()) onCopyMessage(m.text) }
+                        .clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
+                        .border(0.5.dp, Color.White.copy(alpha=.15f), RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
+                ) {
+                    Column(Modifier.padding(horizontal=10.dp, vertical=8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(m.text, color=Color.White.copy(alpha=.92f), fontSize=11.sp, fontWeight=FontWeight.SemiBold)
+                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            AsyncImage(
+                                model = m.imageUrl,
+                                contentDescription = m.giftName,
+                                modifier = Modifier.size(54.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Text(m.giftName, color=Color.White, fontSize=12.sp, fontWeight=FontWeight.Medium)
+                        }
+                    }
+                }
+            } else if (m.type == "image" && m.imageUrl.isNotBlank()) {
                 AsyncImage(model = m.imageUrl, contentDescription = "Room shared image",
                     modifier = Modifier.widthIn(max = 140.dp).heightIn(max = 140.dp)
                         .clip(RoundedCornerShape(12.dp)).clickable { showRoomImagePreview = true },
