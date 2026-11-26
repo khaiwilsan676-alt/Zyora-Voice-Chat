@@ -1,8 +1,21 @@
 package com.hurry.voicechat
 
+import android.graphics.SurfaceTexture
 import android.net.Uri
-import android.widget.VideoView
+import android.opengl.EGL14
+import android.opengl.EGLConfig
+import android.opengl.EGLContext
+import android.opengl.EGLDisplay
+import android.opengl.EGLSurface
+import android.opengl.GLES11Ext
+import android.opengl.GLES20
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
+import android.view.Surface
+import android.view.TextureView
 import android.view.WindowManager
+import android.widget.VideoView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -20,13 +33,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
@@ -56,6 +69,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
@@ -63,10 +79,10 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
 import coil3.compose.AsyncImage
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -84,6 +100,8 @@ data class GiftPickerGift(
     val videoStyle: String? = null,
     val noMask: Boolean = false,
     val sideFade: Boolean = false,
+    val fitNoFade: Boolean = false,
+    val greenRemove: Boolean = false,
 )
 
 data class GiftPickerSeat(
@@ -140,11 +158,33 @@ private val hotGifts = listOf(
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2009, "Desert Aura", 55000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014422.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025102210290741641~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2010, "Golden Santa", 80000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131208.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523341815130~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2011, "Marry Christmas", 60500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131036.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2025120215032990087~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2012, "Telephone", 20000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_130742.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_33912b4f~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+    GiftPickerGift(2013, "Pastery", 10000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_130758.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_53f32fc7~3.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+    GiftPickerGift(2014, "Hand Bag", 15500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_130829.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_e1f4d16e~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+    GiftPickerGift(2015, "Double Gun", 120000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131003.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523341815130~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2016, "Dragon Flame", 520000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131057.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523213229566~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2017, "Crystal Eagle", 55000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131120.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026031609505116054~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2018, "Ring Perposal", 90000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131146.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_32_2026030801230537257~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2019, "Perfume", 80500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131228.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_32_2026030812294130790~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
 private val luxuryGifts = listOf(
     GiftPickerGift(3001, "Golden tiger", 1_000_000, "${GITHUB_PUBLIC_BASE_URL}file_000000008a8c821186f5941d97193ee7.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025121214091492750~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(3002, "Fairy Fox", 7_000_000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131020.png",
+        sideFade = true),
 )
 
 private val standardGifts = listOf(
@@ -213,7 +253,7 @@ fun GiftPicker(
     var selectedTargets by remember { mutableStateOf<List<String>>(emptyList()) }
     var recipientMode by remember { mutableStateOf(RecipientMode.MIC) }
 
-    var playingVideo by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var playingVideo by remember { mutableStateOf<Triple<String, String, Boolean>?>(null) }
 
     val scope = rememberCoroutineScope()
 
@@ -350,7 +390,7 @@ fun GiftPicker(
             }
 
             if (resolvedGiftVideo != null) {
-                playingVideo = resolvedGiftVideo to (giftToSend.videoStyle ?: "fade")
+                playingVideo = Triple(resolvedGiftVideo, giftToSend.videoStyle ?: "fade", giftToSend.greenRemove)
             } else {
                 sending = false
                 onClose()
@@ -361,10 +401,11 @@ fun GiftPicker(
     // ============================================================
     // VIDEO OVERLAY
     // ============================================================
-    playingVideo?.let { (src, style) ->
+    playingVideo?.let { (src, style, greenRemove) ->
         VideoEffectOverlay(
             src = src,
             style = style,
+            greenRemove = greenRemove,
             onFinished = {
                 playingVideo = null
                 sending = false
@@ -836,10 +877,10 @@ private fun GiftCard(
         ) {
             val size = if (gift.noMask) 45.dp else 60.dp
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3)
-            val isLipstick = gift.id == 2005
+            val isFitNoFade = gift.id == 2005 || gift.fitNoFade
             val isKittyCat = gift.id == 2006
             val isDesertAura = gift.id == 2009
-            val isImageEdgeFade = (activeTab == "Hot" || activeTab == "Luxury") && !isLipstick && !isKittyCat
+            val isImageEdgeFade = (activeTab == "Hot" || activeTab == "Luxury") && !isFitNoFade && !isKittyCat
 
             Box(
                 Modifier
@@ -847,7 +888,7 @@ private fun GiftCard(
                     .clip(
                         when {
                             isHotCircle -> CircleShape
-                            isLipstick -> RoundedCornerShape(0.dp)
+                            isFitNoFade -> RoundedCornerShape(0.dp)
                             gift.sideFade -> RoundedCornerShape(12.dp)
                             else -> RoundedCornerShape(0.dp)
                         }
@@ -894,7 +935,7 @@ private fun GiftCard(
                 AsyncImage(
                     model = giftAssetUrl(gift.image),
                     contentDescription = gift.name,
-                    contentScale = if (gift.noMask || isLipstick) ContentScale.Fit else ContentScale.Crop,
+                    contentScale = if (gift.noMask || isFitNoFade) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -1059,6 +1100,336 @@ private fun RecipientButton(
 }
 
 // ============================================================
+// GREEN SCREEN CHROMA KEY VIDEO RENDERER
+// ============================================================
+private fun isGreenScreenGiftVideo(url: String): Boolean {
+    return url.contains("gemini_generated_video_33912b4f~2") ||
+        url.contains("gemini_generated_video_53f32fc7~3") ||
+        url.contains("gemini_generated_video_e1f4d16e~2")
+}
+
+private class ChromaKeyVideoRenderer(
+    private val onVideoSurfaceReady: (Surface) -> Unit,
+) : TextureView.SurfaceTextureListener {
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var glThread: HandlerThread? = null
+    private var glHandler: Handler? = null
+
+    private var eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
+    private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
+    private var eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
+
+    private var program = 0
+    private var oesTextureId = 0
+    private var aPositionLoc = -1
+    private var aTexCoordLoc = -1
+    private var uTexMatrixLoc = -1
+    private var uTextureLoc = -1
+
+    private var videoSurfaceTexture: SurfaceTexture? = null
+    private var videoSurface: Surface? = null
+
+    private var viewportWidth = 0
+    private var viewportHeight = 0
+    private val stMatrix = FloatArray(16)
+
+    @Volatile
+    private var released = false
+
+    private val vertexBuffer: FloatBuffer = ByteBuffer
+        .allocateDirect(8 * 4)
+        .order(ByteOrder.nativeOrder())
+        .asFloatBuffer()
+        .apply {
+            put(
+                floatArrayOf(
+                    -1f, -1f,
+                    1f, -1f,
+                    -1f, 1f,
+                    1f, 1f,
+                )
+            )
+            position(0)
+        }
+
+    private val texCoordBuffer: FloatBuffer = ByteBuffer
+        .allocateDirect(8 * 4)
+        .order(ByteOrder.nativeOrder())
+        .asFloatBuffer()
+        .apply {
+            put(
+                floatArrayOf(
+                    0f, 0f,
+                    1f, 0f,
+                    0f, 1f,
+                    1f, 1f,
+                )
+            )
+            position(0)
+        }
+
+    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+        if (released) return
+        viewportWidth = width
+        viewportHeight = height
+        val thread = HandlerThread("GiftChromaKeyGL").apply { start() }
+        glThread = thread
+        val handler = Handler(thread.looper)
+        glHandler = handler
+        handler.post {
+            if (!released) {
+                initGl(surface)
+            }
+        }
+    }
+
+    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+        glHandler?.post {
+            viewportWidth = width
+            viewportHeight = height
+            if (eglDisplay != EGL14.EGL_NO_DISPLAY && eglSurface != EGL14.EGL_NO_SURFACE) {
+                GLES20.glViewport(0, 0, viewportWidth, viewportHeight)
+            }
+        }
+    }
+
+    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+        release()
+        return true
+    }
+
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
+
+    private fun initGl(outputSurfaceTexture: SurfaceTexture) {
+        eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+        if (eglDisplay == EGL14.EGL_NO_DISPLAY) return
+        val version = IntArray(2)
+        if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) return
+
+        val configAttribs = intArrayOf(
+            EGL14.EGL_RED_SIZE, 8,
+            EGL14.EGL_GREEN_SIZE, 8,
+            EGL14.EGL_BLUE_SIZE, 8,
+            EGL14.EGL_ALPHA_SIZE, 8,
+            EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+            EGL14.EGL_SURFACE_TYPE, EGL14.EGL_WINDOW_BIT,
+            EGL14.EGL_NONE,
+        )
+        val configs = arrayOfNulls<EGLConfig>(1)
+        val numConfigs = IntArray(1)
+        if (!EGL14.eglChooseConfig(eglDisplay, configAttribs, 0, configs, 0, 1, numConfigs, 0) ||
+            numConfigs[0] <= 0 || configs[0] == null
+        ) return
+
+        val contextAttribs = intArrayOf(
+            EGL14.EGL_CONTEXT_CLIENT_VERSION, 2,
+            EGL14.EGL_NONE,
+        )
+        eglContext = EGL14.eglCreateContext(eglDisplay, configs[0], EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
+        if (eglContext == EGL14.EGL_NO_CONTEXT) return
+
+        val surfaceAttribs = intArrayOf(EGL14.EGL_NONE)
+        eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, configs[0], outputSurfaceTexture, surfaceAttribs, 0)
+        if (eglSurface == EGL14.EGL_NO_SURFACE) return
+
+        if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) return
+
+        program = createProgram(VERTEX_SHADER, FRAGMENT_SHADER)
+        if (program == 0) return
+        aPositionLoc = GLES20.glGetAttribLocation(program, "aPosition")
+        aTexCoordLoc = GLES20.glGetAttribLocation(program, "aTexCoord")
+        uTexMatrixLoc = GLES20.glGetUniformLocation(program, "uTexMatrix")
+        uTextureLoc = GLES20.glGetUniformLocation(program, "uTexture")
+
+        val textures = IntArray(1)
+        GLES20.glGenTextures(1, textures, 0)
+        oesTextureId = textures[0]
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+
+        GLES20.glViewport(0, 0, viewportWidth, viewportHeight)
+        GLES20.glClearColor(0f, 0f, 0f, 0f)
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+        EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+
+        val st = SurfaceTexture(oesTextureId)
+        st.setOnFrameAvailableListener({ renderFrame() }, glHandler)
+        videoSurfaceTexture = st
+        val surface = Surface(st)
+        videoSurface = surface
+
+        mainHandler.post {
+            if (!released) {
+                onVideoSurfaceReady(surface)
+            }
+        }
+    }
+
+    private fun renderFrame() {
+        if (released) return
+        val st = videoSurfaceTexture ?: return
+        if (eglDisplay == EGL14.EGL_NO_DISPLAY || eglSurface == EGL14.EGL_NO_SURFACE) return
+
+        try {
+            st.updateTexImage()
+            st.getTransformMatrix(stMatrix)
+        } catch (_: Exception) {
+            return
+        }
+
+        GLES20.glViewport(0, 0, viewportWidth, viewportHeight)
+        GLES20.glDisable(GLES20.GL_BLEND)
+        GLES20.glClearColor(0f, 0f, 0f, 0f)
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+
+        GLES20.glUseProgram(program)
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
+        GLES20.glUniform1i(uTextureLoc, 0)
+        GLES20.glUniformMatrix4fv(uTexMatrixLoc, 1, false, stMatrix, 0)
+
+        vertexBuffer.position(0)
+        GLES20.glEnableVertexAttribArray(aPositionLoc)
+        GLES20.glVertexAttribPointer(aPositionLoc, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+
+        texCoordBuffer.position(0)
+        GLES20.glEnableVertexAttribArray(aTexCoordLoc)
+        GLES20.glVertexAttribPointer(aTexCoordLoc, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
+
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+        GLES20.glDisableVertexAttribArray(aPositionLoc)
+        GLES20.glDisableVertexAttribArray(aTexCoordLoc)
+
+        EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+    }
+
+    fun release() {
+        if (released) return
+        released = true
+        val handler = glHandler
+        val thread = glThread
+        glHandler = null
+        glThread = null
+        if (handler != null) {
+            handler.post {
+                releaseGl()
+                thread?.quitSafely()
+            }
+        } else {
+            thread?.quitSafely()
+        }
+    }
+
+    private fun releaseGl() {
+        try {
+            videoSurfaceTexture?.setOnFrameAvailableListener(null)
+            videoSurface?.release()
+            videoSurface = null
+            videoSurfaceTexture?.release()
+            videoSurfaceTexture = null
+
+            if (oesTextureId != 0) {
+                GLES20.glDeleteTextures(1, intArrayOf(oesTextureId), 0)
+                oesTextureId = 0
+            }
+            if (program != 0) {
+                GLES20.glDeleteProgram(program)
+                program = 0
+            }
+            if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
+                EGL14.eglMakeCurrent(eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
+                if (eglSurface != EGL14.EGL_NO_SURFACE) {
+                    EGL14.eglDestroySurface(eglDisplay, eglSurface)
+                    eglSurface = EGL14.EGL_NO_SURFACE
+                }
+                if (eglContext != EGL14.EGL_NO_CONTEXT) {
+                    EGL14.eglDestroyContext(eglDisplay, eglContext)
+                    eglContext = EGL14.EGL_NO_CONTEXT
+                }
+                EGL14.eglTerminate(eglDisplay)
+                eglDisplay = EGL14.EGL_NO_DISPLAY
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun createProgram(vertexSource: String, fragmentSource: String): Int {
+        val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
+        if (vertexShader == 0) return 0
+        val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)
+        if (fragmentShader == 0) {
+            GLES20.glDeleteShader(vertexShader)
+            return 0
+        }
+        val prog = GLES20.glCreateProgram()
+        GLES20.glAttachShader(prog, vertexShader)
+        GLES20.glAttachShader(prog, fragmentShader)
+        GLES20.glLinkProgram(prog)
+        val linkStatus = IntArray(1)
+        GLES20.glGetProgramiv(prog, GLES20.GL_LINK_STATUS, linkStatus, 0)
+        GLES20.glDeleteShader(vertexShader)
+        GLES20.glDeleteShader(fragmentShader)
+        if (linkStatus[0] != GLES20.GL_TRUE) {
+            GLES20.glDeleteProgram(prog)
+            return 0
+        }
+        return prog
+    }
+
+    private fun loadShader(type: Int, source: String): Int {
+        val shader = GLES20.glCreateShader(type)
+        GLES20.glShaderSource(shader, source)
+        GLES20.glCompileShader(shader)
+        val compiled = IntArray(1)
+        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0)
+        if (compiled[0] == 0) {
+            GLES20.glDeleteShader(shader)
+            return 0
+        }
+        return shader
+    }
+
+    companion object {
+        private const val VERTEX_SHADER = """
+            attribute vec4 aPosition;
+            attribute vec4 aTexCoord;
+            uniform mat4 uTexMatrix;
+            varying vec2 vTexCoord;
+            void main() {
+                gl_Position = aPosition;
+                vTexCoord = (uTexMatrix * aTexCoord).xy;
+            }
+        """
+
+        private const val FRAGMENT_SHADER = """
+            #extension GL_OES_EGL_image_external : require
+            precision mediump float;
+            uniform samplerExternalOES uTexture;
+            varying vec2 vTexCoord;
+            void main() {
+                vec4 color = texture2D(uTexture, vTexCoord);
+                float maxRB = max(color.r, color.b);
+                float greenExcess = color.g - maxRB;
+                float alpha = 1.0 - smoothstep(0.06, 0.18, greenExcess);
+                float spill = smoothstep(0.02, 0.14, greenExcess);
+                vec3 rgb = vec3(
+                    color.r,
+                    mix(color.g, min(color.g, maxRB * 0.96 + 0.02), spill),
+                    color.b
+                );
+                gl_FragColor = vec4(rgb * alpha, alpha);
+            }
+        """
+    }
+}
+
+// ============================================================
 // VIDEO OVERLAY
 // ============================================================
 @Composable
@@ -1067,10 +1438,12 @@ private fun VideoEffectOverlay(
     style: String,
     onFinished: () -> Unit,
     onStarted: () -> Unit,
+    greenRemove: Boolean = false,
 ) {
     val context = LocalContext.current
     val resolvedUrl = giftAssetUrl(src)
     val isFade = style == "fade"
+    val isGreenRemove = greenRemove || isGreenScreenGiftVideo(resolvedUrl)
     var videoRatio by remember(resolvedUrl) { mutableStateOf<Float?>(null) }
     val latestOnFinished by rememberUpdatedState(onFinished)
 
@@ -1108,10 +1481,24 @@ private fun VideoEffectOverlay(
             }
     }
 
-    val textureView = remember(player) {
-        android.view.TextureView(context).apply {
+    val chromaRenderer = remember(player, isGreenRemove) {
+        if (isGreenRemove) {
+            ChromaKeyVideoRenderer { surface ->
+                player.setVideoSurface(surface)
+            }
+        } else {
+            null
+        }
+    }
+
+    val textureView = remember(player, chromaRenderer) {
+        TextureView(context).apply {
             isOpaque = false
-            player.setVideoTextureView(this)
+            if (chromaRenderer != null) {
+                surfaceTextureListener = chromaRenderer
+            } else {
+                player.setVideoTextureView(this)
+            }
         }
     }
 
@@ -1163,16 +1550,30 @@ private fun VideoEffectOverlay(
         )
     }
 
-    DisposableEffect(player, textureView) {
+    DisposableEffect(player, textureView, chromaRenderer) {
         onDispose {
-            player.clearVideoTextureView(textureView)
+            if (chromaRenderer != null) {
+                player.clearVideoSurface()
+                textureView.surfaceTextureListener = null
+                chromaRenderer.release()
+            } else {
+                player.clearVideoTextureView(textureView)
+            }
             player.stop()
             player.clearMediaItems()
             player.release()
         }
     }
 }
+
 @Composable
 fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
-    VideoEffectOverlay(src = giftAssetUrl(src), style = "fade", onFinished = onFinished, onStarted = {})
+    val resolved = giftAssetUrl(src)
+    VideoEffectOverlay(
+        src = resolved,
+        style = "fade",
+        greenRemove = isGreenScreenGiftVideo(resolved),
+        onFinished = onFinished,
+        onStarted = {},
+    )
 }
