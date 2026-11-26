@@ -26,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1052,13 +1053,13 @@ fun PublicProfileScreen(
                     Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Gift")
                         if (receivedGifts.isNotEmpty()) {
-                            val giftRowsHeight = ((receivedGifts.size + 2) / 3 * 88).coerceAtMost(264)
+                            val giftRowsHeight = ((receivedGifts.size + 3) / 4 * 88).coerceAtLeast(88)
                             LazyVerticalGrid(
-                                columns = GridCells.Fixed(3),
+                                columns = GridCells.Fixed(4),
                                 modifier = Modifier.fillMaxWidth().height(giftRowsHeight.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
-                                userScrollEnabled = receivedGifts.size > 9
+                                userScrollEnabled = false
                             ) {
                                 items(receivedGifts.size) { idx ->
                                     val (giftImage, giftCount) = receivedGifts[idx]
@@ -1071,7 +1072,31 @@ fun PublicProfileScreen(
                                             model = profileAsset(giftImage),
                                             contentDescription = "Received gift",
                                             contentScale = ContentScale.Fit,
-                                            modifier = Modifier.size(62.dp)
+                                            modifier = Modifier
+                                                .size(62.dp)
+                                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                                .drawWithContent {
+                                                    drawContent()
+                                                    val edgeFade = 0.12f
+                                                    drawRect(
+                                                        brush = Brush.horizontalGradient(
+                                                            0f to Color.Transparent,
+                                                            edgeFade to Color.White,
+                                                            (1f - edgeFade) to Color.White,
+                                                            1f to Color.Transparent
+                                                        ),
+                                                        blendMode = BlendMode.DstIn
+                                                    )
+                                                    drawRect(
+                                                        brush = Brush.verticalGradient(
+                                                            0f to Color.Transparent,
+                                                            edgeFade to Color.White,
+                                                            (1f - edgeFade) to Color.White,
+                                                            1f to Color.Transparent
+                                                        ),
+                                                        blendMode = BlendMode.DstIn
+                                                    )
+                                                }
                                         )
                                         Text(
                                             text = "×$giftCount",
