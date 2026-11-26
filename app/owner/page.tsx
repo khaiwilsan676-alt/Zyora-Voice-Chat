@@ -852,6 +852,7 @@ export default function StaffPanel() {
   const [masterWalletSelectedUser, setMasterWalletSelectedUser] = useState<any | null>(null);
   const [masterWalletSearching, setMasterWalletSearching] = useState(false);
   const [masterWalletAmount, setMasterWalletAmount] = useState('');
+  const [masterWalletDestination, setMasterWalletDestination] = useState<'seller' | 'coins'>('seller');
   const [masterWalletTransferring, setMasterWalletTransferring] = useState(false);
 
   const officialFileInputRef = useRef<HTMLInputElement>(null);
@@ -919,7 +920,8 @@ export default function StaffPanel() {
           uid: String(user.uid || user.id || user.appLongId || user._id || ''),
           accountId: String(user.accountId || user.accountNumber || user.displayAccountNumber || user.displayUserNumber || user.id || user.uid || ''),
           name: String(user.name || user.displayName || user.userName || 'User'),
-          image: String(user.image || user.dp || user.avatar || user.photoURL || user.photoUrl || user.profileImage || user.picture || '')
+          image: String(user.image || user.dp || user.avatar || user.photoURL || user.photoUrl || user.profileImage || user.picture || ''),
+          isSeller: Boolean(user.coinSellerTag || user.coinSeller || user.sellerTag)
         })).filter((user: any) => user.uid && user.accountId));
       } catch (error) {
         if (active) { setMasterWalletResults([]); console.error('Master wallet user search failed:', error); }
@@ -2731,12 +2733,22 @@ export default function StaffPanel() {
                   </div>
                 )}
                 <div className="mt-5">
+                  <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Add To Wallet</label>
+                  <select value={masterWalletDestination} onChange={e => setMasterWalletDestination(e.target.value as 'seller' | 'coins')} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none focus:border-[#197477]">
+                    <option value="seller">Seller Wallet</option>
+                    <option value="coins">Coins Wallet</option>
+                  </select>
+                  {masterWalletDestination === 'seller' && masterWalletSelectedUser && !masterWalletSelectedUser.isSeller && (
+                    <p className="mt-2 text-xs font-bold text-rose-600">This user is not an active Seller. Seller Wallet credit is not allowed.</p>
+                  )}
+                </div>
+                <div className="mt-5">
                   <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Coins amount</label>
                   <input type="number" min="1" step="1" inputMode="numeric" value={masterWalletAmount} onChange={e => setMasterWalletAmount(e.target.value)} placeholder="Enter coin amount" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-lg font-black text-slate-900 outline-none focus:border-[#197477] focus:bg-white focus:ring-4 focus:ring-indigo-500/10" />
                 </div>
                 <button
                   type="button"
-                  disabled={masterWalletTransferring || !masterWalletSelectedUser || !Number.isSafeInteger(Number(masterWalletAmount)) || Number(masterWalletAmount) <= 0}
+                  disabled={masterWalletTransferring || !masterWalletSelectedUser || (masterWalletDestination === 'seller' && !masterWalletSelectedUser.isSeller) || !Number.isSafeInteger(Number(masterWalletAmount)) || Number(masterWalletAmount) <= 0}
                   onClick={async () => {
                     if (!masterWalletSelectedUser) { alert('Please select a Zyora user first.'); return; }
                     const amount = Number(masterWalletAmount);
@@ -2747,7 +2759,7 @@ export default function StaffPanel() {
                       const response = await fetch(apiUrl('/api/seller/transfer'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                        body: JSON.stringify({ transferId, recipientAccountId: masterWalletSelectedUser.accountId, amount, masterWallet: true })
+                        body: JSON.stringify({ transferId, recipientAccountId: masterWalletSelectedUser.accountId, amount, masterWallet: true, destinationWallet: masterWalletDestination })
                       });
                       const responseText = await response.text();
                       let data: any;
@@ -2760,12 +2772,13 @@ export default function StaffPanel() {
                         accountId: masterWalletSelectedUser.accountId,
                         name: masterWalletSelectedUser.name,
                         avatar: masterWalletSelectedUser.image,
+                        destinationWallet: masterWalletDestination,
                         amount,
                         timestamp: data.transfer?.completedAt || Date.now()
                       });
                       setMasterWalletHistory(await loadMasterWalletHistory());
                       setMasterWalletAmount('');
-                      alert(`Successfully added ${amount.toLocaleString()} coins to Seller Wallet.`);
+                      alert(`Successfully added ${amount.toLocaleString()} coins to ${masterWalletDestination === 'seller' ? 'Seller Wallet' : 'Coins Wallet'}.`);
                     } catch (error: any) {
                       alert(error?.message || 'Coin transfer failed. Please try again.');
                     } finally {
@@ -2780,7 +2793,7 @@ export default function StaffPanel() {
 
               <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
                 <div className="border-b border-slate-100 px-5 py-5 md:px-6">
-                  <h2 className="text-lg font-black text-slate-900">Seller Wallet Credit History</h2>
+                  <h2 className="text-lg font-black text-slate-900">Master Wallet Credit History</h2>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse text-left">
