@@ -483,7 +483,7 @@ fun RoomPage(
     var roomRootSize by luckyAnimation::rootSize
     val luckyGiftFlights = luckyAnimation.flights
     var luckyGiftNotice by luckyAnimation::notice
-    var roomBroadcastNotice by remember(roomId) { mutableStateOf<RoomBroadcastNotice?>(null) }
+    var roomBroadcastNotices by remember(roomId) { mutableStateOf<List<RoomBroadcastNotice>>(emptyList()) }
     var luckyNoticeGeneration by luckyAnimation::noticeGeneration
     var showLuckyComboButton by luckyAnimation::showComboButton
     var pendingLuckyGiftTransferId by remember(roomId) { mutableStateOf("") }
@@ -1437,21 +1437,24 @@ fun RoomPage(
             val id = payload.optString("id")
             if (id.isBlank()) return@Listener
             mainHandler.post {
-                roomBroadcastNotice = RoomBroadcastNotice(
-                    id = id,
-                    video = payload.optString("video", "gemini_generated_video_9da434d9~2.mp4"),
-                    avatar = payload.optString("senderImage").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                    name = payload.optString("senderName").ifBlank { "User" },
-                    detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
-                    giftImage = payload.optString("giftImage").let { raw ->
-                        when {
-                            raw.isBlank() -> ""
-                            raw.startsWith("http", true) -> raw
-                            else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + raw.trimStart('/')
-                        }
-                    },
-                    giftName = payload.optString("giftName")
-                )
+                if (roomBroadcastNotices.none { it.id == id }) {
+                    val notice = RoomBroadcastNotice(
+                        id = id,
+                        video = payload.optString("video", "gemini_generated_video_9da434d9~2.mp4"),
+                        avatar = payload.optString("senderImage").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                        name = payload.optString("senderName").ifBlank { "User" },
+                        detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
+                        giftImage = payload.optString("giftImage").let { raw ->
+                            when {
+                                raw.isBlank() -> ""
+                                raw.startsWith("http", true) -> raw
+                                else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + raw.trimStart('/')
+                            }
+                        },
+                        giftName = payload.optString("giftName")
+                    )
+                    roomBroadcastNotices = (roomBroadcastNotices + notice).takeLast(20)
+                }
             }
         }
         val bigWinBroadcastListener = Emitter.Listener { args ->
@@ -1460,20 +1463,24 @@ fun RoomPage(
             val amount = payload.optLong("win", 0L)
             if (id.isBlank() || amount < 5_000_000L) return@Listener
             mainHandler.post {
-                roomBroadcastNotice = RoomBroadcastNotice(
-                    id = id,
-                    video = payload.optString("video", "gemini_generated_video_87dc00f7~2.mp4"),
-                    avatar = payload.optString("avatar").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                    name = payload.optString("name").ifBlank { "User" },
-                    detail = "Win " + amount.toString() + " • " +
-                        if (payload.optString("game") == "dragonbattle") "Dragon Battle" else "Wild Party",
-                    giftImage = if (payload.optString("game") == "dragonbattle") {
-                        "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261121_020906.png"
-                    } else {
-                        "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png"
-                    },
-                    giftName = if (payload.optString("game") == "dragonbattle") "Dragon Battle" else "Wild Party"
-                )
+                if (roomBroadcastNotices.none { it.id == id }) {
+                    val isDragonBattle = payload.optString("game") == "dragonbattle"
+                    val notice = RoomBroadcastNotice(
+                        id = id,
+                        video = payload.optString("video", "gemini_generated_video_87dc00f7~2.mp4"),
+                        avatar = payload.optString("avatar").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                        name = payload.optString("name").ifBlank { "User" },
+                        detail = "Win " + amount.toString() + " • " +
+                            if (isDragonBattle) "Dragon Battle" else "Wild Party",
+                        giftImage = if (isDragonBattle) {
+                            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261121_020906.png"
+                        } else {
+                            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png"
+                        },
+                        giftName = if (isDragonBattle) "Dragon Battle" else "Wild Party"
+                    )
+                    roomBroadcastNotices = (roomBroadcastNotices + notice).takeLast(20)
+                }
             }
         }
         val luckyGiftReceivedListener = Emitter.Listener { args ->
@@ -3156,10 +3163,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 )
             }
         }
-        roomBroadcastNotice?.let { notice ->
+        roomBroadcastNotices.firstOrNull()?.let { notice ->
             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(124.dp).zIndex(260f)) {
                 RoomBroadcastNotification(notice = notice, onDismiss = {
-                    if (roomBroadcastNotice?.id == notice.id) roomBroadcastNotice = null
+                    roomBroadcastNotices = roomBroadcastNotices.filterNot { it.id == notice.id }
                 })
             }
         }
