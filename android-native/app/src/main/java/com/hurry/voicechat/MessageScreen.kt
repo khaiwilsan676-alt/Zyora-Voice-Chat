@@ -1929,13 +1929,14 @@ fun NativeChatScreen(
                 }
             }
 
-                Column(
-                    Modifier.fillMaxWidth()
-                        .background(Color.White)
-                        .navigationBarsPadding()
-                        .imePadding()
-                ) {
-                    if (replyText != null) {
+                if (!isOfficial) {
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .background(Color.White)
+                            .navigationBarsPadding()
+                            .imePadding()
+                    ) {
+                        if (replyText != null) {
                         Row(
                             Modifier.fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -2133,6 +2134,7 @@ fun NativeChatScreen(
                                     }
                                 }
                             }
+                        }
                         }
                     }
                 }
