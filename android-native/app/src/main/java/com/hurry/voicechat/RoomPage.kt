@@ -1191,11 +1191,7 @@ fun RoomPage(
         }
         val giftVideoListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val giftName = payload.optString("giftName").trim()
-            val priorityGiftVideo = giftName.equals("Golden Santa", true) ||
-                giftName.equals("Marry Christmas", true) ||
-                giftName.equals("Double Gun", true)
-            if (payload.optString("roomId") != roomId || (!latestGiftEffectEnabled && !priorityGiftVideo)) return@Listener
+            if (payload.optString("roomId") != roomId || !latestGiftEffectEnabled) return@Listener
             val video = payload.optString("video").trim()
             if (video.isBlank()) return@Listener
             val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
