@@ -11,6 +11,7 @@ type SellerUser = {
   name: string;
   image: string;
   active: boolean;
+  coins?: number;
 };
 
 const valueOf = (...values: unknown[]) => {
@@ -36,7 +37,7 @@ async function readApiResponse(response: Response) {
   return data;
 }
 
-type SellerCenterUsersProps = { onOpenUser: (user: SellerUser) => void };
+type SellerCenterUsersProps = { onOpenUser: (user: SellerUser) => void | Promise<void> };
 
 export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps) {
   const [query, setQuery] = useState('');
@@ -194,7 +195,18 @@ export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps
                       </button>
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      <button type="button" onClick={() => onOpenUser(user)} className="px-3 py-1.5 rounded-md bg-[#197477] hover:bg-[#17696c] text-white text-[10px] font-semibold transition-colors">Open</button>
+                      <button type="button" onClick={async () => {
+                        try {
+                          const response = await fetch(apiUrl(`/api/lucky-bag/wallet/${encodeURIComponent(user.uid || user.accountId)}`), {
+                            cache: 'no-store',
+                            headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }
+                          });
+                          const wallet = await readApiResponse(response);
+                          await onOpenUser({ ...user, coins: Math.max(0, Number(wallet?.balance ?? 0)) });
+                        } catch (error) {
+                          setMessage(error instanceof Error ? error.message : 'Could not load Seller Center wallet');
+                        }
+                      }} className="px-3 py-1.5 rounded-md bg-[#197477] hover:bg-[#17696c] text-white text-[10px] font-semibold transition-colors">Open</button>
                     </td>
                   </tr>
                 ))}
