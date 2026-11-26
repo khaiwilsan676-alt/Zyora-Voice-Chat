@@ -1450,13 +1450,14 @@ private fun VideoEffectOverlay(
     val player = remember(context, resolvedUrl) {
         val appContext = context.applicationContext
         val httpFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(5_000)
-            .setReadTimeoutMs(10_000)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(30_000)
             .setAllowCrossProtocolRedirects(true)
         val cacheFactory = CacheDataSource.Factory()
             .setCache(SeatEmojiVideoCache.get(appContext))
             .setUpstreamDataSourceFactory(DefaultDataSource.Factory(appContext, httpFactory))
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        var playbackRetryCount = 0
         ExoPlayer.Builder(appContext)
             .setMediaSourceFactory(DefaultMediaSourceFactory(cacheFactory))
             .build()
@@ -1474,7 +1475,14 @@ private fun VideoEffectOverlay(
                         }
                     }
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        latestOnFinished()
+                        if (playbackRetryCount < 1) {
+                            playbackRetryCount++
+                            seekTo(0)
+                            prepare()
+                            playWhenReady = true
+                        } else {
+                            latestOnFinished()
+                        }
                     }
                 })
                 prepare()
