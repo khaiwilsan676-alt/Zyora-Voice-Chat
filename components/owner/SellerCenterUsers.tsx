@@ -36,7 +36,9 @@ async function readApiResponse(response: Response) {
   return data;
 }
 
-export default function SellerCenterUsers() {
+type SellerCenterUsersProps = { onOpenUser: (user: SellerUser) => void };
+
+export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps) {
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState<SellerUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,6 +167,7 @@ export default function SellerCenterUsers() {
                   <th className="py-4 px-2">User</th>
                   <th className="py-4 px-2">User ID</th>
                   <th className="py-4 px-2">Seller Center</th>
+                  <th className="py-4 pr-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -189,6 +192,9 @@ export default function SellerCenterUsers() {
                       >
                         {updating === user.id ? 'Updating...' : user.active ? 'Active' : 'Active Seller Center'}
                       </button>
+                    </td>
+                    <td className="py-3 pr-4 text-right">
+                      <button type="button" onClick={() => onOpenUser(user)} className="px-3 py-1.5 rounded-md bg-[#197477] hover:bg-[#17696c] text-white text-[10px] font-semibold transition-colors">Open</button>
                     </td>
                   </tr>
                 ))}
