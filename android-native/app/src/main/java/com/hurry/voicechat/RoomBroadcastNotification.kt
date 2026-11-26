@@ -86,4 +86,3 @@ fun RoomBroadcastNotification(notice: RoomBroadcastNotice, onDismiss: () -> Unit
             }
         }
     }
-}
