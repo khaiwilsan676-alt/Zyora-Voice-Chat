@@ -2376,7 +2376,7 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
           { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
           { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
         );
-        if (/^\\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
+        if (/^\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
           identityConditions.push({ accountId: Number(accountId) }, { accountNumber: Number(accountId) });
         }
       }
@@ -2459,7 +2459,7 @@ async function resolveLuckyBagClaimDisplay(claim) {
       { accountId }, { accountNumber: accountId }, { displayUserNumber: accountId },
       { displayAccountNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
     );
-    if (/^\\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
+    if (/^\d+$/.test(accountId) && Number.isSafeInteger(Number(accountId))) {
       identityConditions.push({ accountId: Number(accountId) }, { accountNumber: Number(accountId) });
     }
   }
@@ -2516,7 +2516,8 @@ app.get("/api/lucky-bag/:bagId", async (req, res) => {
   try {
     const bag = await getLuckyBag(String(req.params.bagId));
     if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
-    return res.json({ bagId: bag.bagId, senderId: bag.senderId, senderName: bag.senderName, senderImage: bag.senderImage, roomId: bag.roomId, roomName: bag.roomName, amount: bag.amount, recipients: bag.recipients, claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, status: bag.status, expiresAt: bag.expiresAt, claims: bag.claims || [] });
+    const claims = await Promise.all((bag.claims || []).map(resolveLuckyBagClaimDisplay));
+    return res.json({ bagId: bag.bagId, senderId: bag.senderId, senderName: bag.senderName, senderImage: bag.senderImage, roomId: bag.roomId, roomName: bag.roomName, amount: bag.amount, recipients: bag.recipients, claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, status: bag.status, expiresAt: bag.expiresAt, claims });
   } catch (err) {
     return res.status(503).json({ error: "Lucky Bag unavailable" });
   }
