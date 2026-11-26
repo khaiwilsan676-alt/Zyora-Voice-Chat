@@ -3583,7 +3583,9 @@ io.on("connection", (socket) => {
       const normalizedGiftType = String(giftType || "").trim().toLowerCase();
       if (normalizedGiftType.includes("luxury") ||
           normalizedGiftName === "myalo princess" ||
-          normalizedGiftName === "dragon flames") {
+          normalizedGiftName === "mysalo princess" ||
+          normalizedGiftName === "dragon flames" ||
+          normalizedGiftName === "dragon flame") {
         io.emit("zyora_luxury_gift_notification", {
           id: String(eventId || "gift") + ":luxury",
           senderName: transferPayload.senderName,
