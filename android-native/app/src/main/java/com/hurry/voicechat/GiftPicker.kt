@@ -152,8 +152,6 @@ private val hotGifts = listOf(
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026031617445981861~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2002, "Love Twinkle", 200000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165025.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
-    GiftPickerGift(2003, "Castle Night", 170000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165043.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2008, "Heartbeat", 120999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014410.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025081318180787557~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2009, "Desert Aura", 55000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014422.png",
@@ -168,8 +166,6 @@ private val hotGifts = listOf(
         video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_33912b4f~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
     GiftPickerGift(2014, "Hand Bag", 15500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_130829.png",
         video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_e1f4d16e~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
-    GiftPickerGift(2015, "Double Gun", 120000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131003.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523341815130~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2016, "Dragon Flame", 520000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131057.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026031609505116054~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2017, "Crystal Eagle", 55000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131120.png",
@@ -178,6 +174,12 @@ private val hotGifts = listOf(
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_32_2026030812294130790~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2019, "Perfume", 80500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131228.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_32_2026030801230537257~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2020, "Kitty Gloves", 35000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_174313.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_b14f3d64~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+    GiftPickerGift(2021, "Chiken", 65000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_174325.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_ab36b2de~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+    GiftPickerGift(2022, "Sugar Sweet", 50000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_174344.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_60f28193~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
 )
 
 private val luxuryGifts = listOf(
@@ -185,6 +187,10 @@ private val luxuryGifts = listOf(
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_28_2025121214091492750~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(3002, "Fairy Fox", 7_000_000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131020.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523213229566~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2015, "Double Gun", 65_000_000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131003.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_19_2026030523341815130~2.mp4", videoStyle = "fade", sideFade = true),
+    GiftPickerGift(2003, "Castle Night", 85_000_000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165043.png",
+        video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026032620350482882~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
 private val standardGifts = listOf(
@@ -1105,7 +1111,10 @@ private fun RecipientButton(
 private fun isGreenScreenGiftVideo(url: String): Boolean {
     return url.contains("gemini_generated_video_33912b4f~2") ||
         url.contains("gemini_generated_video_53f32fc7~3") ||
-        url.contains("gemini_generated_video_e1f4d16e~2")
+        url.contains("gemini_generated_video_e1f4d16e~2") ||
+        url.contains("gemini_generated_video_b14f3d64~2") ||
+        url.contains("gemini_generated_video_ab36b2de~2") ||
+        url.contains("gemini_generated_video_60f28193~2")
 }
 
 private class ChromaKeyVideoRenderer(
