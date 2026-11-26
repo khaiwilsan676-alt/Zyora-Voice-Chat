@@ -2114,7 +2114,21 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'manage_rooms' && <ManageRooms />}
-      {activeTab === 'seller_center' && <SellerCenterUsers />}
+      {activeTab === 'seller_center' && (
+        <SellerCenterUsers onOpenUser={(seller) => {
+          const matched = users.find((user: any) =>
+            [user.id, user.uid, user.hurryId, user.appLongId, user.longId, user.accountId]
+              .filter(Boolean)
+              .some((value: any) => [seller.uid, seller.accountId, seller.id].filter(Boolean).includes(String(value)))
+          );
+          setSelectedManageUser(matched || {
+            id: seller.id, uid: seller.uid, accountId: seller.accountId,
+            name: seller.name, image: seller.image, username: '', email: '',
+            accountStatus: seller.active ? 'Active' : 'Inactive'
+          });
+          setActiveTab('manage_users');
+        }} />
+      )}
 
         {activeTab === 'game_wild_party' && (
           <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
