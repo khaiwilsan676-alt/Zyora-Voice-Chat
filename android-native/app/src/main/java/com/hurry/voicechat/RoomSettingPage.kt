@@ -518,7 +518,6 @@ fun RoomSettingPage(
 
                 SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
                 SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
-                SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
                 SettingRow("Admin", "${admins.size}/5") { adminSearch = ""; sheet = "admin" }
                 SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
                     password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
