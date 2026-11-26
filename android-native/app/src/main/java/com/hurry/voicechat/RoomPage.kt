@@ -2234,7 +2234,27 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
                             isCovered = isCovered,
-                            onSelectMessage = { selectedChatProfile = it },
+                            onSelectMessage = { message ->
+                                // If the chat sender is currently seated, open the exact
+                                // same RoomProfile path as tapping that seat's avatar.
+                                // This also keeps seat mute/moderation actions identical.
+                                val senderId = message.senderAccountId.trim()
+                                val matchingSeat = seats.firstOrNull {
+                                    it.occupied && senderId.isNotBlank() &&
+                                        it.accountId.trim().equals(senderId, ignoreCase = true)
+                                } ?: if (senderId.isBlank()) {
+                                    seats.singleOrNull {
+                                        it.occupied && it.userName.trim().equals(message.sender.trim(), ignoreCase = true)
+                                    }
+                                } else null
+                                if (matchingSeat != null) {
+                                    selectedChatProfile = null
+                                    selectedSeat = matchingSeat.number
+                                    showSeatSheet = false
+                                } else {
+                                    selectedChatProfile = message
+                                }
+                            },
                             onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) },
                             onCopyMessage = { text ->
                                 clipboard.setText(AnnotatedString(text))
@@ -2392,7 +2412,27 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
                             isCovered = isCovered,
-                            onSelectMessage = { selectedChatProfile = it },
+                            onSelectMessage = { message ->
+                                // If the chat sender is currently seated, open the exact
+                                // same RoomProfile path as tapping that seat's avatar.
+                                // This also keeps seat mute/moderation actions identical.
+                                val senderId = message.senderAccountId.trim()
+                                val matchingSeat = seats.firstOrNull {
+                                    it.occupied && senderId.isNotBlank() &&
+                                        it.accountId.trim().equals(senderId, ignoreCase = true)
+                                } ?: if (senderId.isBlank()) {
+                                    seats.singleOrNull {
+                                        it.occupied && it.userName.trim().equals(message.sender.trim(), ignoreCase = true)
+                                    }
+                                } else null
+                                if (matchingSeat != null) {
+                                    selectedChatProfile = null
+                                    selectedSeat = matchingSeat.number
+                                    showSeatSheet = false
+                                } else {
+                                    selectedChatProfile = message
+                                }
+                            },
                             onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) },
                             onCopyMessage = { text ->
                                 clipboard.setText(AnnotatedString(text))
