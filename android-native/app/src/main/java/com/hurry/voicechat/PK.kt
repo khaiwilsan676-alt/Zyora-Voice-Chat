@@ -112,6 +112,15 @@ private enum class PkCardResult {
     LOSS
 }
 
+private fun formatPkScore(value: Long, mode: String): String {
+    if (mode != "Coins") return value.toString()
+    return when {
+        value >= 1_000_000L -> String.format(Locale.US, "%.1fM", value / 1_000_000.0).replace(".0M", "M")
+        value >= 1_000L -> String.format(Locale.US, "%.1fK", value / 1_000.0).replace(".0K", "K")
+        else -> value.toString()
+    }
+}
+
 private fun parseDurationSeconds(label: String): Int {
     return when (label) {
         "30 s" -> 30
@@ -143,8 +152,8 @@ fun PKBattlePage(
     var selectedRedId by remember(roomId) { mutableStateOf("") }
     var blueUser by remember(roomId) { mutableStateOf<PkUser?>(null) }
     var redUser by remember(roomId) { mutableStateOf<PkUser?>(null) }
-    var blueScore by remember(roomId) { mutableIntStateOf(0) }
-    var redScore by remember(roomId) { mutableIntStateOf(0) }
+    var blueScore by remember(roomId) { mutableLongStateOf(0L) }
+    var redScore by remember(roomId) { mutableLongStateOf(0L) }
     var votedSide by remember(roomId) { mutableStateOf<String?>(null) }
     var remainingSeconds by remember(roomId) { mutableIntStateOf(0) }
     var battleId by remember(roomId) { mutableStateOf("") }
@@ -172,8 +181,8 @@ fun PKBattlePage(
                 battleMode = p.optString("mode", "Votes")
                 blueUser = b
                 redUser = r
-                blueScore = p.optInt("blueScore", 0)
-                redScore = p.optInt("redScore", 0)
+                blueScore = p.optLong("blueScore", 0L)
+                redScore = p.optLong("redScore", 0L)
                 battleEndsAt = p.optLong("endsAt", System.currentTimeMillis() + p.optInt("durationSeconds", 30) * 1000L)
                 remainingSeconds = p.optInt("durationSeconds", 30)
                 votedSide = null
@@ -184,8 +193,8 @@ fun PKBattlePage(
         val score = Emitter.Listener { args ->
             val p = args.firstOrNull() as? JSONObject ?: return@Listener
             if (p.optString("roomId") != roomId || p.optString("battleId") != battleId) return@Listener
-            blueScore = p.optInt("blueScore", blueScore)
-            redScore = p.optInt("redScore", redScore)
+            blueScore = p.optLong("blueScore", blueScore)
+            redScore = p.optLong("redScore", redScore)
             remainingSeconds = p.optInt("remainingSeconds", remainingSeconds)
         }
         val finished = Emitter.Listener { args ->
@@ -530,8 +539,8 @@ private fun PkMainBattleSheet(
 @Composable
 private fun PkActiveBattleOverlay(
     remainingSeconds: Int,
-    blueScore: Int,
-    redScore: Int,
+    blueScore: Long,
+    redScore: Long,
     votedSide: String?,
     blueUser: PkUser?,
     redUser: PkUser?,
@@ -783,7 +792,7 @@ private fun PkActiveBattleOverlay(
                 )
                 Spacer(Modifier.width(5.dp))
                 Text(
-                    text = blueScore.toString(),
+                    text = formatPkScore(blueScore, scoreMode),
                     color = Color(0xFFFFF5DC),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
@@ -798,7 +807,7 @@ private fun PkActiveBattleOverlay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = redScore.toString(),
+                    text = formatPkScore(redScore, scoreMode),
                     color = Color(0xFFFFF5DC),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
