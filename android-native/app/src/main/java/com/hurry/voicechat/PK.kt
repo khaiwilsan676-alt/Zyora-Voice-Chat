@@ -134,6 +134,9 @@ private fun parseDurationSeconds(label: String): Int {
 
 data class PkUser(val accountId: String, val name: String, val image: String)
 
+private fun normalizePkAvatar(value: String): String =
+    if (value.startsWith("https://", true) || value.startsWith("http://", true)) value else ZYORA_DEFAULT_AVATAR_URL
+
 @Composable
 fun PKBattlePage(
     onClose: () -> Unit,
@@ -167,7 +170,7 @@ fun PKBattlePage(
         if (value == null) return null
         val id = value.optString("accountId").trim()
         if (id.isBlank()) return null
-        return PkUser(id, value.optString("name").ifBlank { "User" }, value.optString("image"))
+        return PkUser(id, value.optString("name").ifBlank { "User" }, normalizePkAvatar(value.optString("image")))
     }
 
     DisposableEffect(roomSocket, roomId) {
@@ -289,7 +292,7 @@ fun PKBattlePage(
                 onModeSelect = { selectedMode = it },
                 selectedTime = selectedTime,
                 onTimeSelect = { selectedTime = it },
-                selectedBlueUser = selectedBlue?.let { PkUser(it.accountId, it.userName, it.userImage) },
+                selectedBlueUser = selectedBlue?.let { PkUser(it.accountId, it.userName.ifBlank { "User" }, normalizePkAvatar(it.userImage)) },
                 selectedRedUser = selectedRed?.let { PkUser(it.accountId, it.userName, it.userImage) },
                 onBlueCardClick = { activeSheet = PkSheetView.SELECT_BLUE },
                 onRedCardClick = { activeSheet = PkSheetView.SELECT_RED },
@@ -1026,7 +1029,7 @@ private fun PkActiveBattleCard(
                         )
 
                         Text(
-                            text = if (scoreMode == "Coins") "Send" else if (isVoted) "Voted" else "Vote",
+                            text = if (isVoted && scoreMode == "Votes") "Sent" else "Send",
                             color = Color(0xFFFFE7A3),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
@@ -1347,8 +1350,8 @@ private fun PkSelectPeopleBottomSheet(
                                 .clickable(enabled = seat.occupied && seat.accountId.isNotBlank()) { onSeatClick(seat) },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (seat.occupied && seat.userImage.isNotBlank()) {
-                                PkRemoteImage(seat.userImage, seat.userName, Modifier.fillMaxSize().clip(CircleShape), ContentScale.Crop)
+                            if (seat.occupied && seat.accountId.isNotBlank()) {
+                                PkRemoteImage(normalizePkAvatar(seat.userImage), seat.userName, Modifier.fillMaxSize().clip(CircleShape), ContentScale.Crop)
                                 if (selected) {
                                     Box(Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape)
                                         .background(Color.White).border(1.dp, activeBorderColor, CircleShape), contentAlignment = Alignment.Center) {
