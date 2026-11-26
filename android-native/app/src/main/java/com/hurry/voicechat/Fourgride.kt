@@ -328,7 +328,7 @@ fun Fourgride(
                             val cellModifier = Modifier.weight(1f)
                             when (type) {
                                 PlayToolType.LUCKY_BAG -> ToolCell(cellModifier, "Lucky bag", base + "IMG_20261028_182446.png", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
-                                PlayToolType.PK_BATTLE -> ToolCell(cellModifier, "Pk Battle", base + "IMG_20261028_182422.png", onClick = { onClose(); onOpenPk() })
+                                PlayToolType.PK_BATTLE -> ToolCell(cellModifier, "Pk Battle", base + "IMG_20261126_214316.png", onClick = { onClose(); onOpenPk() })
                             }
                         }
                         // Fill the 3rd and 4th column spaces properly so 1st and 2nd won't stretch awkwardly
