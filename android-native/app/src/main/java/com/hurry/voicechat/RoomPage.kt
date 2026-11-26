@@ -1443,7 +1443,13 @@ fun RoomPage(
                     avatar = payload.optString("senderImage").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
                     name = payload.optString("senderName").ifBlank { "User" },
                     detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
-                    giftImage = payload.optString("giftImage"),
+                    giftImage = payload.optString("giftImage").let { raw ->
+                        when {
+                            raw.isBlank() -> ""
+                            raw.startsWith("http", true) -> raw
+                            else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + raw.trimStart('/')
+                        }
+                    },
                     giftName = payload.optString("giftName")
                 )
             }
