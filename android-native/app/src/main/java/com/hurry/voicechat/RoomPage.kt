@@ -1049,7 +1049,7 @@ fun RoomPage(
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
             val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
-            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex, scrollOffset = 0) }
+            LaunchedEffect(messages.size, kickNotices.size, imeVisible) { kotlinx.coroutines.delay(50); val lastVisibleIndex = chatListState.layoutInfo.totalItemsCount - 1; if (lastVisibleIndex >= 0) chatListState.animateScrollToItem(lastVisibleIndex, scrollOffset = 0) }
     val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val messageId = accountId + "-" + System.currentTimeMillis()
