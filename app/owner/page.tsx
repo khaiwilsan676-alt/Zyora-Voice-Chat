@@ -267,7 +267,7 @@ const saveMasterWalletHistory = async (record: any): Promise<void> => {
   const db = await openMasterWalletDB();
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(MASTER_WALLET_STORE, "readwrite");
-    const normalized = { id: String(record.id), userId: String(record.userId), accountId: String(record.accountId || ""), name: String(record.name || "User"), avatar: String(record.avatar || ""), amount: Number(record.amount), timestamp: Number(record.timestamp || Date.now()), status: "completed" };
+    const normalized = { id: String(record.id), userId: String(record.userId), accountId: String(record.accountId || ""), name: String(record.name || "User"), avatar: String(record.avatar || ""), destinationWallet: record.destinationWallet === "coins" ? "coins" : "seller", amount: Number(record.amount), timestamp: Number(record.timestamp || Date.now()), status: "completed" };
     transaction.objectStore(MASTER_WALLET_STORE).put(normalized);
     publishOwnerSharedRecord("transferHistory", normalized);
     transaction.oncomplete = () => resolve();
@@ -2803,6 +2803,7 @@ export default function StaffPanel() {
                         <th className="px-4 py-3">Avatar</th>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3">Zyora ID</th>
+                        <th className="px-4 py-3">Wallet</th>
                         <th className="px-4 py-3 text-right">Coins</th>
                         <th className="px-5 py-3 text-right">Date Time</th>
                       </tr>
@@ -2818,6 +2819,7 @@ export default function StaffPanel() {
                           </td>
                           <td className="px-4 py-3 text-sm font-bold text-slate-800">{item.name || 'User'}</td>
                           <td className="px-4 py-3 text-xs font-bold text-slate-700">{item.accountId || item.userId}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-slate-700">{item.destinationWallet === "coins" ? "Coins Wallet" : "Seller Wallet"}</td>
                           <td className="px-4 py-3 text-right text-sm font-black tabular-nums text-emerald-700">+{Number(item.amount || 0).toLocaleString()}</td>
                           <td className="px-5 py-3 text-right text-xs font-semibold text-slate-500">{item.timestamp ? new Date(item.timestamp).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
                         </tr>
