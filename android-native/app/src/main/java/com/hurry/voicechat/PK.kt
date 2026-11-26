@@ -24,6 +24,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
+import org.json.JSONObject
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -119,50 +123,129 @@ private fun parseDurationSeconds(label: String): Int {
     }
 }
 
+private data class PkUser(val accountId: String, val name: String, val image: String)
+
 @Composable
-fun PKBattlePage(onClose: () -> Unit) {
+fun PKBattlePage(
+    onClose: () -> Unit,
+    roomId: String,
+    accountId: String,
+    userName: String,
+    userImage: String,
+    roomSocket: Socket?,
+    roomSeats: List<NativeRoomSeat>,
+    onSendGift: (PkUser) -> Unit
+) {
     var selectedMode by remember { mutableStateOf("Votes") }
     var selectedTime by remember { mutableStateOf("30 s") }
     var activeSheet by remember { mutableStateOf(PkSheetView.MAIN) }
-    var selectedBlueIndex by remember { mutableStateOf<Int?>(null) }
-    var selectedRedIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedBlueId by remember(roomId) { mutableStateOf("") }
+    var selectedRedId by remember(roomId) { mutableStateOf("") }
+    var blueUser by remember(roomId) { mutableStateOf<PkUser?>(null) }
+    var redUser by remember(roomId) { mutableStateOf<PkUser?>(null) }
+    var blueScore by remember(roomId) { mutableIntStateOf(0) }
+    var redScore by remember(roomId) { mutableIntStateOf(0) }
+    var votedSide by remember(roomId) { mutableStateOf<String?>(null) }
+    var remainingSeconds by remember(roomId) { mutableIntStateOf(0) }
+    var battleId by remember(roomId) { mutableStateOf("") }
+    var battleMode by remember(roomId) { mutableStateOf("Votes") }
+    var battleEndsAt by remember(roomId) { mutableLongStateOf(0L) }
+    var showSelectPrompt by remember { mutableStateOf(false) }
+    var battleFinished by remember(roomId) { mutableStateOf(false) }
+    var selectPromptText by remember { mutableStateOf("Select the user") }
 
-    // Active PK Battle State
-    var blueScore by remember { mutableStateOf(0) }
-    var redScore by remember { mutableStateOf(0) }
-    var votedSide by remember { mutableStateOf<String?>(null) }
-    var remainingSeconds by remember { mutableStateOf(30) }
+    fun parsePkUser(value: JSONObject?): PkUser? {
+        if (value == null) return null
+        val id = value.optString("accountId").trim()
+        if (id.isBlank()) return null
+        return PkUser(id, value.optString("name").ifBlank { "User" }, value.optString("image"))
+    }
 
-    LaunchedEffect(activeSheet) {
-        if (activeSheet == PkSheetView.BATTLE_ACTIVE) {
-            while (remainingSeconds > 0 && activeSheet == PkSheetView.BATTLE_ACTIVE) {
-                delay(1000L)
-                remainingSeconds -= 1
+    DisposableEffect(roomSocket, roomId) {
+        val started = Emitter.Listener { args ->
+            val p = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (p.optString("roomId") != roomId) return@Listener
+            val b = parsePkUser(p.optJSONObject("blueUser"))
+            val r = parsePkUser(p.optJSONObject("redUser"))
+            if (b != null && r != null) {
+                battleId = p.optString("battleId")
+                battleMode = p.optString("mode", "Votes")
+                blueUser = b
+                redUser = r
+                blueScore = p.optInt("blueScore", 0)
+                redScore = p.optInt("redScore", 0)
+                battleEndsAt = p.optLong("endsAt", System.currentTimeMillis() + p.optInt("durationSeconds", 30) * 1000L)
+                remainingSeconds = p.optInt("durationSeconds", 30)
+                votedSide = null
+                battleFinished = false
+                activeSheet = PkSheetView.BATTLE_ACTIVE
             }
+        }
+        val score = Emitter.Listener { args ->
+            val p = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (p.optString("roomId") != roomId || p.optString("battleId") != battleId) return@Listener
+            blueScore = p.optInt("blueScore", blueScore)
+            redScore = p.optInt("redScore", redScore)
+            remainingSeconds = p.optInt("remainingSeconds", remainingSeconds)
+        }
+        val finished = Emitter.Listener { args ->
+            val p = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (p.optString("roomId") != roomId || p.optString("battleId") != battleId) return@Listener
+            blueScore = p.optInt("blueScore", blueScore)
+            redScore = p.optInt("redScore", redScore)
+            remainingSeconds = 0
+            battleFinished = true
+        }
+        val failed = Emitter.Listener { args ->
+            val p = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (p.optString("roomId") != roomId) return@Listener
+            selectPromptText = when (p.optString("reason")) {
+                "battle_running" -> "A PK is already running"
+                "users_must_be_seated" -> "Select seated users"
+                else -> "Select the user"
+            }
+            showSelectPrompt = true
+        }
+        val voteRejected = Emitter.Listener { args ->
+            val p = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (p.optString("roomId") == roomId && p.optString("reason") == "already_voted") {
+                selectPromptText = "1 person 1 vote"
+                showSelectPrompt = true
+            }
+        }
+        roomSocket?.on("pk_started", started)
+        roomSocket?.on("pk_score_update", score)
+        roomSocket?.on("pk_finished", finished)
+        roomSocket?.on("pk_start_failed", failed)
+        roomSocket?.on("pk_vote_rejected", voteRejected)
+        onDispose {
+            roomSocket?.off("pk_started", started)
+            roomSocket?.off("pk_score_update", score)
+            roomSocket?.off("pk_finished", finished)
+            roomSocket?.off("pk_start_failed", failed)
+            roomSocket?.off("pk_vote_rejected", voteRejected)
+        }
+    }
+
+    LaunchedEffect(battleId, battleEndsAt, activeSheet, battleFinished) {
+        while (battleId.isNotBlank() && activeSheet == PkSheetView.BATTLE_ACTIVE && !battleFinished) {
+            remainingSeconds = (((battleEndsAt - System.currentTimeMillis()).coerceAtLeast(0L)) / 1000L).toInt()
+            if (remainingSeconds <= 0) break
+            delay(250L)
         }
     }
 
     BackHandler {
-        if (activeSheet != PkSheetView.MAIN) {
-            activeSheet = PkSheetView.MAIN
-        } else {
-            onClose()
-        }
+        if (activeSheet != PkSheetView.MAIN) activeSheet = PkSheetView.MAIN else onClose()
     }
 
+    val selectedBlue = roomSeats.firstOrNull { it.occupied && it.accountId == selectedBlueId }
+    val selectedRed = roomSeats.firstOrNull { it.occupied && it.accountId == selectedRedId }
+
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.52f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                if (activeSheet != PkSheetView.MAIN) {
-                    activeSheet = PkSheetView.MAIN
-                } else {
-                    onClose()
-                }
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.52f))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                if (activeSheet != PkSheetView.MAIN) activeSheet = PkSheetView.MAIN else onClose()
             }
     ) {
         if (activeSheet == PkSheetView.BATTLE_ACTIVE) {
@@ -171,20 +254,23 @@ fun PKBattlePage(onClose: () -> Unit) {
                 blueScore = blueScore,
                 redScore = redScore,
                 votedSide = votedSide,
+                blueUser = blueUser,
+                redUser = redUser,
+                scoreMode = battleMode,
                 onBlueVote = {
-                    if (remainingSeconds > 0 && votedSide != "BLUE") {
-                        if (votedSide == "RED" && redScore > 0) redScore -= 1
+                    if (battleMode == "Votes" && remainingSeconds > 0 && votedSide == null) {
+                        roomSocket?.emit("pk_vote", JSONObject().put("roomId", roomId).put("side", "BLUE"))
                         votedSide = "BLUE"
-                        blueScore += 1
                     }
                 },
                 onRedVote = {
-                    if (remainingSeconds > 0 && votedSide != "RED") {
-                        if (votedSide == "BLUE" && blueScore > 0) blueScore -= 1
+                    if (battleMode == "Votes" && remainingSeconds > 0 && votedSide == null) {
+                        roomSocket?.emit("pk_vote", JSONObject().put("roomId", roomId).put("side", "RED"))
                         votedSide = "RED"
-                        redScore += 1
                     }
                 },
+                onBlueSend = { blueUser?.let(onSendGift) },
+                onRedSend = { redUser?.let(onSendGift) },
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
@@ -193,70 +279,57 @@ fun PKBattlePage(onClose: () -> Unit) {
                 onModeSelect = { selectedMode = it },
                 selectedTime = selectedTime,
                 onTimeSelect = { selectedTime = it },
+                selectedBlueUser = selectedBlue?.let { PkUser(it.accountId, it.userName, it.userImage) },
+                selectedRedUser = selectedRed?.let { PkUser(it.accountId, it.userName, it.userImage) },
                 onBlueCardClick = { activeSheet = PkSheetView.SELECT_BLUE },
                 onRedCardClick = { activeSheet = PkSheetView.SELECT_RED },
                 onHelpClick = { activeSheet = PkSheetView.RULES },
                 onStartClick = {
-                    blueScore = 0
-                    redScore = 0
-                    votedSide = null
-                    remainingSeconds = parseDurationSeconds(selectedTime)
-                    activeSheet = PkSheetView.BATTLE_ACTIVE
+                    val blue = roomSeats.firstOrNull { it.occupied && it.accountId == selectedBlueId }
+                    val red = roomSeats.firstOrNull { it.occupied && it.accountId == selectedRedId }
+                    if (blue == null || red == null || blue.accountId == red.accountId) {
+                        selectPromptText = "Select the user"
+                        showSelectPrompt = true
+                    } else {
+                        roomSocket?.emit("pk_start", JSONObject()
+                            .put("roomId", roomId).put("userId", accountId)
+                            .put("userName", userName).put("userImage", userImage)
+                            .put("blueUserId", blue.accountId).put("redUserId", red.accountId)
+                            .put("mode", selectedMode).put("durationSeconds", parseDurationSeconds(selectedTime)))
+                    }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
 
             if (activeSheet != PkSheetView.MAIN) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.42f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            activeSheet = PkSheetView.MAIN
-                        }
-                )
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { activeSheet = PkSheetView.MAIN })
             }
-
             when (activeSheet) {
-                PkSheetView.SELECT_BLUE -> {
-                    PkSelectPeopleBottomSheet(
-                        bgImageUrl = SELECT_BLUE_BG_URL,
-                        fallbackBgColor = Color(0xFF0B2732),
-                        plusTint = Color(0xFF3FA9D6),
-                        activeBorderColor = Color(0xFF60A5FA),
-                        selectedSlotIndex = selectedBlueIndex,
-                        onSlotClick = { index ->
-                            selectedBlueIndex = if (selectedBlueIndex == index) null else index
-                        },
-                        modifier = Modifier.align(Alignment.BottomCenter)
-                    )
-                }
-
-                PkSheetView.SELECT_RED -> {
-                    PkSelectPeopleBottomSheet(
-                        bgImageUrl = SELECT_RED_BG_URL,
-                        fallbackBgColor = Color(0xFF2E0F18),
-                        plusTint = Color(0xFFB9435F),
-                        activeBorderColor = Color(0xFFF87171),
-                        selectedSlotIndex = selectedRedIndex,
-                        onSlotClick = { index ->
-                            selectedRedIndex = if (selectedRedIndex == index) null else index
-                        },
-                        modifier = Modifier.align(Alignment.BottomCenter)
-                    )
-                }
-
-                PkSheetView.RULES -> {
-                    PkRulesBottomSheet(
-                        onBack = { activeSheet = PkSheetView.MAIN },
-                        modifier = Modifier.align(Alignment.BottomCenter)
-                    )
-                }
-
+                PkSheetView.SELECT_BLUE -> PkSelectPeopleBottomSheet(
+                    bgImageUrl = SELECT_BLUE_BG_URL, fallbackBgColor = Color(0xFF0B2732),
+                    plusTint = Color(0xFF3FA9D6), activeBorderColor = Color(0xFF60A5FA),
+                    seats = roomSeats, selectedAccountId = selectedBlueId,
+                    onSeatClick = { seat -> selectedBlueId = if (selectedBlueId == seat.accountId) "" else seat.accountId },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+                PkSheetView.SELECT_RED -> PkSelectPeopleBottomSheet(
+                    bgImageUrl = SELECT_RED_BG_URL, fallbackBgColor = Color(0xFF2E0F18),
+                    plusTint = Color(0xFFB9435F), activeBorderColor = Color(0xFFF87171),
+                    seats = roomSeats, selectedAccountId = selectedRedId,
+                    onSeatClick = { seat -> selectedRedId = if (selectedRedId == seat.accountId) "" else seat.accountId },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+                PkSheetView.RULES -> PkRulesBottomSheet(onBack = { activeSheet = PkSheetView.MAIN }, modifier = Modifier.align(Alignment.BottomCenter))
                 else -> Unit
+            }
+        }
+
+        if (showSelectPrompt) {
+            Box(Modifier.fillMaxSize().background(Color.Transparent).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { showSelectPrompt = false }, contentAlignment = Alignment.Center) {
+                Column(Modifier.clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.30f)).padding(horizontal = 22.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(selectPromptText, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
