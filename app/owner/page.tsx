@@ -691,8 +691,13 @@ function OwnerCustomRoomThemes({ ownerKey }: { ownerKey: string }) {
             <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white px-4 py-4 md:flex-row md:items-center md:gap-4 md:px-5">
               <img src={item.image} alt={item.name} className="h-16 w-12 rounded-lg border border-slate-200 object-cover" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-slate-800">{item.name}</p>
-                <p className="text-xs text-slate-500">ID: {item.userId} · {new Date(item.createdAt).toLocaleString()}</p>
+                <div className="flex items-center gap-2">
+                  <img src={item.userAvatar || "/default-avatar.png"} alt={item.userName || "User"} className="h-8 w-8 rounded-full border border-slate-200 object-cover" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-800">{item.userName || "User"} · {item.name}</p>
+                    <p className="text-xs text-slate-500">ID: {item.userId} · {new Date(item.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
               </div>
               <div className="w-32 text-sm font-bold text-slate-700">🪙 {Number(item.price || 0).toLocaleString("en-IN")}</div>
               <button disabled={busy !== ""} onClick={() => void approve(item.id)} className="rounded-lg bg-[#197477] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{busy === item.id ? "Approving..." : "Approve"}</button>
