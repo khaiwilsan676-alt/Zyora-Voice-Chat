@@ -197,7 +197,7 @@ export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps
                     <td className="py-3 pr-4 text-right">
                       <button type="button" onClick={async () => {
                         try {
-                          const response = await fetch(apiUrl(`/api/lucky-bag/wallet/${encodeURIComponent(user.uid || user.accountId)}`), {
+                          const response = await fetch(apiUrl(`/api/seller/wallet/${encodeURIComponent(user.uid || user.accountId)}`), {
                             cache: 'no-store',
                             headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }
                           });
