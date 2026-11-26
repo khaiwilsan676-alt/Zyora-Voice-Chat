@@ -2308,3 +2308,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native `MeScreen.kt`: CD-Key Apply and Exchange fetch a fresh Firebase ID token before each request instead of relying on a possibly expired cached token.
 - `Zyora-Server/server.js`: CD-Key auth resolves Firebase UID aliases and auth-account mappings, issues codes against the verified Firebase UID, and supplies normalized user/account identity to the Zyora System private message. Redemption tracks whether the reward was already applied so an error after credit cannot reset a consumed code.
 - APK build, live Render deployment, and device-side reward/animation verification remain pending.
+
+
+## 2026-11-26 — Master Wallet destination selection
+- Owner Panel Master Wallet now offers Seller Wallet and Coins Wallet destinations. The selected destination is stored in Master Wallet IndexedDB history and displayed per credit.
+- Seller Wallet credits are allowed only when the recipient has an active owner-controlled seller flag (coinSellerTag, coinSeller, or sellerTag); the Render backend enforces this check, not just the UI.
+- Coins Wallet credits update canonical users.coins and emit wallet_balance_updated. Seller Wallet credits update sellerWalletCoins and emit seller_wallet_balance_updated. Each destination uses its own idempotency key; balances remain separate.
