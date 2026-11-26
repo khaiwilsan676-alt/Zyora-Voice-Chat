@@ -149,7 +149,7 @@ private val hotGifts = listOf(
     GiftPickerGift(3, "Arab King", 500000, "${GITHUB_PUBLIC_BASE_URL}image_d9df9625~2.jpg",
         video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_17e19680~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2021, "Chiken", 65000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_174325.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_ab36b2de~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_b14f3d64~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
     GiftPickerGift(2002, "Love Twinkle", 200000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165025.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_30_2026031022451975617~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2008, "Heartbeat", 120999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261125_014410.png",
@@ -175,7 +175,7 @@ private val hotGifts = listOf(
     GiftPickerGift(2019, "Perfume", 80500, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131228.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_32_2026030801230537257~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2020, "Kitty Gloves", 35000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_174313.png",
-        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_b14f3d64~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
+        video = "${GITHUB_PUBLIC_BASE_URL}gemini_generated_video_ab36b2de~2.mp4", videoStyle = "fade", sideFade = false, fitNoFade = true, greenRemove = true),
     GiftPickerGift(2001, "Mysalo Princess", 499999, "${GITHUB_PUBLIC_BASE_URL}IMG_20261124_165000.png",
         video = "${GITHUB_PUBLIC_BASE_URL}alioss_29_2026031617445981861~2.mp4", videoStyle = "fade", sideFade = true),
     GiftPickerGift(2016, "Dragon Flame", 520000, "${GITHUB_PUBLIC_BASE_URL}IMG_20261126_131057.png",
@@ -1010,10 +1010,10 @@ private fun GiftCard(
         }
 
         if (activeTab == "Luxury" || (activeTab == "Hot" && (gift.id == 2001 || gift.id == 2016))) {
-            Row(
+            Column(
                 modifier = Modifier.align(Alignment.TopStart),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 AsyncImage(
                     model = giftAssetUrl("/IMG_20261126_214358.png"),
