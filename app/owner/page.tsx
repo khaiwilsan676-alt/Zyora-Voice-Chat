@@ -1890,7 +1890,7 @@ export default function StaffPanel() {
           />
           <SidebarCategory
             icon="🛒" title="Store" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'special_ids', label: 'Special ID / Tags', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
+            items={[{ id: 'themes', label: 'Themes', icon: '🎨' }, { id: 'special_ids', label: 'Special ID / Tags', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
           />
           <SidebarCategory
             icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}            items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'seller_center', label: 'Seller Center', icon: '🛒' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
@@ -2268,6 +2268,86 @@ export default function StaffPanel() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'themes' && (
+          <div className="p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
+            <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-bold text-slate-800">All Store Themes</h2>
+              <span className="text-xs font-bold bg-indigo-50 text-[#197477] px-3 py-1 rounded-full">
+                {ALL_STORE_THEMES.length} Themes Active
+              </span>
+            </div>
+
+            <div className="mb-6">
+              <div className="relative w-full max-w-3xl">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={themeSearchQuery}
+                  onChange={(e) => setThemeSearchQuery(e.target.value)}
+                  placeholder="Search themes by name..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="hidden md:flex items-center gap-4 px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-100 rounded-xl mb-2">
+              <span className="w-10">S.No</span>
+              <span className="flex-1">Name</span>
+              <span className="w-40">Prize</span>
+              <span className="w-24">Star</span>
+              <span className="w-20">Theme</span>
+              <span className="w-20 text-right">Days</span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {filteredThemes.map((theme, idx) => (
+                <div
+                  key={theme.id}
+                  className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 px-4 md:px-5 py-4 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-all"
+                >
+                  <div className="w-10 text-xs font-bold text-slate-500">{idx + 1}</div>
+                  <div className="flex-1 flex items-center gap-3 min-w-0">
+                    <span className="font-bold text-slate-800 text-sm truncate">{theme.name}</span>
+                  </div>
+                  <div className="md:w-40 flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                    <span>🪙 {theme.price}</span>
+                  </div>
+                  <div className="md:w-24 flex items-center gap-1">
+                    <span className="flex items-center gap-0.5 text-yellow-400">
+                      {Array.from({ length: theme.stars }).map((_, i) => (
+                        <Star key={i} className="w-3.5 h-3.5 fill-yellow-400" />
+                      ))}
+                    </span>
+                  </div>
+                  <div className="md:w-20">
+                    <button
+                      onClick={() => setEnlargedThemeImage(theme.image)}
+                      className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0 hover:ring-2 hover:ring-indigo-400 transition-all cursor-pointer"
+                    >
+                      <img
+                        src={theme.image}
+                        alt={theme.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/default-theme.png'; }}
+                      />
+                    </button>
+                  </div>
+                  <div className="md:w-20 text-sm font-semibold text-slate-600 md:text-right">
+                    {theme.duration}
+                  </div>
+                </div>
+              ))}
+
+              {filteredThemes.length === 0 && (
+                <div className="py-10 text-center text-slate-400 text-sm font-medium bg-white rounded-xl border border-slate-100">
+                  No themes found
+                </div>
+              )}
+            </div>
+            <OwnerCustomRoomThemes ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
         )}
 
@@ -3306,7 +3386,7 @@ export default function StaffPanel() {
           </div>
         )}
 
-        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_wild_party' && activeTab !== 'game_dragon_battle' && activeTab !== 'gift_catalog' && activeTab !== 'special_ids' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
+        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_wild_party' && activeTab !== 'game_dragon_battle' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'special_ids' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
           <div className="p-8 max-w-5xl mx-auto w-full">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
               <h2 className="text-xl font-bold text-slate-800 capitalize">
