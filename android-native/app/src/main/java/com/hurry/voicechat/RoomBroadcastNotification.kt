@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +65,11 @@ fun RoomBroadcastNotification(notice: RoomBroadcastNotice, onDismiss: () -> Unit
             .clip(RoundedCornerShape(14.dp))) {
             // The banner lifetime is controlled by the five-second countdown below.
             // A shorter source video must not dismiss the notification early.
-            RoomGiftVideoOverlay(src = notice.video, onFinished = {})
+            key(notice.id) {
+                // Recreate ExoPlayer for each notification, even when consecutive
+                // notifications use the same MP4 URL.
+                RoomGiftVideoOverlay(src = notice.video, onFinished = {})
+            }
             Row(
                 Modifier.fillMaxSize().background(Color(0x22000000)).padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
