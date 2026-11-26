@@ -421,16 +421,17 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         ModalBottomSheet(
             onDismissRequest = { showCdKeySheet = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             containerColor = Color.White,
             dragHandle = null
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .fillMaxHeight(0.7f)
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(top = 20.dp, bottom = 220.dp),
+                    .padding(top = 20.dp, bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -493,9 +494,11 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     val result = withContext(Dispatchers.IO) {
                                         runCatching {
                                             val firebaseUser = FirebaseAuth.getInstance().currentUser
-                                                ?: error("Please sign in again")
-                                            val token = Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
-                                                ?: error("Authentication token unavailable")
+                                            val token = if (firebaseUser != null) {
+                                                Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
+                                            } else {
+                                                prefs.getString("idToken", null)
+                                            }?.takeIf { it.isNotBlank() } ?: error("Please sign in again")
                                             val connection = (URL("https://zyora-server.onrender.com/api/cd-key/apply").openConnection() as HttpURLConnection).apply {
                                                 requestMethod = "POST"; connectTimeout = 10000; readTimeout = 15000
                                                 doOutput = true; setRequestProperty("Authorization", "Bearer $token")
@@ -529,9 +532,11 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                         val result = withContext(Dispatchers.IO) {
                                             runCatching {
                                                 val firebaseUser = FirebaseAuth.getInstance().currentUser
-                                                ?: error("Please sign in again")
-                                            val token = Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
-                                                ?: error("Authentication token unavailable")
+                                            val token = if (firebaseUser != null) {
+                                                Tasks.await(firebaseUser.getIdToken(false), 30, TimeUnit.SECONDS).token
+                                            } else {
+                                                prefs.getString("idToken", null)
+                                            }?.takeIf { it.isNotBlank() } ?: error("Please sign in again")
                                             val connection = (URL("https://zyora-server.onrender.com/api/cd-key/redeem").openConnection() as HttpURLConnection).apply {
                                                     requestMethod = "POST"; connectTimeout = 10000; readTimeout = 15000
                                                     doOutput = true; setRequestProperty("Authorization", "Bearer $token")
