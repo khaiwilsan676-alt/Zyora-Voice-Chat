@@ -4022,7 +4022,7 @@ private fun RoomSeatInviteDialog(
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
                 else if(seat.occupied) {
                     FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.requiredSize(seatSize + 1.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                    NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.requiredSize(seatSize + 3.dp).offset(y = 2.dp))
+                    NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.requiredSize(seatSize + 3.dp).offset(y = 4.dp))
                 } else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
             
