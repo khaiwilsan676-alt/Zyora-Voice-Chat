@@ -1,6 +1,8 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -1038,30 +1042,46 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                     Spacer(Modifier.weight(1f))
                     
                     val pMethod = seller.paymentMethod.lowercase()
-                    when {
-                        pMethod.contains("paytm") -> AsyncImage(PAYTM_LOGO, null, Modifier.height(14.dp), contentScale = ContentScale.Fit)
-                        pMethod.contains("gpay") || pMethod.contains("google") -> AsyncImage(GPAY_LOGO, null, Modifier.height(14.dp), contentScale = ContentScale.Fit)
-                        pMethod.contains("phonepe") -> AsyncImage(PHONEPE_LOGO, null, Modifier.height(14.dp), contentScale = ContentScale.Fit)
-                        else -> Text(seller.paymentMethod.ifBlank { "—" }, fontSize = 13.sp, color = Color(0xFF374151), fontWeight = FontWeight.Medium)
+                    val paymentLogo = when {
+                        pMethod.contains("paytm") -> PAYTM_LOGO
+                        pMethod.contains("gpay") || pMethod.contains("google") -> GPAY_LOGO
+                        pMethod.contains("phonepe") -> PHONEPE_LOGO
+                        else -> null
+                    }
+                    if (paymentLogo != null) {
+                        AsyncImage(
+                            model = paymentLogo,
+                            contentDescription = seller.paymentMethod,
+                            modifier = Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(seller.paymentMethod.ifBlank { "—" }, fontSize = 13.sp, color = Color(0xFF374151), fontWeight = FontWeight.Medium)
                     }
                 }
 
                 Spacer(Modifier.height(10.dp))
 
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                val whatsappDigits = seller.whatsapp.filter(Char::isDigit).let { raw ->
+                    if (raw.length == 10) "91$raw" else raw
+                }
+                Row(
+                    Modifier.fillMaxWidth()
+                        .then(if (whatsappDigits.isNotBlank()) Modifier.clickable {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsappDigits")))
+                            }
+                        } else Modifier),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("Whatsapp:", fontSize = 13.sp, color = Color(0xFF374151))
                     Spacer(Modifier.weight(1f))
-                    Text(seller.whatsapp.ifBlank { "—" }, fontSize = 13.sp, color = Color(0xFF374151))
-                    
                     if (seller.whatsapp.isNotBlank()) {
-                        Text(
-                            " ⧉",
-                            Modifier.clickable {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("WhatsApp", seller.whatsapp))
-                            },
-                            fontSize = 15.sp, color = Color(0xFF9CA3AF)
-                        )
+                        Text(seller.whatsapp, fontSize = 13.sp, color = Color(0xFF374151))
+                        Spacer(Modifier.width(4.dp))
+                        WalletAgentWhatsAppMark(Modifier.size(14.dp))
+                    } else {
+                        Text("—", fontSize = 13.sp, color = Color(0xFF374151))
                     }
                 }
             }
@@ -1072,6 +1092,20 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                     textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
             }
         }
+    }
+}
+
+@Composable
+private fun WalletAgentWhatsAppMark(modifier: Modifier = Modifier) {
+    val handset = remember {
+        PathParser().parsePathString("M17.5 14.33c-.31-.15-1.81-.89-2.09-.99-.28-.1-.48-.15-.68.15-.2.3-.79.99-.97 1.2-.18.2-.36.22-.67.07-.31-.15-1.29-.48-2.46-1.52-.91-.81-1.52-1.81-1.7-2.12-.18-.3-.02-.47.13-.62.14-.14.31-.36.46-.54.15-.18.2-.31.3-.52.1-.2.05-.38-.02-.52-.08-.15-.68-1.64-.93-2.25-.24-.6-.49-.52-.67-.53-.18-.01-.38-.01-.59-.01-.2 0-.54.08-.82.38-.28.3-1.06 1.04-1.06 2.53 0 1.49 1.09 2.93 1.24 3.13.15.2 2.14 3.26 5.17 4.57.72.31 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.09 1.81-.74 2.06-1.46.25-.72.25-1.34.18-1.46-.07-.12-.27-.2-.58-.35z").toPath()
+    }
+    Canvas(modifier) {
+        val bg = PathParser().parsePathString("M12.01 2C6.48 2 2 6.48 2 12c0 1.95.56 3.77 1.5 5.25L2 22l4.89-1.47c1.44.89 3.16 1.42 5.11 1.42 5.53 0 10.01-4.48 10.01-10s-4.48-10-10-10z").toPath()
+        drawContext.transform.scale(size.width / 24f, size.height / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero)
+        drawPath(bg, Color(0xFF25D366))
+        drawPath(handset, Color.White)
+        drawContext.transform.scale(24f / size.width, 24f / size.height, pivot = androidx.compose.ui.geometry.Offset.Zero)
     }
 }
 
