@@ -9,7 +9,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+
+private val ReportsTopGradient = Brush.verticalGradient(
+    0.0f  to Color(0xFF2563EB),
+    0.97f to Color(0xFFEFF6FF),
+    1.0f  to Color(0xFFF9FAFB)
+)
 
 data class ReportNative(
     val id: String = "",
@@ -42,7 +50,13 @@ fun Reports(onBack: () -> Unit = {}) {
     }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(ReportsTopGradient)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("Report", style = MaterialTheme.typography.headlineSmall)
         }
         OutlinedTextField(
@@ -74,7 +88,10 @@ fun Reports(onBack: () -> Unit = {}) {
 private fun ReportDetails(report: ReportNative, onClose: () -> Unit) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         Row(
-            Modifier.fillMaxWidth().padding(top = 28.dp, start = 8.dp, end = 16.dp, bottom = 12.dp),
+            Modifier
+                .fillMaxWidth()
+                .background(ReportsTopGradient)
+                .padding(top = 28.dp, start = 8.dp, end = 16.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = onClose) { Text("‹") }
