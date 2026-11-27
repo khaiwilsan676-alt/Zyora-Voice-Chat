@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,11 +39,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -217,7 +221,7 @@ fun RoomSettingPage(
     }
 
     LaunchedEffect(sheet, roomOwnerId, members.isEmpty()) {
-        if (sheet != "admin-members" || roomOwnerId.isBlank() || members.isNotEmpty()) return@LaunchedEffect
+        if (sheet != "admin" || roomOwnerId.isBlank() || members.isNotEmpty()) return@LaunchedEffect
         val refreshed = withContext(Dispatchers.IO) {
             runCatching {
                 val encodedRoom = java.net.URLEncoder.encode(roomOwnerId, "UTF-8")
@@ -246,7 +250,7 @@ fun RoomSettingPage(
                 }
             }.getOrDefault(emptyList())
         }
-        if (sheet == "admin-members" && refreshed.isNotEmpty()) {
+        if (sheet == "admin" && refreshed.isNotEmpty()) {
             val merged = LinkedHashMap<String, NativeSettingMember>()
             members.forEach { merged[it.accountId] = it }
             refreshed.forEach { merged[it.accountId] = it }
@@ -325,7 +329,7 @@ fun RoomSettingPage(
 
     LaunchedEffect(adminSearch, sheet) {
         val q = adminSearch.trim()
-        if (sheet != "admin-members" || q.isBlank()) return@LaunchedEffect
+        if (sheet != "admin" || q.isBlank()) return@LaunchedEffect
         delay(180)
         withContext(Dispatchers.IO) {
             runCatching {
@@ -361,7 +365,7 @@ fun RoomSettingPage(
                 } finally { conn.disconnect() }
             }.getOrDefault(emptyList())
         }.let { found ->
-            if (sheet == "admin-members" && adminSearch.trim() == q && found.isNotEmpty()) {
+            if (sheet == "admin" && adminSearch.trim() == q && found.isNotEmpty()) {
                 val merged = LinkedHashMap<String, NativeSettingMember>()
                 found.forEach { merged[it.accountId] = it }
                 members.forEach { if (it.accountId !in merged) merged[it.accountId] = it }
@@ -951,8 +955,8 @@ fun RoomSettingPage(
                     Modifier.fillMaxWidth()
                         .drawBehind {
                             drawLine(
-                                color = gray100, start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                                end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                                color = gray100, start = Offset(0f, 0f),
+                                end = Offset(size.width, 0f),
                                 strokeWidth = 1.dp.toPx()
                             )
                         }
@@ -964,141 +968,349 @@ fun RoomSettingPage(
             }
         }
 
-        // Admin management uses the same centered-card presentation as the Leaderboard info popup.
-        "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "" }) {
-            Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 16.dp)) {
-                Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.width(22.dp))
-                    Text("Room Admins", Modifier.weight(1f), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Box(
-                        Modifier.size(18.dp)
-                            .clip(CircleShape)
-                            .border(0.7.dp, Color.White.copy(alpha = 0.85f), CircleShape)
-                            .clickable { sheet = "admin-help" },
-                        contentAlignment = Alignment.Center
+        // Full-screen white Room Admin page with grey search input, room members list, and square help modal
+        "admin" -> {
+            var showAdminHelp by remember { mutableStateOf(false) }
+            Dialog(
+                onDismissRequest = { sheet = "" },
+                properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            ) {
+                Box(Modifier.fillMaxSize().background(Color.White)) {
+                    Column(
+                        Modifier.fillMaxSize()
+                            .background(Color.White)
+                            .statusBarsPadding()
+                            .navigationBarsPadding()
                     ) {
-                        Text("?", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Text("Room Admins: ${admins.size}/5", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp, bottom = 10.dp))
-                LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(admins, key = { it }) { adminId ->
-                        val member = members.firstOrNull { it.accountId == adminId }
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(model = member?.image?.ifBlank { RAW_SETTINGS + "default-avatar.png" } ?: RAW_SETTINGS + "default-avatar.png", contentDescription = "Admin", modifier = Modifier.size(40.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                                Text(member?.name ?: adminId, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                AsyncImage(model = RAW_SETTINGS + "IMG_20261107_153823.png", contentDescription = "Room admin tag", modifier = Modifier.height(16.dp).width(52.dp), contentScale = ContentScale.Fit)
-                            }
-                            Text("Remove", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable {
-                                    admins = admins.filterNot { it == adminId }
-                                    performSave(state.copy(admin = admins))
-                                }.padding(horizontal = 8.dp, vertical = 7.dp))
-                        }
-                    }
-                    if (admins.isEmpty()) item { Text("No room admins", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp), textAlign = TextAlign.Center) }
-                }
-                Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.fillMaxWidth().height(44.dp).clip(CircleShape).background(blue500)
-                        .clickable { adminSearch = ""; sheet = "admin-members" }.padding(vertical = 11.dp), contentAlignment = Alignment.Center) {
-                        Text("Add", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-        "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
-            Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
-                Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                val visibleMembers = remember(roomMembers, members, roomOwnerId, currentUserId) {
-                    (roomMembers.asSequence()
-                        .map { NativeSettingMember(it.accountId, it.name, it.image) } + members.asSequence())
-                        .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
-                        .distinctBy { it.accountId }
-                        .toList()
-                }
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(visibleMembers, key = { it.accountId }) { member ->
-                        val added = member.accountId in admins
-                        val canAdd = !added && admins.size < 5
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(model = member.image.ifBlank { RAW_SETTINGS + "default-avatar.png" }, contentDescription = member.name, modifier = Modifier.size(38.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                            Column(Modifier.weight(1f).padding(start = 9.dp)) {
-                                Text(member.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("ID: ${member.accountId}", color = Color(0xFF9CA3AF), fontSize = 10.sp)
-                            }
+                        // Top Header: Left Back Arrow, Middle "Room Admin", Right Question Mark Icon
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box(
-                                Modifier
-                                    .width(72.dp)
-                                    .height(30.dp)
-                                    .shadow(elevation = if (added) 0.dp else 4.dp, shape = CircleShape)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (added) Brush.verticalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF1E3A8A)))
-                                        else Brush.verticalGradient(listOf(Color(0xFF60A5FA), Color(0xFF2563EB), Color(0xFF1D4ED8)))
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        brush = Brush.verticalGradient(
-                                            listOf(Color.White.copy(alpha = if (added) 0.25f else 0.65f), Color(0xFF1E40AF))
-                                        ),
-                                        shape = CircleShape
-                                    )
-                                    .clickable(enabled = canAdd) {
-                                        admins = (admins + member.accountId).distinct()
-                                        performSave(state.copy(admin = admins))
-                                        sheet = "admin"
-                                    },
+                                Modifier.size(40.dp).clip(CircleShape).clickable { sheet = "" },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = if (added) "Added" else "Add",
-                                    color = if (added) Color.White.copy(alpha = 0.85f) else Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(24.dp))
                             }
-                        }
-                    }
-                    if (visibleMembers.isEmpty()) item { Text("No room members available", color = Color(0xFF9CA3AF), modifier = Modifier.fillMaxWidth().padding(20.dp), textAlign = TextAlign.Center) }
-                }
-            }
-        }
 
-        "admin-help" -> CenteredModal(scrimAlpha = 0f, onDismiss = { sheet = "admin" }) {
-            val cardShape = RoundedCornerShape(14.dp)
-            val buttonShape = RoundedCornerShape(12.dp)
-            val goldenBorderBrush = Brush.verticalGradient(listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158)))
-            Box(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp).widthIn(max = 320.dp)
-                    .clip(cardShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF0B4182), Color(0xFF072957), Color(0xFF041A3B))))
-                    .border(1.5.dp, goldenBorderBrush, cardShape)
-                    .padding(horizontal = 22.dp, vertical = 22.dp)
-            ) {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Room Admin", style = TextStyle(brush = Brush.horizontalGradient(listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))), fontSize = 21.sp, fontWeight = FontWeight.Bold), textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 18.dp))
-                    Text("Admin permissions include:", color = Color.White.copy(alpha = 0.95f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(8.dp))
-                    Text("locking the mic, muting the mic, kicking someone out, inviting someone, removing someone from a seat, and playing music.", color = Color.White.copy(alpha = 0.95f), fontSize = 14.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(14.dp))
-                    Text("Each room has 5 admins. You can increase the admin limit in the following ways:", color = Color.White.copy(alpha = 0.95f), fontSize = 14.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(10.dp))
-                    Text("1. By leveling up your ID, you can add 5 more admins; you can increase the total number of admins up to 20.", color = Color.White.copy(alpha = 0.95f), fontSize = 14.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(6.dp))
-                    Text("2. If you wish to appoint more admins, follow the rules below to add admins for free.", color = Color.White.copy(alpha = 0.95f), fontSize = 14.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(14.dp))
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(8.dp))) {
-                        listOf("Level 25" to "+5 admins", "Level 30" to "+5 admins", "Level 35" to "+5 admins").forEachIndexed { idx, (lvl, cnt) ->
-                            Row(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = if (idx % 2 == 0) 0.30f else 0.42f))) {
-                                Text(lvl, Modifier.weight(1f).padding(8.dp), color = Color.White, fontSize = 12.sp)
-                                Text(cnt, Modifier.weight(1f).padding(8.dp), color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center)
+                            Text(
+                                "Room Admin",
+                                Modifier.weight(1f),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = gray800,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Box(
+                                Modifier.size(40.dp).clip(CircleShape).clickable { showAdminHelp = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Canvas(Modifier.size(22.dp)) {
+                                    val strokeW = 1.7.dp.toPx()
+                                    val w = size.width
+                                    val h = size.height
+                                    drawCircle(
+                                        color = gray800,
+                                        radius = (minOf(w, h) - strokeW) / 2f,
+                                        style = Stroke(width = strokeW)
+                                    )
+                                    drawArc(
+                                        color = gray800,
+                                        startAngle = 195f,
+                                        sweepAngle = 255f,
+                                        useCenter = false,
+                                        topLeft = Offset(w * 0.34f, h * 0.24f),
+                                        size = Size(w * 0.32f, h * 0.28f),
+                                        style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                                    )
+                                    drawLine(
+                                        color = gray800,
+                                        start = Offset(w * 0.50f, h * 0.52f),
+                                        end = Offset(w * 0.50f, h * 0.60f),
+                                        strokeWidth = strokeW,
+                                        cap = StrokeCap.Round
+                                    )
+                                    drawCircle(
+                                        color = gray800,
+                                        radius = 1.15.dp.toPx(),
+                                        center = Offset(w * 0.50f, h * 0.72f)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Grey Search Input
+                        Box(
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(gray100)
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            BasicTextField(
+                                value = adminSearch,
+                                onValueChange = { adminSearch = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = TextStyle(fontSize = 14.sp, color = gray800),
+                                singleLine = true,
+                                decorationBox = { inner ->
+                                    Box {
+                                        if (adminSearch.isEmpty()) {
+                                            Text("Search by name or ID", color = gray400, fontSize = 14.sp)
+                                        }
+                                        inner()
+                                    }
+                                }
+                            )
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // Room Members List directly below with Add button on right
+                        val q = adminSearch.trim()
+                        val visibleMembers = remember(roomMembers, members, roomOwnerId, currentUserId, q) {
+                            (roomMembers.asSequence()
+                                .map { NativeSettingMember(it.accountId, it.name, it.image) } + members.asSequence())
+                                .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
+                                .distinctBy { it.accountId }
+                                .filter {
+                                    q.isBlank() ||
+                                        it.name.contains(q, ignoreCase = true) ||
+                                        it.accountId.contains(q, ignoreCase = true)
+                                }
+                                .toList()
+                        }
+
+                        LazyColumn(
+                            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(top = 4.dp, bottom = 20.dp)
+                        ) {
+                            items(visibleMembers, key = { it.accountId }) { member ->
+                                val added = member.accountId in admins
+                                val canToggle = added || admins.size < 5
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    AsyncImage(
+                                        model = member.image.ifBlank { RAW_SETTINGS + "default-avatar.png" },
+                                        contentDescription = member.name,
+                                        modifier = Modifier.size(40.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Column(Modifier.weight(1f).padding(start = 10.dp, end = 8.dp)) {
+                                        Text(
+                                            member.name,
+                                            color = gray800,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            "ID: ${member.accountId}",
+                                            color = gray500,
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Box(
+                                        Modifier
+                                            .width(72.dp)
+                                            .height(30.dp)
+                                            .shadow(elevation = if (added) 0.dp else 4.dp, shape = CircleShape)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (added) Brush.verticalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF1E3A8A)))
+                                                else Brush.verticalGradient(listOf(Color(0xFF60A5FA), Color(0xFF2563EB), Color(0xFF1D4ED8)))
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                brush = Brush.verticalGradient(
+                                                    listOf(Color.White.copy(alpha = if (added) 0.25f else 0.65f), Color(0xFF1E40AF))
+                                                ),
+                                                shape = CircleShape
+                                            )
+                                            .clickable(enabled = canToggle) {
+                                                admins = if (added) {
+                                                    admins.filterNot { it == member.accountId }
+                                                } else {
+                                                    (admins + member.accountId).distinct()
+                                                }
+                                                performSave(state.copy(admin = admins))
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (added) "Added" else "Add",
+                                            color = if (added) Color.White.copy(alpha = 0.85f) else Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            if (visibleMembers.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No room members available",
+                                        color = gray400,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
-                    Spacer(Modifier.height(20.dp))
-                    Box(Modifier.fillMaxWidth().height(48.dp).clip(buttonShape).background(Brush.verticalGradient(listOf(Color(0xFF1055A3), Color(0xFF0A3973)))).border(1.5.dp, Color(0xFFE5C158), buttonShape).clickable { sheet = "admin" }, contentAlignment = Alignment.Center) {
-                        Text("Close", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+
+                    // Compact Square Admin Help Card (no scroll)
+                    if (showAdminHelp) {
+                        val cardShape = RoundedCornerShape(14.dp)
+                        val buttonShape = RoundedCornerShape(10.dp)
+                        val goldenBorderBrush = Brush.verticalGradient(
+                            listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158))
+                        )
+                        Box(
+                            Modifier.fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.45f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { showAdminHelp = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                Modifier
+                                    .padding(horizontal = 24.dp)
+                                    .widthIn(max = 310.dp)
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clip(cardShape)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color(0xFF0B4182), Color(0xFF072957), Color(0xFF041A3B))
+                                        )
+                                    )
+                                    .border(1.5.dp, goldenBorderBrush, cardShape)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { }
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                            ) {
+                                Column(
+                                    Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        "Room Admin",
+                                        style = TextStyle(
+                                            brush = Brush.horizontalGradient(
+                                                listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                                            ),
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        textAlign = TextAlign.Center
+                                    )
+
+                                    Column(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "Admin permissions include:",
+                                            color = Color.White.copy(alpha = 0.95f),
+                                            fontSize = 9.5.sp,
+                                            lineHeight = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            "locking the mic, muting the mic, kicking someone out, inviting someone, removing someone from a seat, and playing music.",
+                                            color = Color.White.copy(alpha = 0.92f),
+                                            fontSize = 9.sp,
+                                            lineHeight = 12.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.height(5.dp))
+                                        Text(
+                                            "Each room has 5 admins. You can increase the admin limit in the following ways:",
+                                            color = Color.White.copy(alpha = 0.92f),
+                                            fontSize = 9.sp,
+                                            lineHeight = 12.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.height(3.dp))
+                                        Text(
+                                            "1. By leveling up your ID, you can add 5 more admins; you can increase the total number of admins up to 20.",
+                                            color = Color.White.copy(alpha = 0.92f),
+                                            fontSize = 9.sp,
+                                            lineHeight = 12.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            "2. If you wish to appoint more admins, follow the rules below to add admins for free.",
+                                            color = Color.White.copy(alpha = 0.92f),
+                                            fontSize = 9.sp,
+                                            lineHeight = 12.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+
+                                    Column(
+                                        Modifier.fillMaxWidth()
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .border(0.8.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(6.dp))
+                                    ) {
+                                        listOf(
+                                            "Level 25" to "+5 admins",
+                                            "Level 30" to "+5 admins",
+                                            "Level 35" to "+5 admins"
+                                        ).forEachIndexed { idx, (lvl, cnt) ->
+                                            Row(
+                                                Modifier.fillMaxWidth()
+                                                    .background(Color.Black.copy(alpha = if (idx % 2 == 0) 0.30f else 0.42f))
+                                            ) {
+                                                Text(
+                                                    lvl,
+                                                    Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    color = Color.White,
+                                                    fontSize = 9.5.sp
+                                                )
+                                                Text(
+                                                    cnt,
+                                                    Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    color = Color.White,
+                                                    fontSize = 9.5.sp,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Box(
+                                        Modifier.fillMaxWidth()
+                                            .height(32.dp)
+                                            .clip(buttonShape)
+                                            .background(Brush.verticalGradient(listOf(Color(0xFF1055A3), Color(0xFF0A3973))))
+                                            .border(1.2.dp, Color(0xFFE5C158), buttonShape)
+                                            .clickable { showAdminHelp = false },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Close", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
