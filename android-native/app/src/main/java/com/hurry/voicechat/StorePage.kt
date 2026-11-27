@@ -90,24 +90,19 @@ private fun readNativeStoreInventoryCache(context: android.content.Context, user
 }
 private fun writeNativeStoreInventoryCache(context: android.content.Context, userId: String, items: JSONArray) {
     if (userId.isBlank()) return
-    // Keep a just-purchased item if an older inventory GET finishes after the Buy request.
-    val merged = LinkedHashMap<String, JSONObject>()
-    val existing = readNativeStoreInventoryCache(context, userId)
+    // The server inventory is an authoritative per-account snapshot. Never merge old
+    // entries into it: doing so can resurrect an item's stale equipped=true flag after
+    // another frame was equipped (or after the previous frame was removed).
+    val snapshot = JSONArray()
     val now = System.currentTimeMillis()
-    for (i in 0 until existing.length()) {
-        val item = existing.optJSONObject(i) ?: continue
-        val id = item.optString("itemId")
-        if (id.isNotBlank() && item.optLong("expiresAt") > now) merged[id] = item
-    }
     for (i in 0 until items.length()) {
-        val item = items.optJSONObject(i) ?: continue
-        val id = item.optString("itemId")
-        if (id.isNotBlank() && item.optLong("expiresAt") > now) merged[id] = item
+        val source = items.optJSONObject(i) ?: continue
+        val id = source.optString("itemId")
+        if (id.isBlank() || source.optLong("expiresAt") <= now) continue
+        snapshot.put(JSONObject(source.toString()))
     }
-    val result = JSONArray()
-    merged.values.forEach { result.put(it) }
     context.getSharedPreferences(NativeStoreCachePrefs, android.content.Context.MODE_PRIVATE)
-        .edit().putString("inventory_$userId", result.toString()).apply()
+        .edit().putString("inventory_$userId", snapshot.toString()).apply()
 }
 private fun upsertNativeStoreCachedItem(context: android.content.Context, userId: String, item: JSONObject) {
     val id = item.optString("itemId")
