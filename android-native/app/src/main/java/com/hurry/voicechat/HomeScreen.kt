@@ -36,13 +36,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 import androidx.compose.ui.geometry.Size
@@ -1140,7 +1144,17 @@ private fun HurryCategoryCard(
 }
 
 @Composable
-fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", unreadMessageCount: Int = 0, onTab: (HurryTab) -> Unit) {
+fun HurryBottomNav(
+    tab: HurryTab,
+    languageCode: String = "en",
+    unreadMessageCount: Int = 0,
+    onTab: (HurryTab) -> Unit,
+    discoverSelected: Boolean = false,
+    onDiscover: (() -> Unit)? = null
+) {
+    var localDiscoverSelected by remember(tab, discoverSelected) { mutableStateOf(discoverSelected) }
+    val activeTab: HurryTab? = if (localDiscoverSelected) null else tab
+
     Row(
         Modifier
             .fillMaxWidth()
@@ -1150,16 +1164,210 @@ fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", unreadMessageCoun
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NavItem(HurryTab.HOME, tab, onTab, nativeText(languageCode, "home"))
-        NavItem(HurryTab.MESSAGE, tab, onTab, nativeText(languageCode, "message"), unreadMessageCount)
-        NavItem(HurryTab.ME, tab, onTab, nativeText(languageCode, "me"))
+        NavItem(
+            which = HurryTab.HOME,
+            selected = activeTab,
+            onTab = {
+                localDiscoverSelected = false
+                onTab(it)
+            },
+            label = nativeText(languageCode, "home")
+        )
+        DiscoverNavItem(
+            selected = localDiscoverSelected,
+            label = "Discover",
+            onClick = {
+                localDiscoverSelected = true
+                onDiscover?.invoke()
+            }
+        )
+        NavItem(
+            which = HurryTab.MESSAGE,
+            selected = activeTab,
+            onTab = {
+                localDiscoverSelected = false
+                onTab(it)
+            },
+            label = nativeText(languageCode, "message"),
+            unreadMessageCount = unreadMessageCount
+        )
+        NavItem(
+            which = HurryTab.ME,
+            selected = activeTab,
+            onTab = {
+                localDiscoverSelected = false
+                onTab(it)
+            },
+            label = nativeText(languageCode, "me")
+        )
+    }
+}
+
+@Composable
+private fun DiscoverNavItem(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        Modifier
+            .width(72.dp)
+            .clickable(
+                interactionSource = null,
+                indication = null
+            ) { if (!selected) onClick() }
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
+        HurryDiscoverIcon(active = selected, modifier = Modifier.size(30.dp))
+        Text(
+            label,
+            fontSize = 12.sp,
+            color = if (selected) Color.Black else Color(0xFF6B7280)
+        )
+    }
+}
+
+@Composable
+fun HurryDiscoverIcon(
+    active: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier) {
+        val s = size.minDimension / 36f
+        val cx = 18f * s
+        val cy = 18f * s
+        val planetRadius = 10.6f * s
+        val ringRx = 14.8f * s
+        val ringRy = 6.0f * s
+        val ringDy = 0.8f * s
+        val ringTopLeft = Offset(cx - ringRx, cy + ringDy - ringRy)
+        val ringSize = Size(ringRx * 2f, ringRy * 2f)
+
+        if (active) {
+            val blueBrush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF60A5FA),
+                    Color(0xFF3B82F6),
+                    Color(0xFF2563EB)
+                ),
+                start = Offset(cx + planetRadius, cy - planetRadius),
+                end = Offset(cx - planetRadius, cy + planetRadius)
+            )
+            val ringBrush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF60A5FA),
+                    Color(0xFF3B82F6),
+                    Color(0xFF2563EB)
+                ),
+                start = Offset(cx - ringRx, cy - ringRx),
+                end = Offset(cx + ringRx, cy + ringRx)
+            )
+
+            // 1. Blue tilted ring ears (top-left & bottom-right)
+            rotate(degrees = 40f, pivot = Offset(cx, cy)) {
+                drawOval(
+                    brush = ringBrush,
+                    topLeft = ringTopLeft,
+                    size = ringSize,
+                    style = Stroke(width = 2.6f * s, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
+
+            // 2. Filled blue planet body
+            val filledRadius = planetRadius + 0.4f * s
+            drawCircle(
+                brush = blueBrush,
+                radius = filledRadius,
+                center = Offset(cx, cy)
+            )
+
+            // 3. Crisp white curved ring cutout across front of planet (like 2nd image, in blue theme)
+            val planetPath = Path().apply {
+                addOval(
+                    Rect(
+                        left = cx - filledRadius,
+                        top = cy - filledRadius,
+                        right = cx + filledRadius,
+                        bottom = cy + filledRadius
+                    )
+                )
+            }
+            clipPath(planetPath) {
+                rotate(degrees = 40f, pivot = Offset(cx, cy)) {
+                    drawArc(
+                        color = Color.White,
+                        startAngle = 0f,
+                        sweepAngle = 180f,
+                        useCenter = false,
+                        topLeft = ringTopLeft,
+                        size = ringSize,
+                        style = Stroke(width = 2.4f * s, cap = StrokeCap.Round)
+                    )
+                }
+            }
+
+            // 4. White inner dot (upper-right)
+            drawCircle(
+                color = Color.White,
+                radius = 2.5f * s,
+                center = Offset(cx + 3.8f * s, cy - 2.6f * s)
+            )
+        } else {
+            val strokeColor = Color(0xFF1D1D1F)
+            val strokeWidth = 2.4f * s
+
+            // 1. Back + outer ears of tilted ring
+            rotate(degrees = 40f, pivot = Offset(cx, cy)) {
+                drawOval(
+                    color = strokeColor,
+                    topLeft = ringTopLeft,
+                    size = ringSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
+
+            // 2. White planet fill (hides back half of ring) + dark outline
+            drawCircle(
+                color = Color.White,
+                radius = planetRadius,
+                center = Offset(cx, cy)
+            )
+            drawCircle(
+                color = strokeColor,
+                radius = planetRadius,
+                center = Offset(cx, cy),
+                style = Stroke(width = strokeWidth)
+            )
+
+            // 3. Front arc of tilted ring passing over planet
+            rotate(degrees = 40f, pivot = Offset(cx, cy)) {
+                drawArc(
+                    color = strokeColor,
+                    startAngle = 0f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = ringTopLeft,
+                    size = ringSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            }
+
+            // 4. Inner dot (upper-right)
+            drawCircle(
+                color = strokeColor,
+                radius = 2.2f * s,
+                center = Offset(cx + 3.8f * s, cy - 2.6f * s)
+            )
+        }
     }
 }
 
 @Composable
 private fun NavItem(
     which: HurryTab,
-    selected: HurryTab,
+    selected: HurryTab?,
     onTab: (HurryTab) -> Unit,
     label: String,
     unreadMessageCount: Int = 0
