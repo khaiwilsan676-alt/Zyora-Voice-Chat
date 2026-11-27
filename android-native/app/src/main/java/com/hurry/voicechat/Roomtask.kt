@@ -51,6 +51,19 @@ import java.util.Calendar
 private data class NativeRoomTaskRow(val title: String, val reward: String, val icon: String)
 private data class NativeRoomTaskStatus(val complete: Boolean, val claimed: Boolean, val progress: Float = 0f)
 
+private fun parseNativeRoomTaskStatuses(response: JSONObject): Map<Int, NativeRoomTaskStatus> {
+    val array = response.optJSONArray("tasks") ?: return emptyMap()
+    return (0 until array.length()).mapNotNull { index ->
+        array.optJSONObject(index)?.let { item ->
+            item.optInt("taskId") to NativeRoomTaskStatus(
+                item.optBoolean("complete"),
+                item.optBoolean("claimed"),
+                (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+            )
+        }
+    }.toMap()
+}
+
 private object NativeRoomTaskApi {
     private const val BASE = "https://zyora-server.onrender.com"
 
@@ -92,8 +105,10 @@ private object NativeRoomTaskApi {
             else "/api/room-owner-tasks/$encodedRoomId/claim"
         val connection = (URL(BASE + endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = if (claimTaskId == null) "GET" else "POST"
-            connectTimeout = 20000
-            readTimeout = 20000
+            connectTimeout = 10000
+            // Render free instances can need time to wake from idle; allow one
+            // request to finish instead of timing out and stacking slow retries.
+            readTimeout = 60000
             useCaches = false
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -121,7 +136,20 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val taskRoomId = remember(roomId) { roomId.trim() }
-    var taskStatuses by remember { mutableStateOf<Map<Int, NativeRoomTaskStatus>>(emptyMap()) }
+    val taskStatusPrefs = remember(context) {
+        context.getSharedPreferences("zyora_room_task_cache", android.content.Context.MODE_PRIVATE)
+    }
+    val taskCacheKey = remember(taskRoomId) { "statuses_$taskRoomId" }
+    // Restore the last server-confirmed snapshot immediately while the API refreshes.
+    var taskStatuses by remember(taskRoomId) {
+        mutableStateOf(
+            runCatching {
+                parseNativeRoomTaskStatuses(
+                    JSONObject(taskStatusPrefs.getString(taskCacheKey, "{}") ?: "{}")
+                )
+            }.getOrDefault(emptyMap())
+        )
+    }
     var claimingTask by remember { mutableIntStateOf(0) }
     var pendingShareTask by remember { mutableIntStateOf(0) }
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
@@ -142,14 +170,8 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                         val refreshed = NativeRoomTaskApi.request(taskRoomId)
                         val array = refreshed.optJSONArray("tasks")
                         if (array != null) {
-                            taskStatuses = (0 until array.length()).mapNotNull { index ->
-                                array.optJSONObject(index)?.let { item ->
-                                    item.optInt("taskId") to NativeRoomTaskStatus(
-                                        item.optBoolean("complete"), item.optBoolean("claimed"),
-                                        (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
-                                    )
-                                }
-                            }.toMap()
+                            taskStatuses = parseNativeRoomTaskStatuses(refreshed)
+                            taskStatusPrefs.edit().putString(taskCacheKey, refreshed.toString()).apply()
                         } else {
                             taskStatuses = taskStatuses + (completedTaskId to NativeRoomTaskStatus(true, false, 1f))
                         }
@@ -165,25 +187,20 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
     LaunchedEffect(taskRoomId) {
         if (taskRoomId.isNotBlank()) {
             var lastError: Throwable? = null
-            repeat(3) { attempt ->
+            repeat(2) { attempt ->
                 val result = runCatching { NativeRoomTaskApi.request(taskRoomId) }
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
                     val array = response.optJSONArray("tasks")
                     if (array != null) {
-                        taskStatuses = (0 until array.length()).mapNotNull { index ->
-                            array.optJSONObject(index)?.let { item ->
-                                item.optInt("taskId") to NativeRoomTaskStatus(
-                                    item.optBoolean("complete"), item.optBoolean("claimed"),
-                                    (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
-                                )
-                            }                        }.toMap()
+                        taskStatuses = parseNativeRoomTaskStatuses(response)
+                        taskStatusPrefs.edit().putString(taskCacheKey, response.toString()).apply()
                     }
                     lastError = null
                     return@LaunchedEffect
                 } else {
                     lastError = result.exceptionOrNull()
-                    if (attempt < 2) delay(1200L * (attempt + 1))
+                    if (attempt < 1) delay(1500L)
                 }
             }
             lastError?.let { error ->
@@ -510,14 +527,8 @@ fun Roomtask(roomId: String, onBack: () -> Unit = {}) {
                                                                     .onSuccess { refreshed ->
                                                                         val array = refreshed.optJSONArray("tasks")
                                                                         if (array != null) {
-                                                                            taskStatuses = (0 until array.length()).mapNotNull { index ->
-                                                                                array.optJSONObject(index)?.let { item ->
-                                                                                    item.optInt("taskId") to NativeRoomTaskStatus(
-                                                                                        item.optBoolean("complete"), item.optBoolean("claimed"),
-                                                                                        (item.optDouble("progressPercent", 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
-                                                                                    )
-                                                                                }
-                                                                            }.toMap()
+                                                                            taskStatuses = parseNativeRoomTaskStatuses(refreshed)
+                                                                            taskStatusPrefs.edit().putString(taskCacheKey, refreshed.toString()).apply()
                                                                         }
                                                                     }
                                                             }
