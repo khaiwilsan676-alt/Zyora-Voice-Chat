@@ -485,7 +485,6 @@ fun RoomPage(
     var roomRootSize by luckyAnimation::rootSize
     val luckyGiftFlights = luckyAnimation.flights
     var luckyGiftNotice by luckyAnimation::notice
-    var roomBroadcastNotices by remember(roomId) { mutableStateOf<List<RoomBroadcastNotice>>(emptyList()) }
     var luckyNoticeGeneration by luckyAnimation::noticeGeneration
     var showLuckyComboButton by luckyAnimation::showComboButton
     var pendingLuckyGiftTransferId by remember(roomId) { mutableStateOf("") }
@@ -1436,57 +1435,6 @@ fun RoomPage(
                 }
             }
         }
-        val luxuryGiftBroadcastListener = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val id = payload.optString("id")
-            if (id.isBlank()) return@Listener
-            mainHandler.post {
-                if (roomBroadcastNotices.none { it.id == id }) {
-                    val notice = RoomBroadcastNotice(
-                        id = id,
-                        video = payload.optString("video", "gemini_generated_video_9da434d9~2.mp4"),
-                        avatar = payload.optString("senderImage").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                        name = payload.optString("senderName").ifBlank { "User" },
-                        detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
-                        giftImage = payload.optString("giftImage").let { raw ->
-                            when {
-                                raw.isBlank() -> ""
-                                raw.startsWith("http", true) -> raw
-                                else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + raw.trimStart('/')
-                            }
-                        },
-                        giftName = payload.optString("giftName")
-                    )
-                    roomBroadcastNotices = (roomBroadcastNotices + notice).takeLast(20)
-                }
-            }
-        }
-        val bigWinBroadcastListener = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val id = payload.optString("id")
-            val amount = payload.optLong("win", 0L)
-            if (id.isBlank() || amount < 5_000_000L) return@Listener
-            mainHandler.post {
-                if (roomBroadcastNotices.none { it.id == id }) {
-                    val isDragonBattle = payload.optString("game") == "dragonbattle"
-                    val notice = RoomBroadcastNotice(
-                        id = id,
-                        video = payload.optString("video", "gemini_generated_video_87dc00f7~2.mp4"),
-                        avatar = payload.optString("avatar").ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                        name = payload.optString("name").ifBlank { "User" },
-                        detail = "Win " + amount.toString() + " • " +
-                            if (isDragonBattle) "Dragon Battle" else "Wild Party",
-                        giftImage = if (isDragonBattle) {
-                            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261121_020906.png"
-                        } else {
-                            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png"
-                        },
-                        giftName = if (isDragonBattle) "Dragon Battle" else "Wild Party"
-                    )
-                    roomBroadcastNotices = (roomBroadcastNotices + notice).takeLast(20)
-                }
-            }
-        }
         val luckyGiftReceivedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
@@ -1928,8 +1876,6 @@ fun RoomPage(
         roomSocket.on("pk_started",pkStartedRoomListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("coin_transfer_received", luckyGiftReceivedListener)
-        roomSocket.on("zyora_luxury_gift_notification", luxuryGiftBroadcastListener)
-        roomSocket.on("zyora_game_big_win_notification", bigWinBroadcastListener)
         roomSocket.on("coin_transfer_failed", coinTransferFailedListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         val roomPublicMessageBlockedListener = Emitter.Listener { args ->
@@ -1993,8 +1939,6 @@ fun RoomPage(
             roomSocket.off("pk_started",pkStartedRoomListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("coin_transfer_received", luckyGiftReceivedListener)
-            roomSocket.off("zyora_luxury_gift_notification", luxuryGiftBroadcastListener)
-            roomSocket.off("zyora_game_big_win_notification", bigWinBroadcastListener)
             roomSocket.off("coin_transfer_failed", coinTransferFailedListener)
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
@@ -3165,13 +3109,6 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     flight = flight,
                     onFinished = { luckyAnimation.finishFlight(flight.id) }
                 )
-            }
-        }
-        roomBroadcastNotices.firstOrNull()?.let { notice ->
-            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(124.dp).zIndex(260f)) {
-                RoomBroadcastNotification(notice = notice, onDismiss = {
-                    roomBroadcastNotices = roomBroadcastNotices.filterNot { it.id == notice.id }
-                })
             }
         }
         luckyGiftNotice?.let { notice ->
