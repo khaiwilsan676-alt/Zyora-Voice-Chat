@@ -271,10 +271,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         val pendingInviteSource = authPrefs.getString("pendingInviteSource", "link").orEmpty()
         val inviteToken = authPrefs.getString("idToken", "").orEmpty()
         if (pendingInviteRef.isNotBlank() && accountId.isNotBlank() && inviteToken.isNotBlank()) {
-            val inviteResult = HurryApi.bindInvite(pendingInviteRef, accountId, inviteToken, pendingInviteSource)
-            if (inviteResult?.optBoolean("success") == true ||
-                inviteResult?.optString("error")?.contains("already", ignoreCase = true) == true) {
-                authPrefs.edit().remove("pendingInviteRef").remove("pendingInviteSource").apply()
+            // Invite binding is independent background work. Never hold up room socket,
+            // ban-status polling, or the first Home render while the API wakes up.
+            launch {
+                val inviteResult = HurryApi.bindInvite(pendingInviteRef, accountId, inviteToken, pendingInviteSource)
+                if (inviteResult?.optBoolean("success") == true ||
+                    inviteResult?.optString("error")?.contains("already", ignoreCase = true) == true) {
+                    authPrefs.edit().remove("pendingInviteRef").remove("pendingInviteSource").apply()
+                }
             }
         }
         val deviceId = authPrefs.getString("deviceId", "").orEmpty()
