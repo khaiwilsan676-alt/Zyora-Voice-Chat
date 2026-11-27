@@ -2864,7 +2864,23 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             isRoomOwner=isRoomOwner || currentUserSeatIds.any { it in roomAdminIds },
             onTogglePublicMsg={
                 if (isRoomOwner || currentUserSeatIds.any { it in roomAdminIds }) {
+                    // Add the system row locally immediately. The settings socket echo
+                    // arrives after publicMsgOff has changed and must not be relied on
+                    // to create the row for the user who performed the toggle.
                     publicMsgOff = !publicMsgOff
+                    val changedAt = System.currentTimeMillis()
+                    val noticeId = "public-message-setting-$roomId-$changedAt-$publicMsgOff"
+                    messages.add(
+                        NativeRoomMessage(
+                            id = noticeId,
+                            text = if (publicMsgOff) "Public Message OFF" else "Public Message ON",
+                            sender = "System",
+                            senderImage = "",
+                            senderAccountId = roomId,
+                            timestamp = changedAt,
+                            type = "pk_system"
+                        )
+                    )
                     roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
                         .put("roomId", roomId).put("userId", accountId).put("publicMsgOff", publicMsgOff))
                 }
