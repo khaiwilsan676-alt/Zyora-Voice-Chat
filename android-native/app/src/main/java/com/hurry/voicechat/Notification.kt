@@ -144,7 +144,7 @@ fun NotificationController() {
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { -it }),
             modifier = Modifier
-                .fillMaxWidth(0.94f)
+                .fillMaxWidth(0.90f)
                 .statusBarsPadding()
                 .padding(top = 6.dp)
         ) {
@@ -154,7 +154,7 @@ fun NotificationController() {
                         AsyncImage(
                             model = notice.giftImage,
                             contentDescription = notice.giftName,
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
                         )
                     } else {
@@ -183,8 +183,32 @@ fun NotificationController() {
                         )
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                            Text(notice.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("$secondsLeft", color = Color.White, fontSize = 11.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    notice.name,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF261710).copy(alpha = 0.70f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "$secondsLeft",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                             Text(notice.detail, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         if (notice.giftImage.isNotBlank()) {
