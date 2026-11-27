@@ -274,7 +274,9 @@ private val nativeStoreItems = listOf(
 fun NativeAvatarFrameOverlay(
     userId: String,
     modifier: Modifier = Modifier,
-    fallbackUserIds: List<String> = emptyList()
+    fallbackUserIds: List<String> = emptyList(),
+    gemshineOffsetX: Dp = 0.dp,
+    gemshineOffsetY: Dp = 4.dp
 ) {
     val appContext = LocalContext.current.applicationContext
     val lookupIds = remember(userId, fallbackUserIds) { (listOf(userId) + fallbackUserIds).filter { it.isNotBlank() }.distinct() }
@@ -353,7 +355,7 @@ fun NativeAvatarFrameOverlay(
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
-            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { val frameScale = if (selected.optString("itemId") == "a4") 1.23f else 1.28f; scaleX = frameScale; scaleY = frameScale }, contentScale = ContentScale.Fit)
+            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { val frameId = selected.optString("itemId"); val isGemshine = frameId == "a5"; val frameScale = if (isGemshine) 1.33f else if (frameId == "a4") 1.23f else 1.28f; scaleX = frameScale; scaleY = frameScale; if (isGemshine) { translationX = gemshineOffsetX.toPx(); translationY = -gemshineOffsetY.toPx() } }, contentScale = ContentScale.Fit)
         }
     }
 }
