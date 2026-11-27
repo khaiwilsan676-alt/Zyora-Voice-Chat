@@ -205,7 +205,7 @@ internal fun NativeChatBubbleMessage(
                 model = StoreAssetBase + activeBubble.image,
                 contentDescription = "Equipped chat bubble",
                 modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.FillBounds
+                contentScale = ContentScale.Fit
             )
         } else {
             Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = .40f)))
