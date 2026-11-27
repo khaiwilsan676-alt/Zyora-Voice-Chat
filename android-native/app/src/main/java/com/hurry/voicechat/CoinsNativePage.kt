@@ -1077,9 +1077,23 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                     Text("Whatsapp:", fontSize = 13.sp, color = Color(0xFF374151))
                     Spacer(Modifier.weight(1f))
                     if (seller.whatsapp.isNotBlank()) {
-                        Text(seller.whatsapp, fontSize = 13.sp, color = Color(0xFF374151))
-                        Spacer(Modifier.width(4.dp))
-                        WalletAgentWhatsAppMark(Modifier.size(14.dp))
+                        Row(
+                            Modifier.clip(RoundedCornerShape(4.dp)).clickable {
+                                runCatching {
+                                    val digits = seller.whatsapp.filter(Char::isDigit).let { raw ->
+                                        if (raw.length == 10) "91$raw" else raw
+                                    }
+                                    if (digits.isNotBlank()) {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$digits")))
+                                    }
+                                }
+                            },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(seller.whatsapp, fontSize = 13.sp, color = Color(0xFF374151))
+                            WalletAgentWhatsAppMark(Modifier.size(13.dp))
+                        }
                     } else {
                         Text("—", fontSize = 13.sp, color = Color(0xFF374151))
                     }
@@ -1103,8 +1117,8 @@ private fun WalletAgentWhatsAppMark(modifier: Modifier = Modifier) {
     Canvas(modifier) {
         val bg = PathParser().parsePathString("M12.01 2C6.48 2 2 6.48 2 12c0 1.95.56 3.77 1.5 5.25L2 22l4.89-1.47c1.44.89 3.16 1.42 5.11 1.42 5.53 0 10.01-4.48 10.01-10s-4.48-10-10-10z").toPath()
         drawContext.transform.scale(size.width / 24f, size.height / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero)
-        drawPath(bg, Color(0xFF25D366))
-        drawPath(handset, Color.White)
+        drawPath(bg, Color.White)
+        drawPath(handset, Color(0xFF25D366))
         drawContext.transform.scale(24f / size.width, 24f / size.height, pivot = androidx.compose.ui.geometry.Offset.Zero)
     }
 }
