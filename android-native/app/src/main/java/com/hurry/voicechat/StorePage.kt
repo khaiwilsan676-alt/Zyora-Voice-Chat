@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
@@ -355,7 +356,7 @@ fun NativeAvatarFrameOverlay(
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
-            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { val frameId = selected.optString("itemId"); val isGemshine = frameId == "a5"; val frameScale = if (isGemshine) 1.33f else if (frameId == "a4") 1.23f else 1.28f; scaleX = frameScale; scaleY = frameScale; if (isGemshine) { translationX = gemshineOffsetX.toPx(); translationY = -gemshineOffsetY.toPx() } }, contentScale = ContentScale.Fit)
+            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { val frameId = selected.optString("itemId"); val isAdjustedFrame = frameId == "a5" || frameId == "a6"; val frameScale = if (isAdjustedFrame) 1.33f else if (frameId == "a4") 1.23f else 1.28f; scaleX = frameScale; scaleY = frameScale; if (isAdjustedFrame) { translationX = gemshineOffsetX.toPx(); translationY = -gemshineOffsetY.toPx() } }, contentScale = ContentScale.Fit)
         }
     }
 }
