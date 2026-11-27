@@ -147,6 +147,11 @@ private object NativeLeaderboardAvatarCache {
     var refreshInFlight: Boolean = false
 }
 
+// Keeps Discover callback available even when tabs like Me/Message call HurryBottomNav without onDiscover.
+private object HurryBottomNavBridge {
+    var onDiscover: (() -> Unit)? = null
+}
+
 // ═══════════════════════════════════════════════════════
 // COUNTRY PILL DATA
 // ═══════════════════════════════════════════════════════
@@ -399,7 +404,7 @@ fun HomeScreen(
         Box(Modifier.fillMaxSize()) {
             MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, followingRooms = followingRooms, onOpenRoom = onRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
             Box(Modifier.align(Alignment.BottomCenter)) {
-                HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected, discoverSelected = false, onDiscover = onDiscover)
+                HurryBottomNav(HurryTab.HOME, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected, discoverSelected = false, onDiscover = onDiscover)
             }
         }
         return
@@ -753,7 +758,7 @@ fun HomeScreen(
 
         // 🟢 BOTTOM NAV - Ab iske BAAD red zone aayega taaki overlay ho!
         Box(Modifier.align(Alignment.BottomCenter)) {
-            HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected, discoverSelected = false, onDiscover = onDiscover)
+            HurryBottomNav(HurryTab.HOME, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected, discoverSelected = false, onDiscover = onDiscover)
         }
 
         // Daily Sign-in decoration remains on Home; Keep Room DP is rendered globally by MainActivity.
@@ -1153,52 +1158,51 @@ fun HurryBottomNav(
     discoverSelected: Boolean = false,
     onDiscover: (() -> Unit)? = null
 ) {
-    var localDiscoverSelected by remember(tab, discoverSelected) { mutableStateOf(discoverSelected) }
-    val activeTab: HurryTab? = if (localDiscoverSelected) null else tab
+    val currentOnDiscover by rememberUpdatedState(onDiscover)
+    SideEffect {
+        if (onDiscover != null) {
+            HurryBottomNavBridge.onDiscover = onDiscover
+        }
+    }
+    val activeTab: HurryTab? = if (discoverSelected) null else tab
 
     Row(
         Modifier
             .fillMaxWidth()
             .background(Color.White)
             .navigationBarsPadding()
-            .height(64.dp),
+            .height(72.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
         NavItem(
             which = HurryTab.HOME,
             selected = activeTab,
-            onTab = {
-                localDiscoverSelected = false
-                onTab(it)
-            },
+            onTab = onTab,
             label = nativeText(languageCode, "home")
         )
         DiscoverNavItem(
-            selected = localDiscoverSelected,
+            selected = discoverSelected,
             label = "Discover",
             onClick = {
-                localDiscoverSelected = true
-                onDiscover?.invoke()
+                val action = currentOnDiscover ?: HurryBottomNavBridge.onDiscover
+                if (tab != HurryTab.HOME) {
+                    onTab(HurryTab.HOME)
+                }
+                action?.invoke()
             }
         )
         NavItem(
             which = HurryTab.MESSAGE,
             selected = activeTab,
-            onTab = {
-                localDiscoverSelected = false
-                onTab(it)
-            },
+            onTab = onTab,
             label = nativeText(languageCode, "message"),
             unreadMessageCount = unreadMessageCount
         )
         NavItem(
             which = HurryTab.ME,
             selected = activeTab,
-            onTab = {
-                localDiscoverSelected = false
-                onTab(it)
-            },
+            onTab = onTab,
             label = nativeText(languageCode, "me")
         )
     }
@@ -1221,7 +1225,7 @@ private fun DiscoverNavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
-        HurryDiscoverIcon(active = selected, modifier = Modifier.size(30.dp))
+        HurryDiscoverIcon(active = selected, modifier = Modifier.size(34.dp))
         Text(
             label,
             fontSize = 12.sp,
@@ -1246,122 +1250,52 @@ fun HurryDiscoverIcon(
         val ringTopLeft = Offset(cx - ringRx, cy + ringDy - ringRy)
         val ringSize = Size(ringRx * 2f, ringRy * 2f)
 
-        if (active) {
-            val blueBrush = Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF60A5FA),
-                    Color(0xFF3B82F6),
-                    Color(0xFF2563EB)
-                ),
-                start = Offset(cx + planetRadius, cy - planetRadius),
-                end = Offset(cx - planetRadius, cy + planetRadius)
-            )
-            val ringBrush = Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF60A5FA),
-                    Color(0xFF3B82F6),
-                    Color(0xFF2563EB)
-                ),
-                start = Offset(cx - ringRx, cy - ringRx),
-                end = Offset(cx + ringRx, cy + ringRx)
-            )
+        val fillColor = if (active) Color(0xFF3B82F6) else Color.White
+        val strokeColor = Color(0xFF1D1D1F)
+        val strokeWidth = 2.4f * s
 
-            // 1. Blue tilted ring ears (top-left & bottom-right)
-            rotate(degrees = 40f, pivot = Offset(cx, cy)) {
-                drawOval(
-                    brush = ringBrush,
-                    topLeft = ringTopLeft,
-                    size = ringSize,
-                    style = Stroke(width = 2.6f * s, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-            }
-
-            // 2. Filled blue planet body
-            val filledRadius = planetRadius + 0.4f * s
-            drawCircle(
-                brush = blueBrush,
-                radius = filledRadius,
-                center = Offset(cx, cy)
-            )
-
-            // 3. Crisp white curved ring cutout across front of planet (like 2nd image, in blue theme)
-            val planetPath = Path().apply {
-                addOval(
-                    Rect(
-                        left = cx - filledRadius,
-                        top = cy - filledRadius,
-                        right = cx + filledRadius,
-                        bottom = cy + filledRadius
-                    )
-                )
-            }
-            clipPath(planetPath) {
-                rotate(degrees = 40f, pivot = Offset(cx, cy)) {
-                    drawArc(
-                        color = Color.White,
-                        startAngle = 0f,
-                        sweepAngle = 180f,
-                        useCenter = false,
-                        topLeft = ringTopLeft,
-                        size = ringSize,
-                        style = Stroke(width = 2.4f * s, cap = StrokeCap.Round)
-                    )
-                }
-            }
-
-            // 4. White inner dot (upper-right)
-            drawCircle(
-                color = Color.White,
-                radius = 2.5f * s,
-                center = Offset(cx + 3.8f * s, cy - 2.6f * s)
-            )
-        } else {
-            val strokeColor = Color(0xFF1D1D1F)
-            val strokeWidth = 2.4f * s
-
-            // 1. Back + outer ears of tilted ring
-            rotate(degrees = 40f, pivot = Offset(cx, cy)) {
-                drawOval(
-                    color = strokeColor,
-                    topLeft = ringTopLeft,
-                    size = ringSize,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-            }
-
-            // 2. White planet fill (hides back half of ring) + dark outline
-            drawCircle(
-                color = Color.White,
-                radius = planetRadius,
-                center = Offset(cx, cy)
-            )
-            drawCircle(
+        // 1. Back + outer ears of tilted ring
+        rotate(degrees = 40f, pivot = Offset(cx, cy)) {
+            drawOval(
                 color = strokeColor,
-                radius = planetRadius,
-                center = Offset(cx, cy),
-                style = Stroke(width = strokeWidth)
-            )
-
-            // 3. Front arc of tilted ring passing over planet
-            rotate(degrees = 40f, pivot = Offset(cx, cy)) {
-                drawArc(
-                    color = strokeColor,
-                    startAngle = 0f,
-                    sweepAngle = 180f,
-                    useCenter = false,
-                    topLeft = ringTopLeft,
-                    size = ringSize,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
-            }
-
-            // 4. Inner dot (upper-right)
-            drawCircle(
-                color = strokeColor,
-                radius = 2.2f * s,
-                center = Offset(cx + 3.8f * s, cy - 2.6f * s)
+                topLeft = ringTopLeft,
+                size = ringSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
         }
+
+        // 2. Planet fill (same blue as Home/Message/Me when active) + dark outline
+        drawCircle(
+            color = fillColor,
+            radius = planetRadius,
+            center = Offset(cx, cy)
+        )
+        drawCircle(
+            color = strokeColor,
+            radius = planetRadius,
+            center = Offset(cx, cy),
+            style = Stroke(width = strokeWidth)
+        )
+
+        // 3. Front arc of tilted ring passing over planet
+        rotate(degrees = 40f, pivot = Offset(cx, cy)) {
+            drawArc(
+                color = strokeColor,
+                startAngle = 0f,
+                sweepAngle = 180f,
+                useCenter = false,
+                topLeft = ringTopLeft,
+                size = ringSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+        }
+
+        // 4. Inner dot (upper-right)
+        drawCircle(
+            color = strokeColor,
+            radius = 2.2f * s,
+            center = Offset(cx + 3.8f * s, cy - 2.6f * s)
+        )
     }
 }
 
@@ -1379,14 +1313,14 @@ private fun NavItem(
             .clickable(
                 interactionSource = null,
                 indication = null
-            ) { if (which != selected) onTab(which) }
+            ) { onTab(which) }
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         if (which == HurryTab.MESSAGE) {
-            Box(Modifier.size(30.dp)) {
-                HurryMessageIcon(active = which == selected, modifier = Modifier.size(30.dp).align(Alignment.Center))
+            Box(Modifier.size(34.dp)) {
+                HurryMessageIcon(active = which == selected, modifier = Modifier.size(34.dp).align(Alignment.Center))
                 if (unreadMessageCount > 0) {
                     Box(
                         Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-2).dp)
@@ -1405,7 +1339,7 @@ private fun NavItem(
                     }
                 }
             }
-        } else Canvas(Modifier.size(30.dp)) {
+        } else Canvas(Modifier.size(34.dp)) {
             val s = size.minDimension / 36f
             val active = which == selected
             val fill = if (active) Color(0xFF3B82F6) else Color.White
