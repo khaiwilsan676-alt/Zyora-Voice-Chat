@@ -656,25 +656,41 @@ fun LuckyBagOpenConfirmCards(
                             } else {
                                 Column(Modifier.fillMaxWidth().heightIn(max = 140.dp).verticalScroll(rememberScrollState())) {
                                     visibleClaims.forEach { claim ->
+                                        val claimUserId = claim.optString("userId")
+                                        val isCurrentClaimant =
+                                            (claimUserId.isNotBlank() && claimUserId == canonicalWalletUserId) ||
+                                            (claim.optString("accountId").isNotBlank() &&
+                                                claim.optString("accountId") == claimantAccountId)
+                                        val serverName = luckyBagClaimName(claim)
+                                        val displayName = if (isCurrentClaimant &&
+                                            (serverName.isBlank() || serverName.equals("User", ignoreCase = true))) {
+                                            claimantName.takeIf { it.isNotBlank() && !it.equals("User", ignoreCase = true) } ?: serverName
+                                        } else serverName
+                                        val serverImage = luckyBagClaimImage(claim)
+                                        val displayImage = if (isCurrentClaimant &&
+                                            (serverImage.isBlank() || serverImage.endsWith("/default-avatar.png", ignoreCase = true))) {
+                                            claimantImage.takeIf { it.isNotBlank() && !it.endsWith("/default-avatar.png", ignoreCase = true) }
+                                                ?: serverImage
+                                        } else serverImage
                                         Row(
                                             modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)
                                                 .clickable {
-                                                    val id = claim.optString("userId")
+                                                    val id = claimUserId
                                                     onOpenPublicProfile(RoomProfileUser(
-                                                        id = id, uid = id, accountId = id,
-                                                        name = luckyBagClaimName(claim),
-                                                        image = luckyBagClaimImage(claim)
+                                                        id = id, uid = id, accountId = claim.optString("accountId").ifBlank { id },
+                                                        name = displayName,
+                                                        image = displayImage
                                                     ))
                                                 },
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             AsyncImage(
-                                                model = luckyBagClaimImage(claim),
+                                                model = displayImage,
                                                 contentDescription = "Lucky Bag opener",
                                                 modifier = Modifier.size(34.dp).clip(CircleShape),
                                                 contentScale = ContentScale.Crop
                                             )
-                                            Text(luckyBagClaimName(claim), color = Color(0xFF7B5738),
+                                            Text(displayName, color = Color(0xFF7B5738),
                                                 fontSize = 12.sp, fontWeight = FontWeight.Medium,
                                                 modifier = Modifier.padding(start = 9.dp, end = 6.dp).weight(1f),
                                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
