@@ -38,8 +38,11 @@ object HurryApi {
             val endpoint = "$API_BASE/api/rooms?sinceUpdatedAt=$sinceUpdatedAt"
             val c = URL(endpoint).openConnection() as HttpURLConnection
             c.requestMethod = "GET"
-            c.connectTimeout = 5000
-            c.readTimeout = 5000
+            // Render free-tier may need tens of seconds to wake after idle.
+            // A 5-second timeout aborts the first cold-start fetch; Home then waits
+            // 150 seconds before retrying, making the homepage appear stuck.
+            c.connectTimeout = 10_000
+            c.readTimeout = 60_000
             // Room state is mutable and server replies are explicitly no-store.
             // Never let HttpURLConnection return an older room snapshot from its cache.
             c.useCaches = false
