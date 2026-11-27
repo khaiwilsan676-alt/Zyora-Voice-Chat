@@ -851,6 +851,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                     }
                 }
+                if (discoverPage && tab == HurryTab.HOME && openedMePage == null) DiscoverPage()
                 if ((tab != HurryTab.HOME || discoverPage) && openedMePage == null) {
                     Box(Modifier.fillMaxSize()) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
