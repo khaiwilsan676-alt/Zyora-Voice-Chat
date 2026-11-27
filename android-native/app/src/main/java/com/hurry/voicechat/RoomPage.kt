@@ -3153,7 +3153,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                             } else {
                                 // Each tap is its own idempotent transaction; never wait for a prior acknowledgement.
                                 val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
-                                val nextMultiplier = (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + luckyComboClicksPending + 1
+                                val nextMultiplier = (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + 1
                                 val comboTransfer = JSONObject(previousGift.toString())
                                     .put("transferId", nextTransferId)
                                     .put("eventId", nextTransferId)
