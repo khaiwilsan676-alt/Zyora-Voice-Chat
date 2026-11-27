@@ -40,7 +40,8 @@ data class RoomBroadcastNotice(
     val name: String,
     val detail: String,
     val giftImage: String,
-    val giftName: String
+    val giftName: String,
+    val useImageBanner: Boolean = false
 )
 
 /** Single app-wide controller for Gift and Game broadcast notifications. */
@@ -103,7 +104,8 @@ fun NotificationController() {
                     name = payload.optString("name").ifBlank { "User" },
                     detail = "Win " + amount.toString() + " • " + if (dragonBattle) "Dragon Battle" else "Wild Party",
                     giftImage = ZYORA_NOTIFICATION_PUBLIC + "IMG_20261127_151231.png",
-                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party"
+                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party",
+                    useImageBanner = true
                 )
             )
         }
@@ -147,14 +149,23 @@ fun NotificationController() {
         ) {
             activeNotice?.let { notice ->
                 Box(Modifier.fillMaxWidth().height(124.dp)) {
-                    key(notice.id) {
-                        VideoEffectOverlay(
-                            src = notice.video,
-                            style = "plain",
-                            onFinished = {},
-                            onStarted = {},
-                            forceNoGreenRemove = true
+                    if (notice.useImageBanner) {
+                        AsyncImage(
+                            model = notice.giftImage,
+                            contentDescription = notice.giftName,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
                         )
+                    } else {
+                        key(notice.id) {
+                            VideoEffectOverlay(
+                                src = notice.video,
+                                style = "plain",
+                                onFinished = {},
+                                onStarted = {},
+                                forceNoGreenRemove = true
+                            )
+                        }
                     }
                     Row(
                         Modifier.fillMaxSize()
@@ -175,7 +186,7 @@ fun NotificationController() {
                             Text("$secondsLeft", color = Color.White, fontSize = 11.sp)
                             Text(notice.detail, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        if (notice.giftImage.isNotBlank()) {
+                        if (!notice.useImageBanner && notice.giftImage.isNotBlank()) {
                             AsyncImage(
                                 model = notice.giftImage,
                                 contentDescription = notice.giftName,
