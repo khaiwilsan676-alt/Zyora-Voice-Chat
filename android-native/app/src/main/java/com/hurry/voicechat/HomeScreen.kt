@@ -753,7 +753,7 @@ fun HomeScreen(
 
         // 🟢 BOTTOM NAV - Ab iske BAAD red zone aayega taaki overlay ho!
         Box(Modifier.align(Alignment.BottomCenter)) {
-            HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected)
+            HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected, discoverSelected = false, onDiscover = onDiscover)
         }
 
         // Daily Sign-in decoration remains on Home; Keep Room DP is rendered globally by MainActivity.
