@@ -118,7 +118,7 @@ private object DiscoverPostStore {
         runCatching {
             val array = JSONArray(raw)
             val loaded = (0 until array.length()).mapNotNull { index ->
-                array.optJSONObject(index)?.let { fromJson(it, currentUserId) }
+                array.optJSONObject(index)?.let { fromJson(it, currentUserId, context) }
             }.filter { it.createdAt > System.currentTimeMillis() - POST_TTL_MS }
                 .sortedByDescending { it.createdAt }.take(MAX_POSTS)
             posts.addAll(loaded)
