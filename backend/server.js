@@ -132,7 +132,7 @@ app.get("/api/discover-image/:postId/:index", (req, res) => {
   const index = Number(req.params.index);
   const raw = post?.imagesBase64?.[index];
   if (!raw || !Number.isInteger(index)) return res.status(404).end();
-  const match = /^data:image\\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(raw);
+  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(raw);
   if (!match) return res.status(404).end();
   res.setHeader("Content-Type", `image/${match[1]}`);
   res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
@@ -2597,7 +2597,7 @@ io.on("connection", (socket) => {
     const imagesBase64 = Array.isArray(payload.imagesBase64)
       ? payload.imagesBase64.filter((value) =>
           typeof value === "string" &&
-          /^data:image\\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) &&
+          /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) &&
           value.length <= 230000).slice(0, 4)
       : [];
     if (!id || !authorId || (!text && !imagesBase64.length)) {
