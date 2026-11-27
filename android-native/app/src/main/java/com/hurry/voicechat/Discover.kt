@@ -103,32 +103,46 @@ private object DiscoverPostStore {
     val posts = mutableStateListOf<DiscoverPostItem>()
     private const val PREFS = "discover_local_cache"
     private const val KEY_POSTS = "posts_v1"
+    private const val MAX_POSTS = 20
+    private const val POST_TTL_MS = 24L * 60L * 60L * 1000L
+
+    fun pruneExpired() {
+        val cutoff = System.currentTimeMillis() - POST_TTL_MS
+        posts.removeAll { it.createdAt <= 0L || it.createdAt < cutoff }
+        while (posts.size > MAX_POSTS) posts.removeAt(posts.lastIndex)
+    }
 
     fun load(context: Context, currentUserId: String) {
-        if (posts.isNotEmpty()) return
+        if (posts.isNotEmpty()) { pruneExpired(); save(context); return }
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_POSTS, null) ?: return
         runCatching {
             val array = JSONArray(raw)
-            for (i in 0 until array.length()) {
-                val item = array.optJSONObject(i) ?: continue
-                posts.add(fromJson(item, currentUserId))
-            }
+            val loaded = (0 until array.length()).mapNotNull { index ->
+                array.optJSONObject(index)?.let { fromJson(it, currentUserId) }
+            }.filter { it.createdAt > System.currentTimeMillis() - POST_TTL_MS }
+                .sortedByDescending { it.createdAt }.take(MAX_POSTS)
+            posts.addAll(loaded)
+            save(context)
         }
     }
 
     fun save(context: Context) {
         runCatching {
+            pruneExpired()
             val array = JSONArray()
-            posts.take(500).forEach { array.put(toJson(it)) }
+            posts.sortedByDescending { it.createdAt }.take(MAX_POSTS).forEach { array.put(toJson(it)) }
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit().putString(KEY_POSTS, array.toString()).apply()
         }
     }
 
     fun upsert(post: DiscoverPostItem) {
+        pruneExpired()
+        if (post.createdAt <= 0L || post.createdAt < System.currentTimeMillis() - POST_TTL_MS) return
         val index = posts.indexOfFirst { it.id == post.id }
         if (index >= 0) posts[index] = post else posts.add(0, post)
-        while (posts.size > 500) posts.removeAt(posts.lastIndex)
+        posts.sortByDescending { it.createdAt }
+        while (posts.size > MAX_POSTS) posts.removeAt(posts.lastIndex)
     }
 
     fun fromJson(item: JSONObject, currentUserId: String): DiscoverPostItem {
@@ -229,6 +243,13 @@ fun DiscoverPage(
 
     val discoverSocket = remember { runCatching { IO.socket("https://zyora-server.onrender.com") }.getOrNull() }
     LaunchedEffect(currentUserId) { DiscoverPostStore.load(context, currentUserId) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            DiscoverPostStore.pruneExpired()
+            DiscoverPostStore.save(context)
+        }
+    }
     DisposableEffect(discoverSocket, currentUserId) {
         val socket = discoverSocket
         val onCreated = io.socket.emitter.Emitter.Listener { args ->
