@@ -252,11 +252,11 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller>? = withCo
         coroutineScope {
             rows.map { seller ->
                 async {
-                    val byUid = fetchCanonicalWallet(seller.uid)?.optLong("balance", 0L)?.coerceAtLeast(0L)
-                    val byAccount = if (seller.accountId != seller.uid) {
-                        fetchCanonicalWallet(seller.accountId)?.optLong("balance", 0L)?.coerceAtLeast(0L)
-                    } else null
-                    seller.copy(coins = maxOf(byUid ?: 0L, byAccount ?: 0L))
+                    // Seller cards must show only this seller account's canonical wallet.
+                    // Never fall back to the viewer's wallet or merge balances from account-number lookup.
+                    val sellerWallet = fetchCanonicalWallet(seller.uid)
+                        ?.optLong("balance", 0L)?.coerceAtLeast(0L) ?: 0L
+                    seller.copy(coins = sellerWallet)
                 }
             }.map { it.await() }
         }
@@ -999,7 +999,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text("Deal of last 30 days:", fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1)
+                            Text("Seller wallet:", fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1)
                             AsyncImage(
                                 model = RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
                                 contentDescription = "Coins",
