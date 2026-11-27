@@ -105,8 +105,7 @@ fun NotificationController() {
                     name = payload.optString("name").ifBlank { "User" },
                     detail = "Win " + amount.toString() + " • " + if (dragonBattle) "Dragon Battle" else "Wild Party",
                     giftImage = ZYORA_NOTIFICATION_PUBLIC + "IMG_20261127_151231.png",
-                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party",
-                    useImageBanner = true
+                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party"
                 )
             )
         }
