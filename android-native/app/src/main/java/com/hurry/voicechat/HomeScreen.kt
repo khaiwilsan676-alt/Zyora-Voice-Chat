@@ -292,23 +292,27 @@ fun HomeScreen(
         // Warm Room DB immediately after the first frame; never hold homepage room data
         // behind an artificial delay. The memory/Room snapshot renders as soon as ready.
         withFrameNanos { }
-        // Warm the shared snapshot from Room DB before network completes. This makes
-        // cards immediately available after tab navigation and cold app starts.
+        // Warm Room DB in parallel with the network refresh. Previously the
+        // homepage waited for the disk query to finish before even starting the
+        // server request, serializing two independent startup operations.
         if (NativeRoomMemoryCache.rooms == null && dao != null) {
-            val cached = runCatching {
-                withContext(Dispatchers.IO) { dao.getAll() }
-            }.getOrDefault(emptyList()).map { entity ->
-                HurryRoom(
-                    id = entity.id,
-                    name = entity.name,
-                    image = entity.image,
-                    country = entity.country,
-                    locked = entity.isLocked,
-                    accountId = entity.accountId
-                )
-            }
-            if (NativeRoomMemoryCache.rooms == null && cached.isNotEmpty()) {
-                NativeRoomMemoryCache.rooms = cached
+            launch {
+                val cached = runCatching {
+                    withContext(Dispatchers.IO) { dao.getAll() }
+                }.getOrDefault(emptyList()).map { entity ->
+                    HurryRoom(
+                        id = entity.id,
+                        name = entity.name,
+                        image = entity.image,
+                        country = entity.country,
+                        locked = entity.isLocked,
+                        accountId = entity.accountId
+                    )
+                }
+                // Never let a slower disk read overwrite a newer server snapshot.
+                if (NativeRoomMemoryCache.rooms == null && cached.isNotEmpty()) {
+                    NativeRoomMemoryCache.rooms = cached
+                }
             }
         }
 
