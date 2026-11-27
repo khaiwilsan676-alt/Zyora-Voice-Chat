@@ -1604,14 +1604,11 @@ fun PublicProfileScreen(
                             }
                         }
                         if (showBackgroundLevelHint) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.Start)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Color.Black.copy(alpha = 0.3f))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text("Reach Level 25", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Dialog(onDismissRequest = { showBackgroundLevelHint = false }) {
+                                Surface(color = Color.White, shape = RoundedCornerShape(14.dp), shadowElevation = 12.dp) {
+                                    Text("Reach Level 25", color = Color(0xFF222222), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+                                }
                             }
                         }
                     }
