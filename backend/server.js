@@ -110,6 +110,35 @@ let daisySupportEnabled = true;
 // Bounded volatile reconnect handoff; Owner Panel IndexedDB is the durable history.
 const liveLuckyBagTransactions = new Map();
 
+
+// Discover feed is intentionally volatile server memory (no MongoDB/Redis writes).
+// Each Android client keeps its own SharedPreferences cache; Socket.IO synchronizes
+// live posts, likes and comments between currently connected users.
+const liveDiscoverPosts = new Map();
+const MAX_DISCOVER_POSTS = 500;
+function publicDiscoverPost(post) {
+  return {
+    id: post.id, authorId: post.authorId, authorName: post.authorName,
+    authorAvatar: post.authorAvatar, authorGender: post.authorGender,
+    text: post.text, createdAt: post.createdAt,
+    images: (post.imagesBase64 || []).map((_, index) =>
+      `https://zyora-server.onrender.com/api/discover-image/${encodeURIComponent(post.id)}/${index}`),
+    likeCount: post.likedBy.size, likedBy: [...post.likedBy],
+    comments: post.comments.slice(-500)
+  };
+}
+app.get("/api/discover-image/:postId/:index", (req, res) => {
+  const post = liveDiscoverPosts.get(String(req.params.postId || ""));
+  const index = Number(req.params.index);
+  const raw = post?.imagesBase64?.[index];
+  if (!raw || !Number.isInteger(index)) return res.status(404).end();
+  const match = /^data:image\\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(raw);
+  if (!match) return res.status(404).end();
+  res.setHeader("Content-Type", `image/${match[1]}`);
+  res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+  return res.send(Buffer.from(match[2], "base64"));
+});
+
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -2553,6 +2582,81 @@ app.get("/", (_req, res) => {
 });
 
 io.on("connection", (socket) => {
+  socket.on("discover_posts_request", (_payload = {}, acknowledge) => {
+    const posts = [...liveDiscoverPosts.values()]
+      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+      .map(publicDiscoverPost);
+    if (typeof acknowledge === "function") acknowledge({ ok: true, posts });
+  });
+
+  socket.on("discover_post_publish", (payload = {}, acknowledge) => {
+    const ack = (value) => { if (typeof acknowledge === "function") acknowledge(value); };
+    const id = String(payload.id || "").trim().slice(0, 100);
+    const authorId = String(payload.authorId || "").trim().slice(0, 120);
+    const text = String(payload.text || "").trim().slice(0, 300);
+    const imagesBase64 = Array.isArray(payload.imagesBase64)
+      ? payload.imagesBase64.filter((value) =>
+          typeof value === "string" &&
+          /^data:image\\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) &&
+          value.length <= 230000).slice(0, 4)
+      : [];
+    if (!id || !authorId || (!text && !imagesBase64.length)) {
+      ack({ ok: false, error: "Post content or user identity is missing." });
+      return;
+    }
+    if (imagesBase64.reduce((sum, value) => sum + value.length, 0) > 850000) {
+      ack({ ok: false, error: "Post images are too large. Please select smaller images." });
+      return;
+    }
+    const post = {
+      id, authorId,
+      authorName: String(payload.authorName || "Zyora User").trim().slice(0, 80),
+      authorAvatar: String(payload.authorAvatar || "").slice(0, 2048),
+      authorGender: String(payload.authorGender || "male").slice(0, 20),
+      text, createdAt: Number(payload.createdAt) || Date.now(),
+      imagesBase64, likedBy: new Set(), comments: []
+    };
+    liveDiscoverPosts.delete(id);
+    liveDiscoverPosts.set(id, post);
+    while (liveDiscoverPosts.size > MAX_DISCOVER_POSTS) {
+      liveDiscoverPosts.delete(liveDiscoverPosts.keys().next().value);
+    }
+    const result = publicDiscoverPost(post);
+    io.emit("discover_post_created", result);
+    ack({ ok: true, post: result });
+  });
+
+  socket.on("discover_post_like", (payload = {}, acknowledge) => {
+    const ack = (value) => { if (typeof acknowledge === "function") acknowledge(value); };
+    const post = liveDiscoverPosts.get(String(payload.postId || ""));
+    const userId = String(payload.userId || "").trim().slice(0, 120);
+    if (!post || !userId) { ack({ ok: false }); return; }
+    if (payload.liked === true) post.likedBy.add(userId);
+    else post.likedBy.delete(userId);
+    const result = publicDiscoverPost(post);
+    io.emit("discover_post_updated", result);
+    ack({ ok: true, post: result });
+  });
+
+  socket.on("discover_post_comment", (payload = {}, acknowledge) => {
+    const ack = (value) => { if (typeof acknowledge === "function") acknowledge(value); };
+    const post = liveDiscoverPosts.get(String(payload.postId || ""));
+    const userId = String(payload.authorId || "").trim().slice(0, 120);
+    const text = String(payload.text || "").trim().slice(0, 500);
+    if (!post || !userId || !text) { ack({ ok: false }); return; }
+    post.comments.push({
+      id: String(payload.id || `comment_${Date.now()}_${socket.id}`).slice(0, 120),
+      authorId: userId,
+      authorName: String(payload.authorName || "Zyora User").slice(0, 80),
+      authorAvatar: String(payload.authorAvatar || "").slice(0, 2048),
+      text, createdAt: Number(payload.createdAt) || Date.now()
+    });
+    if (post.comments.length > 500) post.comments.splice(0, post.comments.length - 500);
+    const result = publicDiscoverPost(post);
+    io.emit("discover_post_updated", result);
+    ack({ ok: true, post: result });
+  });
+
   socket.on("game_round_result_update", (payload = {}) => {
     const game = String(payload.game || "");
     if (!["wildparty", "dragonbattle"].includes(game)) return;
