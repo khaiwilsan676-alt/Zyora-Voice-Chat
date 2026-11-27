@@ -283,7 +283,7 @@ fun Fourgride(
                                 TopToolType.PUBLIC_MSG -> ToolCell(cellModifier, "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
                                 TopToolType.ENTRY_EFFECT -> ToolCell(cellModifier, "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = onToggleEntryEffect)
                                 TopToolType.GIFT_EFFECT -> ToolCell(cellModifier, "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = onToggleGiftEffect)
-                                TopToolType.MUSIC -> ToolCell(cellModifier, "Music", base + "IMG_20261028_182305.png", onClick = {
+                                TopToolType.MUSIC -> ToolCell(cellModifier, "Music", base + "IMG_20261028_182305.png", wholeCellClickable = true, onClick = {
                                     // Reopen the last selected song directly in the room mini-controller.
                                     // Only show the full picker when there is no previous song to restore.
                                     val previousTrack = MusicPlaybackState.currentTrack
@@ -571,11 +571,13 @@ private fun ToolCell(
     title: String,
     imageUrl: String,
     toggle: Boolean? = null,
+    wholeCellClickable: Boolean = false,
     onClick: () -> Unit
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+    val cellClickModifier = if (wholeCellClickable) Modifier.clickable(onClick = onClick) else Modifier
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.then(cellClickModifier)) {
         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            AsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.fillMaxSize().then(if (toggle == null) Modifier.clickable(onClick = onClick) else Modifier), contentScale = ContentScale.Fit)
+            AsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.fillMaxSize().then(if (toggle == null && !wholeCellClickable) Modifier.clickable(onClick = onClick) else Modifier), contentScale = ContentScale.Fit)
             if (toggle != null) Box(Modifier.align(Alignment.BottomEnd).clickable(onClick = onClick)) { ToolToggle(toggle) }
         }
         Text(title, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, softWrap = false)
