@@ -73,8 +73,8 @@ fun RoomDailyCupTotal(roomId: String) {
             runCatching {
                 val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
                 val connection = URL("https://zyora-server.onrender.com/api/rooms/$encodedRoom/contributions?period=daily&_=${System.currentTimeMillis()}").openConnection() as HttpURLConnection
-                connection.connectTimeout = 8_000
-                connection.readTimeout = 10_000
+                connection.connectTimeout = 3_000
+                connection.readTimeout = 5_000
                 // This endpoint is live contribution data. Never let an HTTP cache
                 // turn a stale/304 response into a zero-value replacement.
                 connection.useCaches = false
@@ -124,11 +124,32 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     var selectedOnline by remember(initialOnline) { mutableStateOf(initialOnline) }
     
     var period by remember { mutableStateOf("daily") }
-    var entries by remember { mutableStateOf(emptyList<CupEntry>()) }
-    var mine by remember { mutableStateOf<CupEntry?>(null) }
-    // Keep each period's last successful result in memory so tab changes render immediately.
-    var periodCache by remember(roomId, userId) { mutableStateOf<Map<String, Pair<List<CupEntry>, CupEntry?>>>(emptyMap()) }
-    var loading by remember { mutableStateOf(true) }
+    val diskPrefs = remember { context.getSharedPreferences("zyora_room_cup_cache", android.content.Context.MODE_PRIVATE) }
+    fun cacheKey(p: String) = "cup_${roomId.hashCode()}_${userId.hashCode()}_${p}"
+    fun readDisk(p: String): Pair<List<CupEntry>, CupEntry?>? = runCatching {
+        val raw = diskPrefs.getString(cacheKey(p), null) ?: return null
+        val root = JSONObject(raw)
+        val a = root.optJSONArray("entries") ?: org.json.JSONArray()
+        val list = (0 until a.length()).mapNotNull { i ->
+            a.optJSONObject(i)?.let { CupEntry(it.optString("id"), it.optString("name", "User"), it.optString("image"), it.optLong("coins"), it.optInt("rank")) }
+        }
+        val m = root.optJSONObject("mine")?.let { CupEntry(it.optString("id"), it.optString("name", "User"), it.optString("image"), it.optLong("coins"), it.optInt("rank")) }
+        list to m
+    }.getOrNull()
+    fun saveDisk(p: String, data: Pair<List<CupEntry>, CupEntry?>) {
+        runCatching {
+            fun encode(e: CupEntry) = JSONObject().put("id", e.id).put("name", e.name).put("image", e.image).put("coins", e.coins).put("rank", e.rank)
+            val root = JSONObject().put("entries", org.json.JSONArray().apply { data.first.forEach { put(encode(it)) } })
+            data.second?.let { root.put("mine", encode(it)) }
+            diskPrefs.edit().putString(cacheKey(p), root.toString()).apply()
+        }
+    }
+    val diskDaily = remember(roomId, userId) { readDisk("daily") }
+    var entries by remember { mutableStateOf(diskDaily?.first ?: emptyList()) }
+    var mine by remember { mutableStateOf(diskDaily?.second) }
+    // Persisted leaderboard is shown immediately; network refresh happens in background.
+    var periodCache by remember(roomId, userId) { mutableStateOf(if (diskDaily != null) mapOf("daily" to diskDaily) else emptyMap()) }
+    var loading by remember { mutableStateOf(diskDaily == null) }
     var refreshTick by remember { mutableIntStateOf(0) }
     
     // Swipe state handle karne ke liye
@@ -137,16 +158,22 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(30000); refreshTick++ } }
     
     LaunchedEffect(roomId,period,refreshTick) {
-        periodCache[period]?.let { cached ->
+        val cached = periodCache[period] ?: readDisk(period)
+        if (cached != null) {
             entries = cached.first
             mine = cached.second
+            periodCache = periodCache + (period to cached)
             loading = false
-        } ?: run { loading = true }
+        } else {
+            entries = emptyList()
+            mine = null
+            loading = true
+        }
         val data=withContext(Dispatchers.IO) { runCatching {
             val r=java.net.URLEncoder.encode(roomId,"UTF-8")
             val u=java.net.URLEncoder.encode(userId,"UTF-8")
             val c=URL("https://zyora-server.onrender.com/api/rooms/$r/contributions?period=$period&userId=$u&_=${System.currentTimeMillis()}").openConnection() as HttpURLConnection
-            c.connectTimeout=8000; c.readTimeout=10000
+            c.connectTimeout=3000; c.readTimeout=5000
             c.useCaches = false
             c.setRequestProperty("Cache-Control", "no-cache, no-store")
             c.setRequestProperty("Pragma", "no-cache")
@@ -160,6 +187,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
             } finally { c.disconnect() }
         }.getOrNull() }
         if (data != null) {
+            saveDisk(period, data)
             periodCache = periodCache + (period to data)
             entries = data.first
             mine = data.second
