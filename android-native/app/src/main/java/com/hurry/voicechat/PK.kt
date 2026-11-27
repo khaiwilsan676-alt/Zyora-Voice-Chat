@@ -254,9 +254,14 @@ fun PKBattlePage(
 
     val selectedBlue = roomSeats.firstOrNull { it.occupied && it.accountId == selectedBlueId }
     val selectedRed = roomSeats.firstOrNull { it.occupied && it.accountId == selectedRedId }
+    val rootOverlayBg = if (activeSheet == PkSheetView.BATTLE_ACTIVE) {
+        Color.Transparent
+    } else {
+        Color.Black.copy(alpha = 0.52f)
+    }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.52f))
+        modifier = Modifier.fillMaxSize().background(rootOverlayBg)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                 if (activeSheet != PkSheetView.MAIN) activeSheet = PkSheetView.MAIN else onClose()
             }
@@ -284,6 +289,7 @@ fun PKBattlePage(
                 },
                 onBlueSend = { blueUser?.let(onSendGift) },
                 onRedSend = { redUser?.let(onSendGift) },
+                onMinimize = onClose,
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
@@ -552,6 +558,7 @@ private fun PkActiveBattleOverlay(
     onRedVote: () -> Unit,
     onBlueSend: () -> Unit,
     onRedSend: () -> Unit,
+    onMinimize: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Draw hone par bhi dono LOSS ho jayenge (No Draw text)
@@ -614,6 +621,25 @@ private fun PkActiveBattleOverlay(
             ) { },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Minimize Icon: Loading patti se bahar, top-right corner par
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp)
+        ) {
+            PkMinimizeIcon(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onMinimize
+                    )
+            )
+        }
+
         // Top Loading Patti: 90% wide, Full Round (CircleShape), decreased height
         Box(
             modifier = Modifier
@@ -867,6 +893,82 @@ private fun PkActiveBattleOverlay(
                 modifier = Modifier.align(Alignment.TopCenter)
             )
         }
+    }
+}
+
+@Composable
+private fun PkMinimizeIcon(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val ringStroke = w * 0.088f
+        val radius = (minOf(w, h) - ringStroke) / 2f
+        val center = Offset(w / 2f, h / 2f)
+
+        // Deep warm reddish-brown circular fill
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF7D2206),
+                    Color(0xFF641804),
+                    Color(0xFF4C1002)
+                ),
+                center = Offset(w * 0.46f, h * 0.44f),
+                radius = radius * 1.15f
+            ),
+            radius = radius,
+            center = center
+        )
+
+        // Warm creamy peach-beige circular border ring
+        drawCircle(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFFF2D6C3),
+                    Color(0xFFE3BCA3),
+                    Color(0xFFEDD0BC)
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(w, h)
+            ),
+            radius = radius,
+            center = center,
+            style = Stroke(width = ringStroke)
+        )
+
+        // Inward-pointing minimize corner brackets
+        val bracketStroke = w * 0.115f
+        val bracketColor = Color(0xFFFCE3D2)
+
+        val topRightCorner = Path().apply {
+            moveTo(w * 0.555f, h * 0.275f)
+            lineTo(w * 0.555f, h * 0.445f)
+            lineTo(w * 0.725f, h * 0.445f)
+        }
+        drawPath(
+            path = topRightCorner,
+            color = bracketColor,
+            style = Stroke(
+                width = bracketStroke,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+
+        val bottomLeftCorner = Path().apply {
+            moveTo(w * 0.275f, h * 0.555f)
+            lineTo(w * 0.445f, h * 0.555f)
+            lineTo(w * 0.445f, h * 0.725f)
+        }
+        drawPath(
+            path = bottomLeftCorner,
+            color = bracketColor,
+            style = Stroke(
+                width = bracketStroke,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
     }
 }
 
