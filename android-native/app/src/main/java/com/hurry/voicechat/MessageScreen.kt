@@ -878,19 +878,20 @@ fun NativeChatScreen(
     var blockStateReady by remember(receiverId) { mutableStateOf(false) }
     var blockPopupText by remember { mutableStateOf("") }
     var copyPopupText by remember { mutableStateOf("") }
+    var showImageLevelHint by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
     LaunchedEffect(copyPopupText) {
-        if (showImageLevelHint) {
+        if (copyPopupText.isNotBlank()) {
+            kotlinx.coroutines.delay(1600)
+            copyPopupText = ""
+        }
+    }
+    if (showImageLevelHint) {
         Dialog(onDismissRequest = { showImageLevelHint = false }) {
             Surface(color = Color.White, shape = RoundedCornerShape(14.dp), shadowElevation = 12.dp) {
                 Text("Reach Lv-5", color = Color(0xFF222222), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
             }
-        }
-    }
-    if (copyPopupText.isNotBlank()) {
-            kotlinx.coroutines.delay(1600)
-            copyPopupText = ""
         }
     }
     var replyText by remember { mutableStateOf<String?>(null) }
