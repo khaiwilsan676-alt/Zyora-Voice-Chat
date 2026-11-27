@@ -45,19 +45,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import org.json.JSONObject
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -70,20 +67,42 @@ private const val LUCKY_COIN_ICON_URL =
 // ============================================================
 // LUCKY GIFT ANIMATION CONTROLS — keep all Lucky motion tuning here
 // ============================================================
-private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 260
+private const val LUCKY_SEAT_POPUP_DURATION_MS = 85
+private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 210
 private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
 private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
+private const val LUCKY_MAX_RECIPIENT_FLIGHTS = 15
+private const val LUCKY_MAX_ACTIVE_FLIGHTS = 45
 
 // Notification patti aur Combo button ka × count sync rakhne ke liye
 private object LuckyComboSyncState {
     var displayMultiplier by mutableIntStateOf(1)
     var pendingComboClicks by mutableIntStateOf(0)
+    var activeGiftKey by mutableStateOf("")
+
+    fun reset() {
+        displayMultiplier = 1
+        pendingComboClicks = 0
+        activeGiftKey = ""
+    }
 }
 
+private fun luckyNoticeGiftKey(notice: LuckyNotice): String =
+    "${notice.senderId}|${notice.giftImage.trim()}|${notice.recipientMode.name}"
+
 private fun luckyAnimationAssetUrl(path: String): String {
-    if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
-    return "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
+    val clean = path.trim()
+    if (clean.isEmpty()) return ""
+    if (
+        clean.startsWith("https://") ||
+        clean.startsWith("http://") ||
+        clean.startsWith("file:") ||
+        clean.startsWith("content:")
+    ) {
+        return clean
+    }
+    return "https://zyora-voice-chat.vercel.app/" + clean.trimStart('/')
 }
 
 // ============================================================
@@ -115,10 +134,9 @@ fun calculateLuckyCoinReturn(giftCost: Long): LuckyCoinReturnResult {
     )
 }
 
-
 private const val LUCKY_NOTICE_VISIBLE_DURATION_MS = 5000L
-private const val LUCKY_NOTICE_EXIT_DURATION_MS = 450L
-const val LUCKY_SEAT_LANDING_EFFECT_DELAY_MS = 560L
+private const val LUCKY_NOTICE_EXIT_DURATION_MS = 350L
+const val LUCKY_SEAT_LANDING_EFFECT_DELAY_MS = 320L
 
 /** Single owner for every Lucky animation state, seat target and combo timer. */
 class LuckyAnimationController internal constructor(val roomId: String) {
@@ -137,9 +155,11 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun recordOrigin(value: Offset) { origin = value }
     fun recordRootSize(value: IntSize) { rootSize = value }
     fun recordSeatCenter(id: String, center: Offset) { seatCenters[id] = center }
+
     fun finishFlight(id: String) {
         flights.removeAll { it.id == id }
     }
+
     private val launchedFlightIds = linkedSetOf<String>()
 
     fun launchToRecipients(
@@ -148,54 +168,204 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         recipientIds: Collection<String>,
         popupAtCenter: Boolean = true
     ) {
-        if (id.isBlank() || image.isBlank() || id in launchedFlightIds) return
-        val target = recipientIds.firstNotNullOfOrNull { seatCenters[it] } ?: return
+        val cleanImage = image.trim()
+        if (id.isBlank() || cleanImage.isBlank() || id in launchedFlightIds) return
         if (rootSize == IntSize.Zero) return
+
+        // Jitne recipients select hain (1 se max 15 tak) sabke liye alag image fly hogi
+        val targets = recipientIds
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .mapNotNull { recipientId -> seatCenters[recipientId]?.let { recipientId to it } }
+            .take(LUCKY_MAX_RECIPIENT_FLIGHTS)
+            .toList()
+        if (targets.isEmpty()) return
+
         // Start once on the sender's tap. The later server echo must not create
-        // a second copy or restart the same flight.
+        // a second copy or restart the same flight batch.
         launchedFlightIds.add(id)
         if (launchedFlightIds.size > 200) launchedFlightIds.remove(launchedFlightIds.first())
+
         val center = Offset(rootSize.width / 2f, rootSize.height / 2f)
-        // Hamesha direct center se start hoga — koi delay ya origin shift nahi
-        flights.add(
-            LuckyGiftFlight(
-                id = id,
-                image = image,
-                start = center,
-                target = target,
-                rootCenter = center,
-                popupAtCenter = true
+
+        // Rapid combo taps pe lag na ho isliye active flights bounded rakhenge
+        val overflow = (flights.size + targets.size) - LUCKY_MAX_ACTIVE_FLIGHTS
+        if (overflow > 0) {
+            val removeCount = overflow.coerceAtMost(flights.size)
+            repeat(removeCount) { flights.removeAt(0) }
+        }
+
+        targets.forEachIndexed { index, (recipientId, target) ->
+            flights.add(
+                LuckyGiftFlight(
+                    id = "${id}_${recipientId}_$index",
+                    image = cleanImage,
+                    start = center,
+                    target = target,
+                    rootCenter = center,
+                    popupAtCenter = popupAtCenter
+                )
             )
-        )
+        }
     }
-    fun updateNotice(value: LuckyNotice?) { notice = value }
-    fun renewNotice() { noticeGeneration++ }
+
+    fun updateNotice(value: LuckyNotice?) {
+        if (value == null) {
+            clearNotice()
+            return
+        }
+
+        val current = notice
+        val incomingImage = value.giftImage.trim()
+        val resolvedImage = if (incomingImage.isNotEmpty()) {
+            incomingImage
+        } else if (current != null && !current.isExiting && current.senderId == value.senderId) {
+            current.giftImage.trim()
+        } else {
+            ""
+        }
+
+        val normalized = value.copy(giftImage = resolvedImage)
+        val newGiftKey = luckyNoticeGiftKey(normalized)
+        val wasHiddenOrExiting = current == null || current.isExiting
+        val sameGiftChain = !wasHiddenOrExiting &&
+            luckyNoticeGiftKey(current!!) == newGiftKey
+
+        // Patti hatne ke baad ya naya gift aane par × bilkul shuru se (×1) reset hoke start hoga
+        if (wasHiddenOrExiting || !sameGiftChain) {
+            LuckyComboSyncState.reset()
+            LuckyComboSyncState.activeGiftKey = newGiftKey
+            LuckyComboSyncState.displayMultiplier = 1
+            notice = normalized.copy(
+                multiplier = 1,
+                isExiting = false,
+            )
+            noticeGeneration++
+            return
+        }
+
+        val activeCurrent = current!!
+        val mergedMultiplier = if (showComboButton) {
+            if (LuckyComboSyncState.pendingComboClicks > 0) {
+                LuckyComboSyncState.pendingComboClicks =
+                    (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
+                maxOf(
+                    normalized.multiplier,
+                    activeCurrent.multiplier + 1,
+                    LuckyComboSyncState.displayMultiplier + 1,
+                )
+            } else {
+                maxOf(
+                    normalized.multiplier,
+                    activeCurrent.multiplier,
+                    LuckyComboSyncState.displayMultiplier,
+                )
+            }
+        } else if (normalized.id != activeCurrent.id) {
+            if (normalized.multiplier > activeCurrent.multiplier) {
+                normalized.multiplier
+            } else {
+                maxOf(activeCurrent.multiplier, LuckyComboSyncState.displayMultiplier) + 1
+            }
+        } else {
+            maxOf(
+                normalized.multiplier,
+                activeCurrent.multiplier,
+                LuckyComboSyncState.displayMultiplier,
+            )
+        }
+
+        LuckyComboSyncState.activeGiftKey = newGiftKey
+        LuckyComboSyncState.displayMultiplier = mergedMultiplier
+        notice = normalized.copy(
+            multiplier = mergedMultiplier,
+            isExiting = if (showComboButton) false else normalized.isExiting,
+        )
+        noticeGeneration++
+    }
+
+    internal fun setNoticeExiting(exiting: Boolean) {
+        val current = notice ?: return
+        if (current.isExiting == exiting) return
+        notice = current.copy(isExiting = exiting)
+        noticeGeneration++
+    }
+
+    internal fun clearNotice() {
+        notice = null
+        LuckyComboSyncState.reset()
+    }
+
+    fun renewNotice() {
+        val current = notice
+        if (current != null && current.isExiting) {
+            notice = current.copy(isExiting = false)
+        }
+        noticeGeneration++
+    }
+
     fun confirmCombo(payload: JSONObject) {
         lastComboPayload = JSONObject(payload.toString())
         comboPending = false
         showComboButton = true
         comboTimeLeft = 5
         comboGeneration++
+        val current = notice
+        if (current != null && current.isExiting) {
+            notice = current.copy(isExiting = false)
+            noticeGeneration++
+        }
     }
+
     fun beginCombo() { comboPending = true }
     fun failCombo() { comboPending = false }
+
     fun optimisticCombo() {
-        notice = notice?.copy(multiplier = (notice?.multiplier ?: 1) + 1, isExiting = false)
-        noticeGeneration++
+        if (LuckyComboSyncState.pendingComboClicks > 0) {
+            LuckyComboSyncState.pendingComboClicks =
+                (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
+        }
+        val current = notice
+        val nextMultiplier = maxOf(
+            current?.multiplier ?: 1,
+            LuckyComboSyncState.displayMultiplier,
+        ) + 1
+        LuckyComboSyncState.displayMultiplier = nextMultiplier
+        if (current != null) {
+            LuckyComboSyncState.activeGiftKey = luckyNoticeGiftKey(current)
+            // Purana win amount copy nahi hoga -> sirf actual win pe hi reward badge aayega
+            notice = current.copy(
+                multiplier = nextMultiplier,
+                totalWinAmount = 0L,
+                maxWinTimes = 0,
+                isExiting = false,
+            )
+            noticeGeneration++
+        }
         if (showComboButton) {
             comboTimeLeft = 5
             comboGeneration++
         }
     }
+
     fun tickCombo(value: Int) { comboTimeLeft = value.coerceIn(0, 5) }
+
     fun hideCombo() {
         showComboButton = false
         comboTimeLeft = 0
         comboPending = false
         lastComboPayload = null
-        LuckyComboSyncState.displayMultiplier = 1
         LuckyComboSyncState.pendingComboClicks = 0
-        notice = notice?.copy(multiplier = 1)
+        // Combo button hatne ke saath hi Notification patti bhi exit hogi (100% connected)
+        val current = notice
+        if (current != null && !current.isExiting) {
+            notice = current.copy(isExiting = true)
+            noticeGeneration++
+        } else if (current == null) {
+            LuckyComboSyncState.reset()
+        }
     }
 }
 
@@ -213,22 +383,58 @@ fun LuckyAnimationControllerEffects(controller: LuckyAnimationController) {
             if (controller.comboGeneration != generation || !controller.showComboButton) return@LaunchedEffect
             controller.tickCombo(5 - second)
         }
-        if (controller.comboGeneration == generation) {
+        if (controller.comboGeneration == generation && controller.showComboButton) {
             controller.hideCombo()
         }
     }
-    LaunchedEffect(controller.roomId, controller.noticeGeneration) {
+
+    LaunchedEffect(controller.roomId, controller.noticeGeneration, controller.showComboButton) {
         val generation = controller.noticeGeneration
-        val id = controller.notice?.id ?: return@LaunchedEffect
+        val currentNotice = controller.notice ?: return@LaunchedEffect
+        val id = currentNotice.id
+
+        // Jab tak Combo button visible hai, Notification patti nahi hategi
+        if (controller.showComboButton) {
+            if (currentNotice.isExiting) {
+                controller.setNoticeExiting(false)
+            }
+            return@LaunchedEffect
+        }
+
+        // Combo hat gaya hai -> exit animation complete karke notice hata do & × reset karo
+        if (currentNotice.isExiting) {
+            delay(LUCKY_NOTICE_EXIT_DURATION_MS)
+            if (
+                controller.noticeGeneration == generation &&
+                controller.notice?.id == id &&
+                !controller.showComboButton
+            ) {
+                controller.clearNotice()
+            }
+            return@LaunchedEffect
+        }
+
+        // Viewers ke liye (jinke paas Combo button nahi hai): normal visible timer
         delay(LUCKY_NOTICE_VISIBLE_DURATION_MS)
-        if (controller.noticeGeneration != generation || controller.notice?.id != id) return@LaunchedEffect
-        controller.updateNotice(controller.notice?.copy(isExiting = true))
+        if (
+            controller.noticeGeneration != generation ||
+            controller.notice?.id != id ||
+            controller.showComboButton
+        ) {
+            return@LaunchedEffect
+        }
+        controller.setNoticeExiting(true)
         val exitGeneration = controller.noticeGeneration
         delay(LUCKY_NOTICE_EXIT_DURATION_MS)
-        if (controller.noticeGeneration == exitGeneration && controller.notice?.id == id) controller.updateNotice(null)
+        if (
+            controller.noticeGeneration == exitGeneration &&
+            controller.notice?.id == id &&
+            !controller.showComboButton
+        ) {
+            controller.clearNotice()
+        }
     }
 }
-
 
 // ============================================================
 // LUCKY GIFT NOTIFICATION SLIDER + FLY ANIMATION + REWARD BADGE
@@ -262,42 +468,93 @@ fun LuckyAnimationNotificationSlider(
     // only the notification slider and reward badge, avoiding duplicate flights.
     var lastAnimatedNoticeId by remember { mutableStateOf<String?>(null) }
     var lastAnimatedMultiplier by remember { mutableIntStateOf(0) }
+    var lastGiftKey by remember { mutableStateOf("") }
+    var resetOnNextActive by remember { mutableStateOf(true) }
+
+    // Sirf genuine win pe hi reward badge trigger hoga (har tap pe nahi)
+    var lastRewardedNoticeId by remember { mutableStateOf<String?>(null) }
+    var lastRewardedWinAmount by remember { mutableLongStateOf(0L) }
 
     // Reward badge state (3 sec ke liye, naya reward aate hi purana hat ke naya upar se aayega)
     var activeReward by remember { mutableStateOf<LuckyRewardPopupState?>(null) }
+    val multiplierPopScale = remember { Animatable(1f) }
 
-    LaunchedEffect(notice?.id, notice?.multiplier) {
+    LaunchedEffect(
+        notice?.id,
+        notice?.multiplier,
+        notice?.totalWinAmount,
+        notice?.giftImage,
+        notice?.isExiting,
+    ) {
         if (notice == null) {
+            resetOnNextActive = true
             lastAnimatedNoticeId = null
             lastAnimatedMultiplier = 0
-            LuckyComboSyncState.pendingComboClicks = 0
+            lastGiftKey = ""
+            lastRewardedNoticeId = null
+            lastRewardedWinAmount = 0L
+            activeReward = null
+            LuckyComboSyncState.reset()
             return@LaunchedEffect
         }
 
-        if (notice.id != lastAnimatedNoticeId || notice.multiplier != lastAnimatedMultiplier) {
-            lastAnimatedNoticeId = notice.id
-            lastAnimatedMultiplier = notice.multiplier
+        if (notice.isExiting) {
+            resetOnNextActive = true
+            activeReward = null
+            return@LaunchedEffect
+        }
 
-            // Combo button aur Notification patti dono ka × bilkul connected rahega
-            val syncedMultiplier = if (LuckyComboSyncState.pendingComboClicks > 0) {
+        val currentGiftKey = luckyNoticeGiftKey(notice)
+        val freshStart = resetOnNextActive || currentGiftKey != lastGiftKey
+        val stateChanged = freshStart ||
+            notice.id != lastAnimatedNoticeId ||
+            notice.multiplier != lastAnimatedMultiplier ||
+            notice.totalWinAmount != lastRewardedWinAmount
+
+        if (stateChanged) {
+            val previousMultiplier = LuckyComboSyncState.displayMultiplier
+            val syncedMultiplier = if (freshStart) {
+                resetOnNextActive = false
+                LuckyComboSyncState.pendingComboClicks = 0
+                1
+            } else if (LuckyComboSyncState.pendingComboClicks > 0) {
                 LuckyComboSyncState.pendingComboClicks =
                     (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
-                if (notice.multiplier > LuckyComboSyncState.displayMultiplier) {
-                    notice.multiplier
-                } else {
-                    LuckyComboSyncState.displayMultiplier + 1
-                }
+                maxOf(notice.multiplier, previousMultiplier + 1)
             } else {
-                notice.multiplier.coerceAtLeast(1)
+                maxOf(notice.multiplier, previousMultiplier).coerceAtLeast(1)
             }
+
+            LuckyComboSyncState.activeGiftKey = currentGiftKey
             LuckyComboSyncState.displayMultiplier = syncedMultiplier
 
-            if (notice.totalWinAmount > 0L) {
+            if (!freshStart && syncedMultiplier > previousMultiplier) {
+                launch {
+                    multiplierPopScale.snapTo(1.22f)
+                    multiplierPopScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 110, easing = FastOutSlowInEasing),
+                    )
+                }
+            }
+
+            // Win image & coins value SIRF jab actual win ho (> 0L) aur naya win event ho
+            val isGenuineNewWin = notice.totalWinAmount > 0L && (
+                notice.id != lastRewardedNoticeId ||
+                    notice.totalWinAmount != lastRewardedWinAmount
+            )
+            if (isGenuineNewWin) {
+                lastRewardedNoticeId = notice.id
+                lastRewardedWinAmount = notice.totalWinAmount
                 activeReward = LuckyRewardPopupState(
-                    id = "${notice.id}_${syncedMultiplier}",
+                    id = "${notice.id}_${notice.totalWinAmount}",
                     winAmount = notice.totalWinAmount,
                 )
             }
+
+            lastGiftKey = currentGiftKey
+            lastAnimatedNoticeId = notice.id
+            lastAnimatedMultiplier = syncedMultiplier
         }
     }
 
@@ -311,12 +568,12 @@ fun LuckyAnimationNotificationSlider(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Notification patti (thori niche + 10.dp height increase + avatar & name thoda bada)
+        // Notification patti (10.dp aur niche: 66.dp -> 76.dp)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 12.dp)
-                .offset(y = 66.dp),
+                .offset(y = 76.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             AnimatedVisibility(
@@ -327,14 +584,24 @@ fun LuckyAnimationNotificationSlider(
             ) {
                 if (notice == null) return@AnimatedVisibility
                 val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
-                        notice.recipientMode == RecipientMode.ROOM
+                    notice.recipientMode == RecipientMode.ROOM
                 val topText = when (notice.recipientMode) {
                     RecipientMode.MIC -> "Sent to All Mic"
                     RecipientMode.ROOM -> "Sent to All in room"
                     else -> notice.senderName
                 }
                 val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
-                val shownMultiplier = LuckyComboSyncState.displayMultiplier.coerceAtLeast(1)
+                val shownMultiplier = if (LuckyComboSyncState.activeGiftKey == luckyNoticeGiftKey(notice)) {
+                    maxOf(notice.multiplier, LuckyComboSyncState.displayMultiplier).coerceAtLeast(1)
+                } else {
+                    notice.multiplier.coerceAtLeast(1)
+                }
+                val senderImageUrl = remember(notice.senderImage) {
+                    luckyAnimationAssetUrl(notice.senderImage)
+                }
+                val giftImageUrl = remember(notice.giftImage) {
+                    luckyAnimationAssetUrl(notice.giftImage)
+                }
 
                 Box(contentAlignment = Alignment.CenterStart) {
                     Row(
@@ -360,14 +627,16 @@ fun LuckyAnimationNotificationSlider(
                             .wrapContentWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        AsyncImage(
-                            model = notice.senderImage,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape),
-                        )
+                        key(senderImageUrl) {
+                            AsyncImage(
+                                model = senderImageUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape),
+                            )
+                        }
                         Spacer(Modifier.width(8.dp))
 
                         Column(
@@ -400,28 +669,37 @@ fun LuckyAnimationNotificationSlider(
                         }
                         Spacer(Modifier.width(8.dp))
 
-                        AsyncImage(
-                            model = luckyAnimationAssetUrl(notice.giftImage),
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(26.dp),
-                        )
+                        if (giftImageUrl.isNotEmpty()) {
+                            key(giftImageUrl) {
+                                AsyncImage(
+                                    model = giftImageUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            }
+                        }
                         Text(
                             text = "×$shownMultiplier",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Black,
                             fontStyle = FontStyle.Italic,
-                            modifier = Modifier.padding(start = 4.dp),
+                            modifier = Modifier
+                                .padding(start = 4.dp)
+                                .graphicsLayer {
+                                    scaleX = multiplierPopScale.value
+                                    scaleY = multiplierPopScale.value
+                                },
                         )
                     }
 
-                    // Name ke right-side top corner par (position untouched)
+                    // Win image badge exact 3.dp niche (26.dp -> 29.dp)
                     activeReward?.let { reward ->
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .offset(x = 142.dp, y = 26.dp)
+                                .offset(x = 142.dp, y = 29.dp)
                                 .size(0.dp)
                                 .wrapContentSize(align = Alignment.BottomCenter, unbounded = true)
                                 .zIndex(2f),
@@ -434,7 +712,6 @@ fun LuckyAnimationNotificationSlider(
                 }
             }
         }
-
     }
 }
 
@@ -480,7 +757,7 @@ private fun LuckyRewardTopBadge(
         }
     }
 
-    // Bigger winning image (114.dp), choti shining (84.dp), coins icon & value 15.dp upar
+    // Bigger winning image (114.dp), choti shining (84.dp), coins icon & value 5.dp aur upar (-21.dp -> -26.dp)
     Box(
         modifier = modifier
             .size(114.dp)
@@ -555,11 +832,11 @@ private fun LuckyRewardTopBadge(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // Coin Icon + Yellow Coins Amount exact 15.dp upar (-6.dp -> -21.dp)
+        // Coin Icon + Yellow Coins Amount exact 5.dp aur upar (-21.dp -> -26.dp)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-21).dp),
+                .offset(y = (-26).dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -591,7 +868,7 @@ private fun LuckyRewardTopBadge(
 }
 
 // ============================================================
-// LUCKY COMBO BUTTON (Same to same image style + connected ×)
+// LUCKY COMBO BUTTON (Bigger size + Only "Combo" text, no ×)
 // ============================================================
 @Composable
 fun LuckyAnimationComboButton(
@@ -600,16 +877,8 @@ fun LuckyAnimationComboButton(
     onClick: () -> Unit,
     comboCount: Int? = null,
 ) {
-    LaunchedEffect(visible) {
-        if (!visible) {
-            LuckyComboSyncState.displayMultiplier = 1
-            LuckyComboSyncState.pendingComboClicks = 0
-        }
-    }
-
     if (!visible) return
 
-    val shownCount = (comboCount ?: LuckyComboSyncState.displayMultiplier).coerceAtLeast(1)
     val comboInteraction = remember { MutableInteractionSource() }
     val isComboPressed by comboInteraction.collectIsPressedAsState()
     // Respond on the first rendered press frame; no delayed press tween.
@@ -632,7 +901,7 @@ fun LuckyAnimationComboButton(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(84.dp)
+                .size(100.dp)
                 .graphicsLayer {
                     scaleX = comboPressScale
                     scaleY = comboPressScale
@@ -654,10 +923,10 @@ fun LuckyAnimationComboButton(
                     onClick()
                 },
         ) {
-            // Inner vibrant orange-red to golden-orange circle
+            // Inner vibrant orange-red to golden-orange circle (bigger size)
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(86.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.verticalGradient(
@@ -670,41 +939,23 @@ fun LuckyAnimationComboButton(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = "x$shownCount",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        lineHeight = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontStyle = FontStyle.Italic,
-                        style = TextStyle(
-                            shadow = textShadow,
-                            platformStyle = PlatformTextStyle(includeFontPadding = false),
-                        ),
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "Combo",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        lineHeight = 19.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontStyle = FontStyle.Italic,
-                        style = TextStyle(
-                            shadow = textShadow,
-                            platformStyle = PlatformTextStyle(includeFontPadding = false),
-                        ),
-                    )
-                }
+                Text(
+                    text = "Combo",
+                    color = Color.White,
+                    fontSize = 21.sp,
+                    lineHeight = 23.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontStyle = FontStyle.Italic,
+                    style = TextStyle(
+                        shadow = textShadow,
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    ),
+                )
             }
 
             // Rounded white circular progress arc around the orange circle
-            Canvas(modifier = Modifier.fillMaxSize().padding(4.5.dp)) {
-                val strokePx = 3.5.dp.toPx()
+            Canvas(modifier = Modifier.fillMaxSize().padding(5.dp)) {
+                val strokePx = 4.dp.toPx()
                 val arcSize = Size(size.width - strokePx, size.height - strokePx)
                 val topLeft = Offset(strokePx / 2f, strokePx / 2f)
 
@@ -736,7 +987,7 @@ fun LuckyAnimationComboButton(
 }
 
 // ============================================================
-// LUCKY GIFT SEAT FLIGHT — Instant center small -> popup original size -> seat
+// LUCKY GIFT SEAT FLIGHT — Fast center popup -> simultaneous fan-out to seats
 // ============================================================
 data class LuckyGiftFlight(
     val id: String,
@@ -749,61 +1000,81 @@ data class LuckyGiftFlight(
 
 @Composable
 fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
+    val giftImageUrl = remember(flight.image) { luckyAnimationAssetUrl(flight.image) }
+    val currentOnFinished by rememberUpdatedState(onFinished)
+
+    if (giftImageUrl.isEmpty()) {
+        LaunchedEffect(flight.id) { currentOnFinished() }
+        return
+    }
+
     val density = LocalDensity.current
     val imageSizeDp = LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP.dp
     val halfImagePx = with(density) { imageSizeDp.toPx() } / 2f
 
-    // Direct screen center par choti image se start, zero delay
-    val posX = remember(flight.id) { Animatable(flight.rootCenter.x) }
-    val posY = remember(flight.id) { Animatable(flight.rootCenter.y) }
-    val scaleAnim = remember(flight.id) { Animatable(0.25f) }
-    val itemAlpha = remember(flight.id) { Animatable(1f) }
+    // Single Animatable (0f..1f center popup, 1f..2f fast flight to seat + end fade)
+    val motionProgress = remember(flight.id) { Animatable(0f) }
 
     LaunchedEffect(flight.id) {
-        // Center par choti se popup hoke seedha original size (1.0f) me aayegi
-        scaleAnim.animateTo(
-            targetValue = 1.0f,
-            animationSpec = tween(durationMillis = 130, easing = FastOutSlowInEasing)
+        motionProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = LUCKY_SEAT_POPUP_DURATION_MS,
+                easing = FastOutSlowInEasing,
+            ),
         )
-
-        // Turant seat par fly hogi
-        val flyXJob = launch {
-            posX.animateTo(
-                flight.target.x,
-                animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing)
-            )
-        }
-        val flyYJob = launch {
-            posY.animateTo(
-                flight.target.y,
-                animationSpec = tween(LUCKY_SEAT_FLIGHT_DURATION_MS, easing = FastOutSlowInEasing)
-            )
-        }
-        val fadeOutJob = launch {
-            delay((LUCKY_SEAT_FLIGHT_DURATION_MS - 100).coerceAtLeast(0).toLong())
-            itemAlpha.animateTo(0f, animationSpec = tween(100))
-        }
-        flyXJob.join()
-        flyYJob.join()
-        fadeOutJob.join()
-
-        onFinished()
+        motionProgress.animateTo(
+            targetValue = 2f,
+            animationSpec = tween(
+                durationMillis = LUCKY_SEAT_FLIGHT_DURATION_MS,
+                easing = FastOutSlowInEasing,
+            ),
+        )
+        currentOnFinished()
     }
 
-    Box(Modifier.fillMaxSize().zIndex(260f), contentAlignment = Alignment.TopStart) {
-        AsyncImage(
-            model = luckyAnimationAssetUrl(flight.image),
-            contentDescription = "Lucky gift animation",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .size(imageSizeDp)
-                .graphicsLayer {
-                    translationX = posX.value - halfImagePx
-                    translationY = posY.value - halfImagePx
-                    scaleX = scaleAnim.value
-                    scaleY = scaleAnim.value
-                    alpha = itemAlpha.value
-                }
-        )
+    val startX = flight.rootCenter.x
+    val startY = flight.rootCenter.y
+    val deltaX = flight.target.x - startX
+    val deltaY = flight.target.y - startY
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(260f),
+        contentAlignment = Alignment.TopStart,
+    ) {
+        key(flight.id, giftImageUrl) {
+            AsyncImage(
+                model = giftImageUrl,
+                contentDescription = "Lucky gift animation",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(imageSizeDp)
+                    .graphicsLayer {
+                        val progress = motionProgress.value
+                        if (progress <= 1f) {
+                            val pop = progress.coerceIn(0f, 1f)
+                            val scale = 0.35f + (0.65f * pop)
+                            translationX = startX - halfImagePx
+                            translationY = startY - halfImagePx
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = 1f
+                        } else {
+                            val fly = (progress - 1f).coerceIn(0f, 1f)
+                            translationX = (startX + deltaX * fly) - halfImagePx
+                            translationY = (startY + deltaY * fly) - halfImagePx
+                            scaleX = 1f
+                            scaleY = 1f
+                            alpha = if (fly > 0.68f) {
+                                (1f - ((fly - 0.68f) / 0.32f)).coerceIn(0f, 1f)
+                            } else {
+                                1f
+                            }
+                        }
+                    },
+            )
+        }
     }
 }
