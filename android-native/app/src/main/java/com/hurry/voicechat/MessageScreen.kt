@@ -758,7 +758,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
     ) {
         
         // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable(
+        Box(contentAlignment = Alignment.BottomCenter, modifier = if (isOfficial) Modifier else Modifier.clickable(
             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
             indication = null
         ) { onOpenProfile(RoomProfileUser(id = chat.uid, uid = chat.uid, accountId = chat.uid, name = chat.name, image = chat.image)) }) {
