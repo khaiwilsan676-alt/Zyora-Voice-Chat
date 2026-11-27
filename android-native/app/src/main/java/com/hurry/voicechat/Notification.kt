@@ -102,11 +102,7 @@ fun NotificationController() {
                     avatar = payload.optString("avatar").ifBlank { ZYORA_NOTIFICATION_PUBLIC + "default-avatar.png" },
                     name = payload.optString("name").ifBlank { "User" },
                     detail = "Win " + amount.toString() + " • " + if (dragonBattle) "Dragon Battle" else "Wild Party",
-                    giftImage = ZYORA_NOTIFICATION_PUBLIC + if (dragonBattle) {
-                        "IMG_20261121_020906.png"
-                    } else {
-                        "file_000000009d808211b8ffb7c2183b4ef5.png"
-                    },
+                    giftImage = ZYORA_NOTIFICATION_PUBLIC + "IMG_20261127_151231.png",
                     giftName = if (dragonBattle) "Dragon Battle" else "Wild Party"
                 )
             )
