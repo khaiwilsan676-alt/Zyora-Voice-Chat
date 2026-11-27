@@ -252,10 +252,20 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller>? = withCo
         coroutineScope {
             rows.map { seller ->
                 async {
-                    // Seller cards must show only this seller account's canonical wallet.
-                    // Never fall back to the viewer's wallet or merge balances from account-number lookup.
-                    val sellerWallet = fetchCanonicalWallet(seller.uid)
-                        ?.optLong("balance", 0L)?.coerceAtLeast(0L) ?: 0L
+                    // Read the dedicated Seller Center wallet, not the user's Coins wallet.
+                    val encodedSellerId = URLEncoder.encode(seller.uid, "UTF-8")
+                    val sellerWallet = runCatching {
+                        val connection = (URL("https://zyora-server.onrender.com/api/seller/wallet/$encodedSellerId").openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 12000
+                            readTimeout = 12000
+                            setRequestProperty("Cache-Control", "no-cache, no-store")
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) 0L
+                            else JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                                .optLong("balance", 0L).coerceAtLeast(0L)
+                        } finally { connection.disconnect() }
+                    }.getOrDefault(0L)
                     seller.copy(coins = sellerWallet)
                 }
             }.map { it.await() }
@@ -999,7 +1009,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text("Seller wallet:", fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1)
+                            Text("Deal of last 30 days:", fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1)
                             AsyncImage(
                                 model = RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
                                 contentDescription = "Coins",
