@@ -55,7 +55,11 @@ private fun formatRoomCupTotal(value: Long): String {
 /** Daily room cup total shown in the room's top cup pill. */
 @Composable
 fun RoomDailyCupTotal(roomId: String) {
-    var total by remember(roomId) { mutableStateOf(0L) }
+    val context = LocalContext.current
+    val dayKey = remember(roomId) { SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("Asia/Kolkata") }.format(Date()) }
+    val totalCacheKey = remember(roomId, dayKey) { "daily_total_${roomId.hashCode()}_${dayKey}" }
+    val prefs = remember { context.getSharedPreferences("zyora_room_cup_cache", android.content.Context.MODE_PRIVATE) }
+    var total by remember(roomId, dayKey) { mutableStateOf(prefs.getLong(totalCacheKey, 0L)) }
     var totalDayKey by remember(roomId) {
         mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("Asia/Kolkata")
@@ -104,7 +108,10 @@ fun RoomDailyCupTotal(roomId: String) {
             totalDayKey = todayKey
             total = 0L
         }
-        if (latest != null) total = maxOf(total, latest)
+        if (latest != null) {
+            total = maxOf(total, latest)
+            prefs.edit().putLong(totalCacheKey, total).apply()
+        }
     }
     Text(
         // Room header uses compact K/M/B formatting for the complete daily sent-gift coin total.
