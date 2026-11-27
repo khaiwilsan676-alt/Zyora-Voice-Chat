@@ -48,32 +48,31 @@ import kotlinx.coroutines.delay
 
 private fun luckyBagClaimName(claim: JSONObject): String {
     val user = claim.optJSONObject("user") ?: claim.optJSONObject("profile") ?: JSONObject()
-    return listOf("userName", "name", "displayName", "username", "fullName")
+    return listOf("name", "displayName", "userName", "username", "fullName", "nickname")
         .asSequence()
         .map { key -> claim.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
-        .firstOrNull { it.isNotBlank() }
-        ?: listOf("name", "displayName", "username", "fullName")
+        .firstOrNull { it.isNotBlank() && !it.equals("User", ignoreCase = true) }
+        ?: listOf("name", "displayName", "userName", "username", "fullName", "nickname")
             .asSequence().map { key -> user.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
-            .firstOrNull { it.isNotBlank() }
+            .firstOrNull { it.isNotBlank() && !it.equals("User", ignoreCase = true) }
         ?: "User"
 }
 
 private fun luckyBagClaimImage(claim: JSONObject): String {
     val user = claim.optJSONObject("user") ?: claim.optJSONObject("profile") ?: JSONObject()
-    return (listOf("userImage", "image", "avatar", "photoURL", "photoUrl", "dp", "picture", "profileImage")
+    val value = (listOf("image", "userImage", "avatar", "profileImageUrl", "profileImage", "photoURL", "photoUrl", "photo", "dp", "picture", "avatarUrl")
         .asSequence()
         .map { key -> claim.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
         .firstOrNull { it.isNotBlank() }
-        ?: listOf("image", "avatar", "photoURL", "photoUrl", "dp", "picture", "profileImage")
+        ?: listOf("image", "userImage", "avatar", "profileImageUrl", "profileImage", "photoURL", "photoUrl", "photo", "dp", "picture", "avatarUrl")
             .asSequence().map { key -> user.optString(key).takeUnless { it == "null" || it == "undefined" }.orEmpty() }
             .firstOrNull { it.isNotBlank() }
-        ?: "").let { value ->
-            when {
-                value.isBlank() -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png"
-                value.startsWith("/") -> "https://zyora-server.onrender.com$value"
-                else -> value
-            }
-        }
+        ?: "")
+    return when {
+        value.isBlank() -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png"
+        value.startsWith("/") -> "https://zyora-server.onrender.com$value"
+        else -> value
+    }
 }
 
 private const val LUCKY_BAG_SOCKET_URL = "https://zyora-server.onrender.com"
