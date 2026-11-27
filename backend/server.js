@@ -115,7 +115,22 @@ const liveLuckyBagTransactions = new Map();
 // Each Android client keeps its own SharedPreferences cache; Socket.IO synchronizes
 // live posts, likes and comments between currently connected users.
 const liveDiscoverPosts = new Map();
-const MAX_DISCOVER_POSTS = 500;
+const MAX_DISCOVER_POSTS = 20;
+const DISCOVER_POST_TTL_MS = 24 * 60 * 60 * 1000;
+function pruneExpiredDiscoverPosts() {
+  const cutoff = Date.now() - DISCOVER_POST_TTL_MS;
+  for (const [id, post] of liveDiscoverPosts.entries()) {
+    const createdAt = Number(post?.createdAt || 0);
+    if (!createdAt || createdAt < cutoff || createdAt > Date.now() + 5 * 60 * 1000) {
+      liveDiscoverPosts.delete(id);
+    }
+  }
+  while (liveDiscoverPosts.size > MAX_DISCOVER_POSTS) {
+    liveDiscoverPosts.delete(liveDiscoverPosts.keys().next().value);
+  }
+}
+const discoverExpiryTimer = setInterval(pruneExpiredDiscoverPosts, 60 * 1000);
+if (typeof discoverExpiryTimer.unref === "function") discoverExpiryTimer.unref();
 function publicDiscoverPost(post) {
   return {
     id: post.id, authorId: post.authorId, authorName: post.authorName,
@@ -2583,6 +2598,7 @@ app.get("/", (_req, res) => {
 
 io.on("connection", (socket) => {
   socket.on("discover_posts_request", (_payload = {}, acknowledge) => {
+    pruneExpiredDiscoverPosts();
     const posts = [...liveDiscoverPosts.values()]
       .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
       .map(publicDiscoverPost);
@@ -2590,6 +2606,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("discover_post_publish", (payload = {}, acknowledge) => {
+    pruneExpiredDiscoverPosts();
     const ack = (value) => { if (typeof acknowledge === "function") acknowledge(value); };
     const id = String(payload.id || "").trim().slice(0, 100);
     const authorId = String(payload.authorId || "").trim().slice(0, 120);
@@ -2627,6 +2644,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("discover_post_like", (payload = {}, acknowledge) => {
+    pruneExpiredDiscoverPosts();
     const ack = (value) => { if (typeof acknowledge === "function") acknowledge(value); };
     const post = liveDiscoverPosts.get(String(payload.postId || ""));
     const userId = String(payload.userId || "").trim().slice(0, 120);
@@ -2639,6 +2657,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("discover_post_comment", (payload = {}, acknowledge) => {
+    pruneExpiredDiscoverPosts();
     const ack = (value) => { if (typeof acknowledge === "function") acknowledge(value); };
     const post = liveDiscoverPosts.get(String(payload.postId || ""));
     const userId = String(payload.authorId || "").trim().slice(0, 120);
