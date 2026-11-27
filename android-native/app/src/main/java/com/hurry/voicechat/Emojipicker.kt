@@ -141,17 +141,17 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
 
     val stickers = listOf(
         EmojiSticker("gif_512", "Emoji", "${GITHUB_PUBLIC_BASE}512.gif", null, 1.1f),
-        EmojiSticker("gif_1", "Emoji 1", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f),
+        EmojiSticker("gif_1", "Shocked", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f),
         EmojiSticker("sad", "Sad", "${GITHUB_PUBLIC_BASE}512%20(6).gif", null, 1.1f),
-        EmojiSticker("gif_2", "Emoji 2", "${GITHUB_PUBLIC_BASE}512%20(2).gif", null, 1.1f),
-        EmojiSticker("gif_3", "Emoji 3", "${GITHUB_PUBLIC_BASE}512%20(3).gif", null, 1.1f),
+        EmojiSticker("gif_2", "Cry", "${GITHUB_PUBLIC_BASE}512%20(2).gif", null, 1.1f),
+        EmojiSticker("gif_3", "Blushing", "${GITHUB_PUBLIC_BASE}512%20(3).gif", null, 1.1f),
         EmojiSticker("pleading", "Pleading", "${GITHUB_PUBLIC_BASE}512%20(4).gif", null, 1.1f),
         EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f),
         EmojiSticker("rolling", "Rolling", "${GITHUB_PUBLIC_BASE}512%20(10).gif", null, 1.1f),
         EmojiSticker("unamused", "Unamused", "${GITHUB_PUBLIC_BASE}512%20(11).gif", null, 1.1f),
         EmojiSticker("irritating", "Irritating", "${GITHUB_PUBLIC_BASE}512%20(12).gif", null, 1.1f),
         EmojiSticker("smart", "Smart", "${GITHUB_PUBLIC_BASE}512%20(13).gif", null, 1.1f),
-        EmojiSticker("gif_14", "Emoji 14", "${GITHUB_PUBLIC_BASE}512%20(14).gif", null, 1.1f),
+        EmojiSticker("gif_14", "Kiss R", "${GITHUB_PUBLIC_BASE}512%20(14).gif", null, 1.1f),
         EmojiSticker("loving", "Loving", "${GITHUB_PUBLIC_BASE}512%20(15).gif", null, 1.1f),
         EmojiSticker("party", "Party", "${GITHUB_PUBLIC_BASE}512%20(16).gif", null, 1.1f)
     )
@@ -184,7 +184,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Tab("Emojis", activeTab == "emojis") { activeTab = "emojis" }
+                    Tab("Smile", activeTab == "emojis") { activeTab = "emojis" }
                     Spacer(Modifier.width(32.dp))
                     Tab("Premium", activeTab == "premium") { activeTab = "premium" }
                 }
