@@ -84,7 +84,8 @@ fun NotificationController() {
                     name = payload.optString("senderName").ifBlank { "User" },
                     detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
                     giftImage = ZYORA_NOTIFICATION_PUBLIC + "IMG_20261127_152115.png",
-                    giftName = payload.optString("giftName").ifBlank { "Gift" }
+                    giftName = payload.optString("giftName").ifBlank { "Gift" },
+                    useImageBanner = true
                 )
             )
         }
