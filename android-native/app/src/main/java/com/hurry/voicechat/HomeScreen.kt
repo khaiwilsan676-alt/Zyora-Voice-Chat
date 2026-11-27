@@ -220,7 +220,8 @@ fun HomeScreen(
     languageCode: String = "en",
     selectedTab: HurryTab = HurryTab.HOME,
     onTabSelected: (HurryTab) -> Unit = {},
-    unreadMessageCount: Int = 0
+    unreadMessageCount: Int = 0,
+    onDiscover: () -> Unit = {}
 ) {
     val mine = mineSelected
     val context = LocalContext.current
@@ -398,7 +399,7 @@ fun HomeScreen(
         Box(Modifier.fillMaxSize()) {
             MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, followingRooms = followingRooms, onOpenRoom = onRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
             Box(Modifier.align(Alignment.BottomCenter)) {
-                HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected)
+                HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected, discoverSelected = false, onDiscover = onDiscover)
             }
         }
         return
