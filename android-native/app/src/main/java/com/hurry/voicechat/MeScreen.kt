@@ -345,6 +345,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             NativeAvatarFrameOverlay(
                                 userId = prefs.getString("accountId", uid).orEmpty().ifBlank { uid },
                                 modifier = Modifier.size(84.dp).offset(y = 3.dp),
+                                gemshineOffsetY = 4.dp,
                                 fallbackUserIds = listOf(uid)
                             )
                         }
