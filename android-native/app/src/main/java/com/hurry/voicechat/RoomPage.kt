@@ -344,13 +344,15 @@ fun RoomPage(
         }
     }
     val roomDisplayName = cachedCurrentProfile?.let { profile ->
-        sequenceOf("name", "displayName", "userName", "nickname")
-            .map { profile.optString(it, "").trim() }
-            .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
+        val nested = profile.optJSONObject("profile") ?: profile.optJSONObject("userData") ?: profile.optJSONObject("user") ?: JSONObject()
+        sequenceOf("name", "displayName", "userName", "username", "nickname", "fullName", "profileName")
+            .flatMap { key -> sequenceOf(profile.optString(key, "").trim(), nested.optString(key, "").trim()) }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && !it.equals("User", ignoreCase = true) }
     } ?: currentUser.name.trim().takeIf { it.isNotBlank() && !it.equals("User", ignoreCase = true) } ?: "User"
     val roomDisplayImage = cachedCurrentProfile?.let { profile ->
-        sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
-            .map { profile.optString(it, "").trim() }
+        val nested = profile.optJSONObject("profile") ?: profile.optJSONObject("userData") ?: profile.optJSONObject("user") ?: JSONObject()
+        sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture", "profilePic", "profilePicture", "avatar_url")
+            .flatMap { key -> sequenceOf(profile.optString(key, "").trim(), nested.optString(key, "").trim()) }
             .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
     } ?: currentUser.image.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
         ?: ZYORA_DEFAULT_AVATAR_URL
