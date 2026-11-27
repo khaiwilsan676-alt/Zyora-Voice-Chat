@@ -1123,31 +1123,31 @@ fun RoomSettingPage(
             }
         }
 
-        "admin-help" -> CenteredModal(scrimAlpha = 0.6f, onDismiss = { sheet = "admin" }) {
+        "admin-help" -> CenteredModal(scrimAlpha = 0f, onDismiss = { sheet = "admin" }) {
             Box(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp).widthIn(max = 320.dp)
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp).widthIn(max = 280.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFFFFDF3))
-                    .border(1.dp, yellowBorder, RoundedCornerShape(16.dp))
+                    .background(Color.Black.copy(alpha = 0.70f))
+                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp))
             ) {
                 Column {
-                    Box(Modifier.fillMaxWidth().background(yellowCard1)) {
+                    Box(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.70f))) {
                         Text(
                             "Room Admin",
                             Modifier.fillMaxWidth().padding(vertical = 14.dp),
-                            color = yellowInkDark, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                            color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
                         )
                     }
-                    Column(Modifier.background(yellowCard2).padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(Modifier.background(Color.Black.copy(alpha = 0.70f)).padding(horizontal = 16.dp, vertical = 8.dp)) {
                         Text(
                             "Admin permissions include:",
-                            color = yellowInkDark, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
+                            color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "locking the mic, muting the mic, kicking someone out, inviting someone, removing someone from a seat, and playing music.",
-                            color = yellowInk, fontSize = 12.sp, lineHeight = 18.sp
+                            color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, lineHeight = 18.sp
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
@@ -1167,7 +1167,7 @@ fun RoomSettingPage(
                         Spacer(Modifier.height(12.dp))
                         Column(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
-                                .border(1.dp, yellowBorder, RoundedCornerShape(8.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                         ) {
                             listOf(
                                 "Level 25" to "+5 admins",
@@ -1176,15 +1176,15 @@ fun RoomSettingPage(
                             ).forEachIndexed { idx, (lvl, cnt) ->
                                 Row(
                                     Modifier.fillMaxWidth()
-                                        .background(if (idx % 2 == 0) Color(0xFFFAEEC2) else yellowCard1)
+                                        .background(Color.Black.copy(alpha = if (idx % 2 == 0) 0.42f else 0.30f))
                                 ) {
                                     Text(
                                         lvl, Modifier.weight(1f).padding(8.dp),
-                                        color = yellowInk, fontSize = 11.sp
+                                        color = Color.White, fontSize = 11.sp
                                     )
                                     Text(
                                         cnt, Modifier.weight(1f).padding(8.dp),
-                                        color = yellowInk, fontSize = 11.sp, textAlign = TextAlign.Center
+                                        color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -1192,8 +1192,8 @@ fun RoomSettingPage(
                         Spacer(Modifier.height(16.dp))
                         PillButton(
                             "Close",
-                            color = yellowBtn,
-                            textColor = yellowInk,
+                            color = Color(0xFF303030),
+                            textColor = Color.White,
                             onClick = { sheet = "admin" }
                         )
                     }
