@@ -635,25 +635,19 @@ private fun DiscoverFeedCard(
 
 @Composable
 private fun DiscoverGenderTag(gender: String) {
-    val isFemale = gender.trim().lowercase().startsWith("f")
-    val bgColor = if (isFemale) Color(0xFFFCE7F3) else Color(0xFFDBEAFE)
-    val fgColor = if (isFemale) Color(0xFFEC4899) else Color(0xFF2563EB)
-    val symbol = if (isFemale) "♀" else "♂"
+    // Match the PublicProfile gender tag exactly: same gender normalization,
+    // circular 20dp badge, colors, and shared gender icon.
+    val genderStr = gender.trim().ifEmpty { "Male" }
+    val isFemale = genderStr.equals("female", ignoreCase = true)
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bgColor)
-            .padding(horizontal = 6.dp, vertical = 1.dp),
+            .size(20.dp)
+            .clip(CircleShape)
+            .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6)),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = symbol,
-            color = fgColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 13.sp
-        )
+        CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
     }
 }
 
