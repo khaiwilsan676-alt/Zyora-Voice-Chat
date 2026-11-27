@@ -145,7 +145,21 @@ private object DiscoverPostStore {
         while (posts.size > MAX_POSTS) posts.removeAt(posts.lastIndex)
     }
 
-    fun fromJson(item: JSONObject, currentUserId: String): DiscoverPostItem {
+    private fun persistRemoteImage(context: Context, postId: String, index: Int, value: String): String {
+        if (!value.startsWith("data:image/")) return value
+        return runCatching {
+            val comma = value.indexOf(',')
+            require(comma > 0)
+            val bytes = Base64.decode(value.substring(comma + 1), Base64.DEFAULT)
+            val directory = File(context.filesDir, "discover_received").apply { mkdirs() }
+            val safeId = postId.hashCode().toUInt().toString(16)
+            val target = File(directory, "${safeId}_${index}.jpg")
+            target.writeBytes(bytes)
+            target.absolutePath
+        }.getOrDefault("")
+    }
+
+    fun fromJson(item: JSONObject, currentUserId: String, context: Context): DiscoverPostItem {
         val images = item.optJSONArray("images") ?: JSONArray()
         val commentsJson = item.optJSONArray("comments") ?: JSONArray()
         val comments = (0 until commentsJson.length()).mapNotNull { index ->
@@ -163,7 +177,10 @@ private object DiscoverPostStore {
             authorAvatar = item.optString("authorAvatar"),
             authorGender = item.optString("authorGender", "male"),
             text = item.optString("text"),
-            images = (0 until images.length()).map { images.optString(it) },
+            images = (0 until images.length()).mapNotNull { index ->
+                persistRemoteImage(context, item.optString("id"), index, images.optString(index))
+                    .takeIf { it.isNotBlank() }
+            },
             createdAt = item.optLong("createdAt"), likeCount = item.optInt("likeCount"),
             liked = liked, isMine = item.optString("authorId") == currentUserId,
             comments = comments
@@ -255,13 +272,13 @@ fun DiscoverPage(
         val onCreated = io.socket.emitter.Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             mainHandler.post {
-                runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId)); DiscoverPostStore.save(context) }
+                runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId, context)); DiscoverPostStore.save(context) }
             }
         }
         val onUpdated = io.socket.emitter.Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             mainHandler.post {
-                runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId)); DiscoverPostStore.save(context) }
+                runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId, context)); DiscoverPostStore.save(context) }
             }
         }
         val requestFeed = {
@@ -272,7 +289,7 @@ fun DiscoverPage(
                 mainHandler.post {
                     for (i in 0 until array.length()) {
                         val item = array.optJSONObject(i) ?: continue
-                        runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(item, currentUserId)) }
+                        runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(item, currentUserId, context)) }
                     }
                     DiscoverPostStore.save(context)
                 }
@@ -423,7 +440,7 @@ fun DiscoverPage(
                             if (response?.optBoolean("ok") == true && serverPost != null) {
                                 mainHandler.post {
                                     runCatching {
-                                        DiscoverPostStore.upsert(DiscoverPostStore.fromJson(serverPost, currentUserId))
+                                        DiscoverPostStore.upsert(DiscoverPostStore.fromJson(serverPost, currentUserId, context))
                                         DiscoverPostStore.save(context)
                                     }
                                 }
