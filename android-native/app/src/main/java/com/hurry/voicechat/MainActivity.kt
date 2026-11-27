@@ -461,26 +461,36 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         roomAccessCheckInProgress = true
         roomCreateScope.launch {
             val access = withContext(Dispatchers.IO) {
-                runCatching {
-                    val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                        doOutput = true
-                        setRequestProperty("Content-Type", "application/json")
-                        setRequestProperty("Accept", "application/json")
-                        setRequestProperty("Cache-Control", "no-cache")
+                // Render's free instance can be asleep on the first room entry.
+                // Retry one transient connection failure instead of immediately showing
+                // the misleading "Please try again" popup to a user who is allowed in.
+                var result: JSONObject? = null
+                repeat(2) { attempt ->
+                    if (result == null) {
+                        result = runCatching {
+                            val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
+                                requestMethod = "POST"
+                                connectTimeout = 15000
+                                readTimeout = 60000
+                                doOutput = true
+                                setRequestProperty("Content-Type", "application/json")
+                                setRequestProperty("Accept", "application/json")
+                                setRequestProperty("Cache-Control", "no-cache")
+                            }
+                            try {
+                                val payload = JSONObject().put("roomId", roomIdToCheck)
+                                    .put("userId", joiningAccountId).put("password", roomPassword)
+                                connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+                                val code = connection.responseCode
+                                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                                JSONObject(stream?.bufferedReader()?.use { it.readText() }.orEmpty().ifBlank { "{}" })
+                                    .put("_httpCode", code)
+                            } finally { connection.disconnect() }
+                        }.getOrNull()
                     }
-                    try {
-                        val payload = JSONObject().put("roomId", roomIdToCheck)
-                            .put("userId", joiningAccountId).put("password", roomPassword)
-                        connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
-                        val code = connection.responseCode
-                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                        JSONObject(stream?.bufferedReader()?.use { it.readText() }.orEmpty().ifBlank { "{}" })
-                            .put("_httpCode", code)
-                    } finally { connection.disconnect() }
-                }.getOrNull()
+                    if (result == null && attempt == 0) kotlinx.coroutines.delay(1200)
+                }
+                result
             }
             roomAccessCheckInProgress = false
             // A live kick may arrive while this asynchronous join check is still in flight.
