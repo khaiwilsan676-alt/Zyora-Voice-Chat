@@ -1725,12 +1725,12 @@ fun RoomPage(
                                 messages.add(
                                     NativeRoomMessage(
                                         id = noticeId,
-                                        text = if (updatedPublicMsgOff) "Public Message OFF" else "Public message ON",
+                                        text = if (updatedPublicMsgOff) "Public Message OFF" else "Public Message ON",
                                         sender = "System",
                                         senderImage = "",
                                         senderAccountId = roomId,
                                         timestamp = payload.optLong("publicMsgUpdatedAt", payload.optLong("updatedAt", System.currentTimeMillis())),
-                                        type = "message"
+                                        type = "pk_system"
                                     )
                                 )
                             }
