@@ -379,8 +379,12 @@ fun PublicProfileScreen(
     }
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
+        // Keep SQLite reads off the Compose main thread; profile UI already renders
+        // immediately from TargetUser and the first cache snapshot above.
         val cache = NativeIndexDatabase(context)
-        val cached = profileCacheKeys.firstNotNullOfOrNull { cache.loadProfile(it) }
+        val cached = withContext(Dispatchers.IO) {
+            profileCacheKeys.firstNotNullOfOrNull { key -> runCatching { cache.loadProfile(key) }.getOrNull() }
+        }
         val remote = ProfilePersistence.load(targetUser)
         // Republish families created by older app builds under the real Firebase UID.
         if (!isOtherUser && familyPrefs.getBoolean("familyCreated", false) && remote?.optBoolean("familyCreated", false) != true) {
@@ -486,7 +490,12 @@ fun PublicProfileScreen(
             else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + syncedRewardTagFile
         } else ""
 
-        if (profileCacheKey.isNotBlank()) listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { cache.saveProfile(it!!, merged) }
+        if (profileCacheKey.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey)
+                    .filter { !it.isNullOrBlank() }.distinct().forEach { cache.saveProfile(it!!, merged) }
+            }
+        }
         liveProfileTags = merged
         val remoteFamilyCode = merged.optString("familyCode").takeIf { it.isNotBlank() && it != "null" }
             ?: merged.optString("familyId").takeIf { it.isNotBlank() && it != "null" }.orEmpty()
