@@ -1648,7 +1648,7 @@ fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
         // Keep notification playback on ExoPlayer's direct TextureView path.
         // The custom GL chroma SurfaceTexture renderer is not reliable in this
         // short-lived room banner and can leave the video completely invisible.
-        greenRemove = false,
+        greenRemove = isGreenScreenGiftVideo(resolved),
         onFinished = onFinished,
         onStarted = {},
     )
