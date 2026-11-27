@@ -1109,6 +1109,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     ))
                 }
             )
+            NotificationController()
         }
     }
 }
