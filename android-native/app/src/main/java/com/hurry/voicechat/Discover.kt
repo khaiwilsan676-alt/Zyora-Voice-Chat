@@ -1,8 +1,11 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.graphics.Color as AndroidColor
 import android.net.Uri
+import android.os.Build
 import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -48,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -74,13 +78,13 @@ private data class DiscoverPostItem(
     val authorId: String,
     val authorName: String,
     val authorAvatar: String,
+    val authorGender: String = "male",
     val text: String,
     val images: List<String>,
     val createdAt: Long,
     val likeCount: Int = 0,
     val liked: Boolean = false,
     val isMine: Boolean = true,
-    val isFollowed: Boolean = false,
     val comments: List<DiscoverCommentItem> = emptyList()
 )
 
@@ -115,12 +119,16 @@ fun DiscoverPage(
             .firstOrNull { it.isNotBlank() && !it.equals("null", true) }
             .orEmpty()
     }
+    val currentUserGender = remember {
+        sequenceOf("gender", "sex")
+            .mapNotNull { authPrefs.getString(it, null)?.trim() }
+            .firstOrNull { it.isNotBlank() && !it.equals("null", true) }
+            ?: "male"
+    }
 
-    // Direct state read so like/comment/follow updates recompose immediately.
     // Mine tab shows ONLY posts created by the current user.
     val visiblePosts = when (selectedTab) {
         "Mine" -> DiscoverPostStore.posts.filter { it.isMine && it.authorId == currentUserId }
-        "Following" -> DiscoverPostStore.posts.filter { it.isFollowed }
         else -> DiscoverPostStore.posts.toList()
     }
 
@@ -148,8 +156,8 @@ fun DiscoverPage(
                         .height(68.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf("Mine", "Following", "Discover").forEach { item ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("Mine", "Discover").forEach { item ->
                             val isSelected = selectedTab == item
                             Box(
                                 modifier = Modifier
@@ -162,7 +170,7 @@ fun DiscoverPage(
                             ) {
                                 Text(
                                     text = item,
-                                    fontSize = 21.sp,
+                                    fontSize = 18.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     color = if (isSelected) Color(0xFF1E1E1E) else Color(0xFF6B7280)
                                 )
@@ -172,7 +180,7 @@ fun DiscoverPage(
                 }
             }
 
-            // ═══════════ POSTS FEED (2ND IMAGE STYLE CARD) ═══════════
+            // ═══════════ POSTS FEED ═══════════
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -199,33 +207,24 @@ fun DiscoverPage(
                         onOpenComments = {
                             activeCommentPostId = post.id
                         },
-                        onToggleFollow = {
-                            val idx = DiscoverPostStore.posts.indexOfFirst { it.id == post.id }
-                            if (idx >= 0) {
-                                val current = DiscoverPostStore.posts[idx]
-                                DiscoverPostStore.posts[idx] = current.copy(
-                                    isFollowed = !current.isFollowed
-                                )
-                            }
-                        },
                         onMoreClick = {}
                     )
                 }
             }
         }
 
-        // ═══════════ BOTTOM RIGHT 3D PENCIL FAB (35DP FROM BOTTOM) ═══════════
+        // ═══════════ BOTTOM RIGHT 3D BLUE PENCIL FAB (EXACT HOMEPAGE IMAGE SPACE) ═══════════
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 35.dp)
+                .padding(end = 12.dp, bottom = 110.dp)
         ) {
             DiscoverPencilFab3D(
                 onClick = { showCreatePost = true }
             )
         }
 
-        // ═══════════ FULL SCREEN CREATE POST PAGE (NO TOP GAP) ═══════════
+        // ═══════════ FULL SCREEN UPLOAD POST PAGE (EDGE-TO-EDGE WHITE, NO BLACK TOP) ═══════════
         if (showCreatePost) {
             DiscoverCreatePostFullScreen(
                 onDismiss = { showCreatePost = false },
@@ -237,13 +236,13 @@ fun DiscoverPage(
                             authorId = currentUserId,
                             authorName = currentUserName,
                             authorAvatar = currentUserAvatar,
+                            authorGender = currentUserGender,
                             text = postText,
                             images = imagePaths,
                             createdAt = System.currentTimeMillis(),
                             likeCount = 0,
                             liked = false,
                             isMine = true,
-                            isFollowed = false,
                             comments = emptyList()
                         )
                     )
@@ -282,14 +281,13 @@ fun DiscoverPage(
 }
 
 // ═══════════════════════════════════════════════════════
-// FEED POST CARD (EXACT 2ND IMAGE LAYOUT + BLUE + PILL + 3 DOTS)
+// FEED POST CARD (AVATAR TOP ROW + CONTENT BELOW AVATAR LEFT CORNER)
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun DiscoverFeedCard(
     post: DiscoverPostItem,
     onToggleLike: () -> Unit,
     onOpenComments: () -> Unit,
-    onToggleFollow: () -> Unit,
     onMoreClick: () -> Unit
 ) {
     Column(
@@ -298,15 +296,15 @@ private fun DiscoverFeedCard(
             .background(Color.White)
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
+        // ── Top Row: Avatar + Black Username + Gender Tag + 3 Vertical Dots ──
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Circular User Avatar
             if (post.authorAvatar.isBlank()) {
                 DefaultUserAvatarIcon(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                 )
             } else {
@@ -314,7 +312,7 @@ private fun DiscoverFeedCard(
                     model = post.authorAvatar,
                     contentDescription = post.authorName,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFE5E7EB)),
                     contentScale = ContentScale.Crop
@@ -323,121 +321,114 @@ private fun DiscoverFeedCard(
 
             Spacer(Modifier.width(10.dp))
 
-            // Right Content Column (Username + Blue + Pill + 3 Dots + Text + Images + Time/Like/Comment)
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = post.authorName,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                Spacer(Modifier.width(6.dp))
+
+                DiscoverGenderTag(gender = post.authorGender)
+            }
+
+            Spacer(Modifier.width(6.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) { onMoreClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                DiscoverThreeVerticalDotsIcon(
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // ── Below Avatar (Left Corner Aligned): Text, Images, Time + Like + Comment ──
+        if (post.text.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = post.text,
+                fontSize = 14.sp,
+                color = Color(0xFF374151),
+                lineHeight = 19.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (post.images.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            DiscoverPostImageGrid(images = post.images)
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatDiscoverTime(post.createdAt),
+                fontSize = 12.sp,
+                color = Color(0xFF9CA3AF)
+            )
+            Spacer(Modifier.weight(1f))
+
+            Row(
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) { onToggleLike() }
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                DiscoverHeartIcon(
+                    liked = post.liked,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = post.likeCount.toString(),
+                    fontSize = 13.sp,
+                    color = if (post.liked) Color(0xFFEF4444) else Color(0xFF9CA3AF)
+                )
+            }
+
+            Spacer(Modifier.width(20.dp))
+
+            Row(
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) { onOpenComments() }
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                DiscoverCommentIcon(
+                    modifier = Modifier.size(20.dp)
+                )
+                if (post.comments.isNotEmpty()) {
                     Text(
-                        text = post.authorName,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFD97706),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Exact Pill Outline (+) Icon in Blue Color
-                    DiscoverBluePlusPillIcon(
-                        followed = post.isFollowed,
-                        onClick = onToggleFollow
-                    )
-
-                    Spacer(Modifier.width(6.dp))
-
-                    // 3 Vertical Dots Right After (+)
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable(
-                                interactionSource = null,
-                                indication = null
-                            ) { onMoreClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        DiscoverThreeVerticalDotsIcon(
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                if (post.text.isNotBlank()) {
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        text = post.text,
-                        fontSize = 14.sp,
-                        color = Color(0xFF374151),
-                        lineHeight = 19.sp
-                    )
-                }
-
-                if (post.images.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    DiscoverPostImageGrid(images = post.images)
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                // Bottom Bar: Time Left, Heart + Count + Comment Right
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = formatDiscoverTime(post.createdAt),
-                        fontSize = 12.sp,
+                        text = post.comments.size.toString(),
+                        fontSize = 13.sp,
                         color = Color(0xFF9CA3AF)
                     )
-                    Spacer(Modifier.weight(1f))
-
-                    Row(
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = null,
-                                indication = null
-                            ) { onToggleLike() }
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        DiscoverHeartIcon(
-                            liked = post.liked,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = post.likeCount.toString(),
-                            fontSize = 13.sp,
-                            color = if (post.liked) Color(0xFFEF4444) else Color(0xFF9CA3AF)
-                        )
-                    }
-
-                    Spacer(Modifier.width(20.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = null,
-                                indication = null
-                            ) { onOpenComments() }
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        DiscoverCommentIcon(
-                            modifier = Modifier.size(20.dp)
-                        )
-                        if (post.comments.isNotEmpty()) {
-                            Text(
-                                text = post.comments.size.toString(),
-                                fontSize = 13.sp,
-                                color = Color(0xFF9CA3AF)
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -448,6 +439,30 @@ private fun DiscoverFeedCard(
                 .fillMaxWidth()
                 .height(0.8.dp)
                 .background(Color(0xFFF1F5F9))
+        )
+    }
+}
+
+@Composable
+private fun DiscoverGenderTag(gender: String) {
+    val isFemale = gender.trim().lowercase().startsWith("f")
+    val bgColor = if (isFemale) Color(0xFFFCE7F3) else Color(0xFFDBEAFE)
+    val fgColor = if (isFemale) Color(0xFFEC4899) else Color(0xFF2563EB)
+    val symbol = if (isFemale) "♀" else "♂"
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bgColor)
+            .padding(horizontal = 6.dp, vertical = 1.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = symbol,
+            color = fgColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 13.sp
         )
     }
 }
@@ -471,7 +486,8 @@ private fun DiscoverCommentBottomSheet(
             decorFitsSystemWindows = false
         )
     ) {
-        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        val view = LocalView.current
+        val dialogWindow = (view.parent as? DialogWindowProvider)?.window
         SideEffect {
             dialogWindow?.let { window ->
                 window.setDimAmount(0f)
@@ -479,6 +495,20 @@ private fun DiscoverCommentBottomSheet(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                @Suppress("DEPRECATION")
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                @Suppress("DEPRECATION")
+                window.statusBarColor = AndroidColor.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = AndroidColor.TRANSPARENT
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val params = window.attributes
+                    params.layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    window.attributes = params
+                }
             }
         }
 
@@ -659,7 +689,6 @@ private fun DiscoverCommentBottomSheet(
 
                     Spacer(Modifier.width(10.dp))
 
-                    // Outside Input Right Corner: Blue Circle + White Send Icon
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -738,7 +767,7 @@ private fun formatDiscoverTime(createdAt: Long): String {
 }
 
 // ═══════════════════════════════════════════════════════
-// FULL-SCREEN CREATE POST SHEET (NO GAP FROM TOP)
+// FULL-SCREEN UPLOAD POST PAGE (TRUE EDGE-TO-EDGE WHITE, NO BLACK TOP)
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun DiscoverCreatePostFullScreen(
@@ -792,14 +821,34 @@ private fun DiscoverCreatePostFullScreen(
             decorFitsSystemWindows = false
         )
     ) {
-        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        val view = LocalView.current
+        val dialogWindow = (view.parent as? DialogWindowProvider)?.window
         SideEffect {
             dialogWindow?.let { window ->
                 window.setDimAmount(0f)
+                window.setBackgroundDrawableResource(android.R.color.white)
                 window.setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                @Suppress("DEPRECATION")
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                @Suppress("DEPRECATION")
+                window.statusBarColor = AndroidColor.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = AndroidColor.WHITE
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val params = window.attributes
+                    params.layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    window.attributes = params
+                }
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = true
+                    isAppearanceLightNavigationBars = true
+                }
             }
         }
 
@@ -811,19 +860,20 @@ private fun DiscoverCreatePostFullScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.White)
                     .statusBarsPadding()
                     .navigationBarsPadding()
                     .imePadding()
             ) {
-                // ── Top Bar: Back Arrow Left + Small 3D Blue Post Pill Right ──
-                Row(
+                // ── Top Bar: Back Arrow Left + Middle Heading "Upload" + Small 3D Blue Post Pill Right ──
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Box(
                         modifier = Modifier
+                            .align(Alignment.CenterStart)
                             .size(36.dp)
                             .clip(CircleShape)
                             .clickable(
@@ -835,23 +885,38 @@ private fun DiscoverCreatePostFullScreen(
                         DiscoverBackArrowIcon(modifier = Modifier.size(24.dp))
                     }
 
-                    Spacer(Modifier.weight(1f))
-
-                    DiscoverPostBluePill3D(
-                        enabled = postText.isNotBlank() || selectedImages.isNotEmpty(),
-                        onClick = {
-                            if (postText.isNotBlank() || selectedImages.isNotEmpty()) {
-                                onPublish(postText.trim(), selectedImages.toList())
-                            }
-                        }
+                    Text(
+                        text = "Upload",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.align(Alignment.Center)
                     )
+
+                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                        DiscoverPostBluePill3D(
+                            enabled = postText.isNotBlank() || selectedImages.isNotEmpty(),
+                            onClick = {
+                                if (postText.isNotBlank() || selectedImages.isNotEmpty()) {
+                                    onPublish(postText.trim(), selectedImages.toList())
+                                }
+                            }
+                        )
+                    }
                 }
 
-                // ── Below Back Icon: Grey Square Card (+) with 12dp Corner Radius ──
+                // ── Title: Image (Left Corner Before + Card) ──
+                Text(
+                    text = "Image",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1F2937),
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+                )
+
+                // ── Grey Square Card (+) with 12dp Corner Radius ──
                 LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -925,6 +990,15 @@ private fun DiscoverCreatePostFullScreen(
                 }
 
                 Spacer(Modifier.height(16.dp))
+
+                // ── Title: Description (Left Corner Above Input Box) ──
+                Text(
+                    text = "Description",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1F2937),
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
 
                 // ── Large Grey Input Square Box with 0/300 Counter ──
                 Box(
@@ -1006,17 +1080,17 @@ private fun DiscoverCreatePostFullScreen(
 }
 
 // ═══════════════════════════════════════════════════════
-// 3D GREEN PENCIL FAB (EXACT 1ST IMAGE STYLE)
+// 3D BLUE PENCIL FAB
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun DiscoverPencilFab3D(
     onClick: () -> Unit
 ) {
-    val green3DBrush = Brush.linearGradient(
+    val blue3DBrush = Brush.linearGradient(
         colors = listOf(
-            Color(0xFF55E875),
-            Color(0xFF2CD39B),
-            Color(0xFF14B8A6)
+            Color(0xFF60A5FA),
+            Color(0xFF3B82F6),
+            Color(0xFF1D4ED8)
         ),
         start = Offset(90f, 0f),
         end = Offset(0f, 120f)
@@ -1028,17 +1102,17 @@ private fun DiscoverPencilFab3D(
             .shadow(
                 elevation = 12.dp,
                 shape = CircleShape,
-                ambientColor = Color(0xFF22C55E),
-                spotColor = Color(0xFF14B8A6)
+                ambientColor = Color(0xFF2563EB),
+                spotColor = Color(0xFF1D4ED8)
             )
             .clip(CircleShape)
-            .background(green3DBrush)
+            .background(blue3DBrush)
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
                         Color.White.copy(alpha = 0.55f),
-                        Color(0xFF0F766E).copy(alpha = 0.25f)
+                        Color(0xFF1E3A8A).copy(alpha = 0.30f)
                     )
                 ),
                 shape = CircleShape
@@ -1067,7 +1141,7 @@ private fun DiscoverPencilFab3D(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         Color.Transparent,
-                        Color(0xFF0F766E).copy(alpha = 0.24f)
+                        Color(0xFF1E3A8A).copy(alpha = 0.28f)
                     ),
                     startY = size.height * 0.6f,
                     endY = size.height
@@ -1087,7 +1161,7 @@ private fun DiscoverPencilFab3D(
                 val eraserHeight = 5.0f * s
 
                 drawRoundRect(
-                    color = Color.Black.copy(alpha = 0.12f),
+                    color = Color.Black.copy(alpha = 0.14f),
                     topLeft = Offset(left + shadowOffset, eraserTop + shadowOffset),
                     size = Size(pencilWidth, eraserHeight),
                     cornerRadius = CornerRadius(3.2f * s, 3.2f * s)
@@ -1115,7 +1189,7 @@ private fun DiscoverPencilFab3D(
                     lineTo(left + shadowOffset, bodyTop + bodyHeight + shadowOffset)
                     close()
                 }
-                drawPath(path = shadowPath, color = Color.Black.copy(alpha = 0.12f))
+                drawPath(path = shadowPath, color = Color.Black.copy(alpha = 0.14f))
                 drawPath(path = tipPath, color = Color.White)
             }
         }
@@ -1123,7 +1197,7 @@ private fun DiscoverPencilFab3D(
 }
 
 // ═══════════════════════════════════════════════════════
-// SMALL 3D BLUE POST PILL BUTTON (TOP RIGHT)
+// COMPACT 3D BLUE POST PILL BUTTON (TOP RIGHT)
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun DiscoverPostBluePill3D(
@@ -1151,7 +1225,7 @@ private fun DiscoverPostBluePill3D(
     Box(
         modifier = Modifier
             .shadow(
-                elevation = 7.dp,
+                elevation = 5.dp,
                 shape = RoundedCornerShape(50),
                 ambientColor = Color(0xFF2563EB),
                 spotColor = Color(0xFF1D4ED8)
@@ -1172,13 +1246,13 @@ private fun DiscoverPostBluePill3D(
                 interactionSource = null,
                 indication = null
             ) { onClick() }
-            .padding(horizontal = 18.dp, vertical = 7.dp),
+            .padding(horizontal = 13.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "Post",
             color = Color.White,
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -1187,58 +1261,6 @@ private fun DiscoverPostBluePill3D(
 // ═══════════════════════════════════════════════════════
 // VECTOR CANVAS ICONS
 // ═══════════════════════════════════════════════════════
-@Composable
-private fun DiscoverBluePlusPillIcon(
-    followed: Boolean,
-    onClick: () -> Unit
-) {
-    val blueColor = Color(0xFF3B82F6)
-    Box(
-        modifier = Modifier
-            .width(38.dp)
-            .height(22.dp)
-            .clip(RoundedCornerShape(50))
-            .background(if (followed) blueColor.copy(alpha = 0.12f) else Color.Transparent)
-            .border(1.6.dp, blueColor, RoundedCornerShape(50))
-            .clickable(
-                interactionSource = null,
-                indication = null
-            ) { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.size(11.dp)) {
-            val stroke = 1.8.dp.toPx()
-            if (followed) {
-                val checkPath = Path().apply {
-                    moveTo(size.width * 0.12f, size.height * 0.54f)
-                    lineTo(size.width * 0.42f, size.height * 0.82f)
-                    lineTo(size.width * 0.90f, size.height * 0.22f)
-                }
-                drawPath(
-                    path = checkPath,
-                    color = blueColor,
-                    style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-            } else {
-                drawLine(
-                    color = blueColor,
-                    start = Offset(size.width / 2f, size.height * 0.08f),
-                    end = Offset(size.width / 2f, size.height * 0.92f),
-                    strokeWidth = stroke,
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color = blueColor,
-                    start = Offset(size.width * 0.08f, size.height / 2f),
-                    end = Offset(size.width * 0.92f, size.height / 2f),
-                    strokeWidth = stroke,
-                    cap = StrokeCap.Round
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun DiscoverThreeVerticalDotsIcon(modifier: Modifier = Modifier) {
     Canvas(modifier) {
