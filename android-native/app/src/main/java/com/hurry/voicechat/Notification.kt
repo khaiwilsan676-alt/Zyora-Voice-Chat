@@ -187,7 +187,7 @@ fun NotificationController() {
                             Text("$secondsLeft", color = Color.White, fontSize = 11.sp)
                             Text(notice.detail, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        if (!notice.useImageBanner && notice.giftImage.isNotBlank()) {
+                        if (notice.giftImage.isNotBlank()) {
                             AsyncImage(
                                 model = notice.giftImage,
                                 contentDescription = notice.giftName,
