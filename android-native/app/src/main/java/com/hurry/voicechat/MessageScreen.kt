@@ -994,7 +994,6 @@ fun NativeChatScreen(
     val messageIds = remember(name, receiverId, currentUserId) { mutableStateListOf<String>() }
 
     var imageUploadInProgress by remember(receiverId) { mutableStateOf(false) }
-    var showImageLevelHint by remember { mutableStateOf(false) }
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null && !imageUploadInProgress) {
             if (isOfficial) {
