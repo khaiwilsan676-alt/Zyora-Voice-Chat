@@ -880,7 +880,15 @@ fun NativeChatScreen(
     var copyPopupText by remember { mutableStateOf("") }
     val clipboard = LocalClipboardManager.current
     LaunchedEffect(copyPopupText) {
-        if (copyPopupText.isNotBlank()) {
+        if (showImageLevelHint) {
+        Dialog(onDismissRequest = { showImageLevelHint = false }) {
+            Surface(color = Color.White, shape = RoundedCornerShape(14.dp), shadowElevation = 12.dp) {
+                Text("Reach Lv-5", color = Color(0xFF222222), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+            }
+        }
+    }
+    if (copyPopupText.isNotBlank()) {
             kotlinx.coroutines.delay(1600)
             copyPopupText = ""
         }
@@ -985,6 +993,7 @@ fun NativeChatScreen(
     val messageIds = remember(name, receiverId, currentUserId) { mutableStateListOf<String>() }
 
     var imageUploadInProgress by remember(receiverId) { mutableStateOf(false) }
+    var showImageLevelHint by remember { mutableStateOf(false) }
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null && !imageUploadInProgress) {
             if (isOfficial) {
@@ -1972,8 +1981,8 @@ fun NativeChatScreen(
 
                         // Keep the existing image action visible; only the direct-chat Gift Picker was requested to be removed.
                         IconButton(
-                            onClick = { if (!imageUploadInProgress) imagePickerLauncher.launch("image/*") },
-                            enabled = !imageUploadInProgress && !isVoiceMode,
+                            onClick = { showImageLevelHint = true },
+                            enabled = !isVoiceMode,
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(Icons.Outlined.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
