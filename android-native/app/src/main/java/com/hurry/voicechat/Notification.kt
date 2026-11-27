@@ -8,7 +8,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,10 +127,10 @@ fun NotificationController() {
     }
 
     val activeNotice = notices.firstOrNull()
-    var secondsLeft by remember(activeNotice?.id) { mutableIntStateOf(5) }
+    var secondsLeft by remember(activeNotice?.id) { mutableIntStateOf(6) }
     LaunchedEffect(activeNotice?.id) {
         if (activeNotice == null) return@LaunchedEffect
-        repeat(5) {
+        repeat(6) {
             delay(1000L)
             secondsLeft = (secondsLeft - 1).coerceAtLeast(0)
         }
@@ -144,7 +143,7 @@ fun NotificationController() {
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { -it }),
             modifier = Modifier
-                .fillMaxWidth(0.90f)
+                .fillMaxWidth(0.95f)
                 .statusBarsPadding()
                 .padding(top = 6.dp)
         ) {
@@ -154,8 +153,8 @@ fun NotificationController() {
                         AsyncImage(
                             model = notice.giftImage,
                             contentDescription = notice.giftName,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier.fillMaxSize()
                         )
                     } else {
                         key(notice.id) {
@@ -169,9 +168,8 @@ fun NotificationController() {
                         }
                     }
                     Row(
-                        Modifier.fillMaxSize()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0x22000000))
+                        Modifier
+                            .fillMaxSize()
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -179,24 +177,31 @@ fun NotificationController() {
                             model = notice.avatar,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(42.dp).clip(CircleShape)
+                            modifier = Modifier.size(32.dp).clip(CircleShape)
                         )
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        Spacer(Modifier.width(6.dp))
+                        Column(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.offset(y = 2.dp)
+                            ) {
                                 Text(
                                     notice.name,
                                     color = Color.White,
-                                    fontSize = 13.sp,
+                                    fontSize = 11.sp,
+                                    lineHeight = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                Spacer(Modifier.width(6.dp))
+                                Spacer(Modifier.width(5.dp))
                                 Box(
                                     modifier = Modifier
-                                        .size(22.dp)
+                                        .size(18.dp)
                                         .clip(CircleShape)
                                         .background(Color(0xFF261710).copy(alpha = 0.70f)),
                                     contentAlignment = Alignment.Center
@@ -204,12 +209,21 @@ fun NotificationController() {
                                     Text(
                                         "$secondsLeft",
                                         color = Color.White,
-                                        fontSize = 11.sp,
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
-                            Text(notice.detail, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                notice.detail,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                lineHeight = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.offset(y = (-2).dp)
+                            )
                         }
                         if (notice.giftImage.isNotBlank()) {
                             AsyncImage(
