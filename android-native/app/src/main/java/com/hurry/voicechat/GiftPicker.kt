@@ -1497,11 +1497,12 @@ private fun VideoEffectOverlay(
     onFinished: () -> Unit,
     onStarted: () -> Unit,
     greenRemove: Boolean = false,
+    forceNoGreenRemove: Boolean = false,
 ) {
     val context = LocalContext.current
     val resolvedUrl = giftAssetUrl(src)
     val isFade = style == "fade"
-    val isGreenRemove = greenRemove || isGreenScreenGiftVideo(resolvedUrl)
+    val isGreenRemove = !forceNoGreenRemove && (greenRemove || isGreenScreenGiftVideo(resolvedUrl))
     var videoRatio by remember(resolvedUrl) { mutableStateOf<Float?>(null) }
     val latestOnFinished by rememberUpdatedState(onFinished)
 
