@@ -340,9 +340,11 @@ fun HomeScreen(
             }
             NativeRoomMemoryCache.refreshInFlight = true
             NativeRoomMemoryCache.isRefreshing = true
+            var refreshSucceeded = false
             try {
                 val update = HurryApi.roomsUpdatedSince(0L)
                 if (update != null) {
+                    refreshSucceeded = true
                     val fresh = update.rooms.distinctBy { it.id }
                     NativeRoomMemoryCache.rooms = fresh
                     NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
@@ -374,8 +376,11 @@ fun HomeScreen(
                 NativeRoomMemoryCache.refreshInFlight = false
                 NativeRoomMemoryCache.isRefreshing = false
             }
-            // Wait 150 seconds after each automatic refresh; pull-down bypasses this wait.
-            withTimeoutOrNull(150_000L) {
+            // Keep the normal 150-second refresh cadence after success. If Render is
+            // waking from free-tier sleep (or the network is briefly unavailable), retry
+            // quickly instead of leaving a cold-start homepage without rooms for 150 seconds.
+            val retryDelayMs = if (refreshSucceeded) 150_000L else 5_000L
+            withTimeoutOrNull(retryDelayMs) {
                 NativeRoomMemoryCache.manualRefresh.receive()
             }
         }
