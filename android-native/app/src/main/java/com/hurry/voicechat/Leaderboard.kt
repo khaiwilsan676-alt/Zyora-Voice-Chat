@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -568,7 +570,46 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
 
     val podiumTopWidth = (screenWidthDp * 0.55f).coerceAtMost(240f).dp
 
-    Box(Modifier.fillMaxSize().background(Color(0xFF1A0204))) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFF1A0204))
+            .pointerInput(tab, period) {
+                var horizontalDistance = 0f
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (horizontalDistance <= -72f) {
+                            val periodIndex = periods.indexOfFirst { it.first == period }
+                            if (periodIndex < periods.lastIndex) {
+                                period = periods[periodIndex + 1].first
+                            } else {
+                                val tabIndex = tabs.indexOfFirst { it.first == tab }
+                                if (tabIndex < tabs.lastIndex) {
+                                    tab = tabs[tabIndex + 1].first
+                                    period = "daily"
+                                }
+                            }
+                        } else if (horizontalDistance >= 72f) {
+                            val periodIndex = periods.indexOfFirst { it.first == period }
+                            if (periodIndex > 0) {
+                                period = periods[periodIndex - 1].first
+                            } else {
+                                val tabIndex = tabs.indexOfFirst { it.first == tab }
+                                if (tabIndex > 0) {
+                                    tab = tabs[tabIndex - 1].first
+                                    period = "daily"
+                                }
+                            }
+                        }
+                        horizontalDistance = 0f
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        horizontalDistance += dragAmount
+                        change.consume()
+                    }
+                )
+            }
+    ) {
         Box(Modifier.fillMaxWidth().height(screenHeight * 0.60f).align(Alignment.TopCenter)) {
             AsyncImage(
                 model = raw + topImage,
