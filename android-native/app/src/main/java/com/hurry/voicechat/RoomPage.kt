@@ -491,6 +491,7 @@ fun RoomPage(
     var luckyComboTimeLeft by luckyAnimation::comboTimeLeft
     var luckyComboGeneration by luckyAnimation::comboGeneration
     var luckyComboPending by luckyAnimation::comboPending
+    var luckyComboClicksPending by remember(roomId) { mutableIntStateOf(0) }
     var lastLuckyComboPayload by luckyAnimation::lastComboPayload
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     val seenRoomGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
@@ -1420,6 +1421,7 @@ fun RoomPage(
             val reason = payload.optString("reason")
             mainHandler.post {
                 luckyComboPending = false
+                if (payload.optString("transferId").startsWith("combo-")) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
                 val failedTransferId = payload.optString("transferId").ifBlank { payload.optString("eventId") }
                 if (pendingLuckyGiftTransferId.isNotBlank() && failedTransferId == pendingLuckyGiftTransferId) {
                     pendingLuckyGiftTransferId = ""
@@ -1539,9 +1541,13 @@ fun RoomPage(
                     // A combo changes only the multiplier text; keep the same banner,
                     // sender, recipient, image, and position without replaying its entrance.
                     luckyGiftNotice = luckyGiftNotice?.copy(
-                        multiplier = if (senderId == accountId && luckyComboPending)
+                        multiplier = if (isComboReplay) {
+                            maxOf(luckyGiftNotice?.multiplier ?: multiplier, multiplier)
+                        } else if (senderId == accountId && luckyComboPending) {
                             (luckyGiftNotice?.multiplier ?: multiplier)
-                        else (luckyGiftNotice?.multiplier ?: multiplier) + 1,
+                        } else {
+                            (luckyGiftNotice?.multiplier ?: multiplier) + 1
+                        },
                         isExiting = false
                     )
                 } else {
@@ -1559,6 +1565,7 @@ fun RoomPage(
                     )
                 }
                 if (senderId == accountId) {
+                    if (isComboReplay) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
                     // Only a server-confirmed transfer may start/renew the combo window.
                     lastLuckyComboPayload = JSONObject(payload.toString())
                     pendingLuckyGiftTransferId = ""
@@ -3140,33 +3147,32 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     onClick = {
                         val previousGift = lastLuckyComboPayload
                         val socket = roomSocketRef.value
-                        if (!luckyComboPending && previousGift != null) {
+                        if (previousGift != null) {
                             if (socket?.connected() != true) {
                                 roomToastText = "Connection unavailable. Please try again."
                             } else {
+                                // Each tap is its own idempotent transaction; never wait for a prior acknowledgement.
                                 val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
+                                val nextMultiplier = (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + luckyComboClicksPending + 1
                                 val comboTransfer = JSONObject(previousGift.toString())
                                     .put("transferId", nextTransferId)
                                     .put("eventId", nextTransferId)
                                     .put("comboReplay", true)
-                                    .put("multiplier", (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + 1)
+                                    .put("multiplier", nextMultiplier)
                                     .put("timestamp", System.currentTimeMillis())
                                 val recipientJson = comboTransfer.optJSONArray("recipientIds") ?: JSONArray()
                                 val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
                                 val image = comboTransfer.optString("giftImage").ifBlank { comboTransfer.optString("luckyImage") }
                                 val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
                                 luckyAnimation.launchToRecipients(nextTransferId, resolvedImage, recipientIds, popupAtCenter = true)
-                                // Optimistically reflect the tap; the server echo confirms the
-                                // same combo without adding a second multiplier increment.
-                                luckyGiftNotice = luckyGiftNotice?.copy(
-                                    multiplier = (luckyGiftNotice?.multiplier ?: 1) + 1,
-                                    isExiting = false
-                                )
+                                luckyComboClicksPending += 1
+                                luckyGiftNotice = luckyGiftNotice?.copy(multiplier = nextMultiplier, isExiting = false)
                                 luckyComboPending = true
+                                luckyComboTimeLeft = 5
+                                luckyComboGeneration++
                                 socket.emit("coin_transfer", comboTransfer)
                             }
-                        }
-                    },
+                        }                    },
                 )
             }
         }
