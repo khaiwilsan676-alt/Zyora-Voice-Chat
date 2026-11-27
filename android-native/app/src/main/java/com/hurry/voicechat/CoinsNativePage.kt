@@ -1093,7 +1093,12 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(seller.whatsapp, fontSize = 13.sp, color = Color(0xFF374151))
-                            WalletAgentWhatsAppMark(Modifier.size(13.dp))
+                            Box(
+                                Modifier.size(14.dp).clip(RoundedCornerShape(50)).background(Color(0xFF25D366)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                WalletAgentWhatsAppMark(Modifier.size(12.dp))
+                            }
                         }
                     } else {
                         Text("—", fontSize = 13.sp, color = Color(0xFF374151))
