@@ -1,7 +1,12 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color as AndroidColor
+import android.os.Handler
+import android.os.Looper
+import android.util.Base64
 import android.net.Uri
 import android.os.Build
 import android.view.ViewGroup
@@ -53,10 +58,16 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import coil3.compose.AsyncImage
+import io.socket.client.Ack
+import io.socket.client.IO
+import io.socket.client.Socket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 private val DiscoverTopGradient = Brush.verticalGradient(
@@ -90,13 +101,103 @@ private data class DiscoverPostItem(
 
 private object DiscoverPostStore {
     val posts = mutableStateListOf<DiscoverPostItem>()
+    private const val PREFS = "discover_local_cache"
+    private const val KEY_POSTS = "posts_v1"
+
+    fun load(context: Context, currentUserId: String) {
+        if (posts.isNotEmpty()) return
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_POSTS, null) ?: return
+        runCatching {
+            val array = JSONArray(raw)
+            for (i in 0 until array.length()) {
+                val item = array.optJSONObject(i) ?: continue
+                posts.add(fromJson(item, currentUserId))
+            }
+        }
+    }
+
+    fun save(context: Context) {
+        runCatching {
+            val array = JSONArray()
+            posts.take(500).forEach { array.put(toJson(it)) }
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putString(KEY_POSTS, array.toString()).apply()
+        }
+    }
+
+    fun upsert(post: DiscoverPostItem) {
+        val index = posts.indexOfFirst { it.id == post.id }
+        if (index >= 0) posts[index] = post else posts.add(0, post)
+        while (posts.size > 500) posts.removeAt(posts.lastIndex)
+    }
+
+    fun fromJson(item: JSONObject, currentUserId: String): DiscoverPostItem {
+        val images = item.optJSONArray("images") ?: JSONArray()
+        val commentsJson = item.optJSONArray("comments") ?: JSONArray()
+        val comments = (0 until commentsJson.length()).mapNotNull { index ->
+            commentsJson.optJSONObject(index)?.let { c ->
+                DiscoverCommentItem(c.optString("id"), c.optString("authorName"),
+                    c.optString("authorAvatar"), c.optString("text"), c.optLong("createdAt"))
+            }
+        }
+        val likedBy = item.optJSONArray("likedBy") ?: JSONArray()
+        val liked = (0 until likedBy.length()).any { likedBy.optString(it) == currentUserId }
+            || item.optBoolean("liked", false)
+        return DiscoverPostItem(
+            id = item.optString("id"), authorId = item.optString("authorId"),
+            authorName = item.optString("authorName", "Zyora User"),
+            authorAvatar = item.optString("authorAvatar"),
+            authorGender = item.optString("authorGender", "male"),
+            text = item.optString("text"),
+            images = (0 until images.length()).map { images.optString(it) },
+            createdAt = item.optLong("createdAt"), likeCount = item.optInt("likeCount"),
+            liked = liked, isMine = item.optString("authorId") == currentUserId,
+            comments = comments
+        )
+    }
+
+    private fun toJson(post: DiscoverPostItem) = JSONObject().apply {
+        put("id", post.id); put("authorId", post.authorId); put("authorName", post.authorName)
+        put("authorAvatar", post.authorAvatar); put("authorGender", post.authorGender)
+        put("text", post.text); put("createdAt", post.createdAt); put("likeCount", post.likeCount)
+        put("liked", post.liked); put("images", JSONArray(post.images))
+        put("comments", JSONArray().apply {
+            post.comments.forEach { c -> put(JSONObject().put("id", c.id).put("authorName", c.authorName)
+                .put("authorAvatar", c.authorAvatar).put("text", c.text).put("createdAt", c.createdAt)) }
+        })
+    }
 }
+
+private fun discoverEncodeImage(path: String): String? = runCatching {
+    val source = BitmapFactory.decodeFile(path) ?: return null
+    val scale = minOf(1f, 640f / maxOf(source.width, source.height))
+    val bitmap = if (scale < 1f) Bitmap.createScaledBitmap(source,
+        (source.width * scale).toInt().coerceAtLeast(1),
+        (source.height * scale).toInt().coerceAtLeast(1), true) else source
+    var quality = 58
+    var bytes = ByteArray(0)
+    do {
+        bytes = ByteArrayOutputStream().use { output ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
+            output.toByteArray()
+        }
+        if (bytes.size <= 145 * 1024 || quality <= 40) break
+        quality -= 6
+    } while (quality >= 40)
+    if (bitmap !== source) bitmap.recycle()
+    source.recycle()
+    if (bytes.isEmpty() || bytes.size > 170 * 1024) return null
+    "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+}.getOrNull()
+
 
 @Composable
 fun DiscoverPage(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var selectedTab by remember { mutableStateOf("Discover") }
     var showCreatePost by remember { mutableStateOf(false) }
     var activeCommentPostId by remember { mutableStateOf<String?>(null) }
@@ -124,6 +225,44 @@ fun DiscoverPage(
             .mapNotNull { authPrefs.getString(it, null)?.trim() }
             .firstOrNull { it.isNotBlank() && !it.equals("null", true) }
             ?: "male"
+    }
+
+    val discoverSocket = remember { runCatching { IO.socket("https://zyora-server.onrender.com") }.getOrNull() }
+    LaunchedEffect(currentUserId) { DiscoverPostStore.load(context, currentUserId) }
+    DisposableEffect(discoverSocket, currentUserId) {
+        val socket = discoverSocket
+        val onCreated = io.socket.emitter.Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            mainHandler.post {
+                runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId)); DiscoverPostStore.save(context) }
+            }
+        }
+        val onUpdated = io.socket.emitter.Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            mainHandler.post {
+                runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId)); DiscoverPostStore.save(context) }
+            }
+        }
+        socket?.on("discover_post_created", onCreated)
+        socket?.on("discover_post_updated", onUpdated)
+        socket?.connect()
+        socket?.emit("discover_posts_request", JSONObject(), Ack { args ->
+            val response = args.firstOrNull() as? JSONObject ?: return@Ack
+            val array = response.optJSONArray("posts") ?: JSONArray()
+            mainHandler.post {
+                for (i in 0 until array.length()) {
+                    val item = array.optJSONObject(i) ?: continue
+                    runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(item, currentUserId)) }
+                }
+                DiscoverPostStore.save(context)
+            }
+        })
+        onDispose {
+            socket?.off("discover_post_created", onCreated)
+            socket?.off("discover_post_updated", onUpdated)
+            socket?.disconnect()
+            socket?.close()
+        }
     }
 
     // Mine tab shows ONLY posts created by the current user.
@@ -198,10 +337,15 @@ fun DiscoverPage(
                             if (idx >= 0) {
                                 val current = DiscoverPostStore.posts[idx]
                                 val nextLiked = !current.liked
-                                DiscoverPostStore.posts[idx] = current.copy(
+                                val updated = current.copy(
                                     liked = nextLiked,
                                     likeCount = (current.likeCount + if (nextLiked) 1 else -1).coerceAtLeast(0)
                                 )
+                                DiscoverPostStore.posts[idx] = updated
+                                DiscoverPostStore.save(context)
+                                discoverSocket?.emit("discover_post_like", JSONObject()
+                                    .put("postId", current.id).put("userId", currentUserId)
+                                    .put("liked", nextLiked))
                             }
                         },
                         onOpenComments = {
@@ -229,23 +373,37 @@ fun DiscoverPage(
             DiscoverCreatePostFullScreen(
                 onDismiss = { showCreatePost = false },
                 onPublish = { postText, imagePaths ->
-                    DiscoverPostStore.posts.add(
-                        0,
-                        DiscoverPostItem(
-                            id = "post_${System.currentTimeMillis()}",
-                            authorId = currentUserId,
-                            authorName = currentUserName,
-                            authorAvatar = currentUserAvatar,
-                            authorGender = currentUserGender,
-                            text = postText,
-                            images = imagePaths,
-                            createdAt = System.currentTimeMillis(),
-                            likeCount = 0,
-                            liked = false,
-                            isMine = true,
-                            comments = emptyList()
-                        )
+                    val postId = "post_${currentUserId}_${System.currentTimeMillis()}"
+                    val createdAt = System.currentTimeMillis()
+                    val localPost = DiscoverPostItem(
+                        id = postId, authorId = currentUserId, authorName = currentUserName,
+                        authorAvatar = currentUserAvatar, authorGender = currentUserGender,
+                        text = postText, images = imagePaths, createdAt = createdAt,
+                        likeCount = 0, liked = false, isMine = true, comments = emptyList()
                     )
+                    DiscoverPostStore.upsert(localPost)
+                    DiscoverPostStore.save(context)
+                    scope.launch {
+                        val encodedImages = withContext(Dispatchers.IO) {
+                            imagePaths.mapNotNull { discoverEncodeImage(it) }.take(4)
+                        }
+                        val payload = JSONObject().put("id", postId).put("authorId", currentUserId)
+                            .put("authorName", currentUserName).put("authorAvatar", currentUserAvatar)
+                            .put("authorGender", currentUserGender).put("text", postText)
+                            .put("createdAt", createdAt).put("imagesBase64", JSONArray(encodedImages))
+                        discoverSocket?.emit("discover_post_publish", payload, Ack { args ->
+                            val response = args.firstOrNull() as? JSONObject
+                            val serverPost = response?.optJSONObject("post")
+                            if (response?.optBoolean("ok") == true && serverPost != null) {
+                                mainHandler.post {
+                                    runCatching {
+                                        DiscoverPostStore.upsert(DiscoverPostStore.fromJson(serverPost, currentUserId))
+                                        DiscoverPostStore.save(context)
+                                    }
+                                }
+                            }
+                        })
+                    }
                     showCreatePost = false
                 }
             )
@@ -273,6 +431,12 @@ fun DiscoverPage(
                         DiscoverPostStore.posts[idx] = current.copy(
                             comments = current.comments + newComment
                         )
+                        DiscoverPostStore.save(context)
+                        discoverSocket?.emit("discover_post_comment", JSONObject()
+                            .put("postId", current.id).put("id", newComment.id)
+                            .put("authorId", currentUserId).put("authorName", currentUserName)
+                            .put("authorAvatar", currentUserAvatar).put("text", commentText)
+                            .put("createdAt", newComment.createdAt))
                     }
                 }
             )
