@@ -82,7 +82,7 @@ fun NotificationController() {
                     avatar = payload.optString("senderImage").ifBlank { ZYORA_NOTIFICATION_PUBLIC + "default-avatar.png" },
                     name = payload.optString("senderName").ifBlank { "User" },
                     detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
-                    giftImage = giftImage,
+                    giftImage = ZYORA_NOTIFICATION_PUBLIC + "IMG_20261127_152115.png",
                     giftName = payload.optString("giftName").ifBlank { "Gift" }
                 )
             )
@@ -148,7 +148,13 @@ fun NotificationController() {
             activeNotice?.let { notice ->
                 Box(Modifier.fillMaxWidth().height(124.dp)) {
                     key(notice.id) {
-                        RoomGiftVideoOverlay(src = notice.video, onFinished = {})
+                        VideoEffectOverlay(
+                            src = notice.video,
+                            style = "plain",
+                            onFinished = {},
+                            onStarted = {},
+                            forceNoGreenRemove = true
+                        )
                     }
                     Row(
                         Modifier.fillMaxSize()
