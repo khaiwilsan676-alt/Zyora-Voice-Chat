@@ -322,14 +322,14 @@ fun PKBattlePage(
                 PkSheetView.SELECT_BLUE -> PkSelectPeopleBottomSheet(
                     bgImageUrl = SELECT_BLUE_BG_URL, fallbackBgColor = Color(0xFF0B2732),
                     plusTint = Color(0xFF3FA9D6), activeBorderColor = Color(0xFF60A5FA),
-                    seats = roomSeats, selectedAccountId = selectedBlueId,
+                    seats = roomSeats, selectedAccountId = selectedBlueId, excludedAccountId = selectedRedId,
                     onSeatClick = { seat -> selectedBlueId = if (selectedBlueId == seat.accountId) "" else seat.accountId },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
                 PkSheetView.SELECT_RED -> PkSelectPeopleBottomSheet(
                     bgImageUrl = SELECT_RED_BG_URL, fallbackBgColor = Color(0xFF2E0F18),
                     plusTint = Color(0xFFB9435F), activeBorderColor = Color(0xFFF87171),
-                    seats = roomSeats, selectedAccountId = selectedRedId,
+                    seats = roomSeats, selectedAccountId = selectedRedId, excludedAccountId = selectedBlueId,
                     onSeatClick = { seat -> selectedRedId = if (selectedRedId == seat.accountId) "" else seat.accountId },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
@@ -383,7 +383,7 @@ private fun PkMainBattleSheet(
             PkRemoteImage(
                 url = BATTLE_ICON_URL,
                 contentDescription = "Battle",
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(28.dp),
                 contentScale = ContentScale.Fit,
                 fallbackColor = Color.Transparent
             )
@@ -399,7 +399,7 @@ private fun PkMainBattleSheet(
                             1.0f to Color(0xFFF0BE3C)
                         )
                     ),
-                    fontSize = 20.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             )
@@ -904,6 +904,7 @@ private fun PkActiveBattleCard(
     onSendClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isSent by remember(cardImageUrl) { mutableStateOf(false) }
     val isLoss = result == PkCardResult.LOSS
     val cardBitmap = rememberPkRemoteBitmap(cardImageUrl)
     val cardAspectRatio = remember(cardBitmap) {
@@ -960,7 +961,7 @@ private fun PkActiveBattleCard(
             PkRemoteImage(
                 url = avatarUrl,
                 contentDescription = userName,
-                modifier = Modifier.size(avatarSize).clip(CircleShape).border(1.2.dp, Color.White.copy(alpha = 0.75f), CircleShape),
+                modifier = Modifier.size(avatarSize).clip(CircleShape),
                 contentScale = ContentScale.Crop,
                 fallbackColor = Color(0xFF29343A)
             )
@@ -1016,7 +1017,14 @@ private fun PkActiveBattleCard(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = if (scoreMode == "Coins") onSendClick else onVoteClick
+                                onClick = {
+                                    if (scoreMode == "Coins") {
+                                        onSendClick()
+                                        isSent = true
+                                    } else {
+                                        onVoteClick()
+                                    }
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1029,7 +1037,10 @@ private fun PkActiveBattleCard(
                         )
 
                         Text(
-                            text = if (isVoted && scoreMode == "Votes") "Sent" else "Send",
+                            text = when (scoreMode) {
+                                "Votes" -> if (isVoted) "Voted" else "Vote"
+                                else -> if (isSent) "Sended" else "Send"
+                            },
                             color = Color(0xFFFFE7A3),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
@@ -1323,6 +1334,7 @@ private fun PkSelectPeopleBottomSheet(
     activeBorderColor: Color,
     seats: List<NativeRoomSeat>,
     selectedAccountId: String,
+    excludedAccountId: String,
     onSeatClick: (NativeRoomSeat) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1335,30 +1347,29 @@ private fun PkSelectPeopleBottomSheet(
         PkRemoteImage(bgImageUrl, null, Modifier.matchParentSize(), ContentScale.FillBounds, fallbackBgColor)
         Column(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                .padding(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 14.dp),
+                .padding(start = 18.dp, end = 18.dp, top = 30.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             for (row in 0 until 3) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     for (col in 0 until 5) {
                         val seat = seats.getOrNull(row * 5 + col) ?: NativeRoomSeat(row * 5 + col + 1)
+                        val excluded = seat.occupied && seat.accountId.isNotBlank() && seat.accountId == excludedAccountId
                         val selected = seat.occupied && seat.accountId.isNotBlank() && seat.accountId == selectedAccountId
                         Box(
                             Modifier.size(44.dp).clip(CircleShape)
                                 .background(Color.Black.copy(alpha = 0.32f))
-                                .then(if (selected) Modifier.border(1.6.dp, activeBorderColor, CircleShape) else Modifier)
-                                .clickable(enabled = seat.occupied && seat.accountId.isNotBlank()) { onSeatClick(seat) },
+                                .clickable(enabled = seat.occupied && seat.accountId.isNotBlank() && !excluded) { onSeatClick(seat) },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (seat.occupied && seat.accountId.isNotBlank()) {
+                            if (seat.occupied && seat.accountId.isNotBlank() && !excluded) {
                                 PkRemoteImage(normalizePkAvatar(seat.userImage), seat.userName, Modifier.fillMaxSize().clip(CircleShape), ContentScale.Crop)
                                 if (selected) {
-                                    Box(Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape)
-                                        .background(Color.White).border(1.dp, activeBorderColor, CircleShape), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color(0xFF111827), modifier = Modifier.size(13.dp))
+                                    Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.Black.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(23.dp))
                                     }
                                 }
-                            } else {
+                            } else if (!excluded) {
                                 Icon(Icons.Default.Add, contentDescription = "Empty seat", tint = plusTint, modifier = Modifier.size(20.dp))
                             }
                         }
