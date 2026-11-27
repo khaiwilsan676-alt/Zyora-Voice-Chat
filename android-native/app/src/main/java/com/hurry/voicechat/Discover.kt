@@ -264,25 +264,30 @@ fun DiscoverPage(
                 runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(data, currentUserId)); DiscoverPostStore.save(context) }
             }
         }
+        val requestFeed = {
+            socket?.emit("discover_posts_request", JSONObject(), Ack { args ->
+                val response = args.firstOrNull() as? JSONObject ?: return@Ack
+                if (!response.optBoolean("ok", false)) return@Ack
+                val array = response.optJSONArray("posts") ?: JSONArray()
+                mainHandler.post {
+                    for (i in 0 until array.length()) {
+                        val item = array.optJSONObject(i) ?: continue
+                        runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(item, currentUserId)) }
+                    }
+                    DiscoverPostStore.save(context)
+                }
+            })
+        }
+        val onConnect = io.socket.emitter.Emitter.Listener { requestFeed() }
+        socket?.on("connect", onConnect)
         socket?.on("discover_post_created", onCreated)
         socket?.on("discover_post_updated", onUpdated)
-        socket?.connect()
-        socket?.emit("discover_posts_request", JSONObject(), Ack { args ->
-            val response = args.firstOrNull() as? JSONObject ?: return@Ack
-            val array = response.optJSONArray("posts") ?: JSONArray()
-            mainHandler.post {
-                for (i in 0 until array.length()) {
-                    val item = array.optJSONObject(i) ?: continue
-                    runCatching { DiscoverPostStore.upsert(DiscoverPostStore.fromJson(item, currentUserId)) }
-                }
-                DiscoverPostStore.save(context)
-            }
-        })
+        if (socket?.connected() == true) requestFeed() else socket?.connect()
         onDispose {
+            socket?.off("connect", onConnect)
             socket?.off("discover_post_created", onCreated)
             socket?.off("discover_post_updated", onUpdated)
             socket?.disconnect()
-            socket?.close()
         }
     }
 
