@@ -383,6 +383,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         }
     }
     var tab by remember { mutableStateOf(HurryTab.HOME) }
+    var discoverPage by rememberSaveable { mutableStateOf(false) }
     val messageIdentity = remember(userId) {
         authPrefs.getString("accountId", "").orEmpty().ifBlank {
             context.getSharedPreferences("hurry_user", android.content.Context.MODE_PRIVATE).let { messagePrefs ->
@@ -606,6 +607,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     BackHandler(enabled = true) {
         when {
             openedFamilyId != null -> openedFamilyId = null
+            discoverPage -> discoverPage = false
             openedPublicProfile != null -> openedPublicProfile = null
             openedRoomSupport -> openedRoomSupport = false
             openedSearch -> openedSearch = false
@@ -714,7 +716,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 languageCode = languageCode,
                                 selectedTab = tab,
                                 unreadMessageCount = unreadMessageCount,
+                                onDiscover = { discoverPage = true },
                                 onTabSelected = { selected ->
+                                    discoverPage = false
                                     if (selected == HurryTab.MESSAGE) {
                                         ZyoraMessageBannerState.current = null
                                         unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
@@ -847,10 +851,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                     }
                 }
-                if (tab != HurryTab.HOME && openedMePage == null) {
+                if ((tab != HurryTab.HOME || discoverPage) && openedMePage == null) {
                     Box(Modifier.fillMaxSize()) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
-                            HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = { selected ->
+                            HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, discoverSelected = discoverPage, onDiscover = { discoverPage = true }, onTab = { selected ->
+                                discoverPage = false
                                 if (selected == HurryTab.MESSAGE) {
                                     ZyoraMessageBannerState.current = null
                                     unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
