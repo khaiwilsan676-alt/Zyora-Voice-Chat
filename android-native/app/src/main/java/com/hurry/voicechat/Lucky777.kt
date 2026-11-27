@@ -1,6 +1,5 @@
 package com.hurry.voicechat
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -40,7 +39,6 @@ fun Lucky777(
     onMinimize: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    BackHandler { onClose() }
     var progress by remember { mutableFloatStateOf(0f) }
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
