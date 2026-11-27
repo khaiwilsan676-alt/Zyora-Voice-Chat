@@ -3172,7 +3172,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 luckyComboGeneration++
                                 socket.emit("coin_transfer", comboTransfer)
                             }
-                        }                    },
+                        }
+                    },
                 )
             }
         }
