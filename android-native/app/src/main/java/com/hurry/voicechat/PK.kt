@@ -293,7 +293,7 @@ fun PKBattlePage(
                 selectedTime = selectedTime,
                 onTimeSelect = { selectedTime = it },
                 selectedBlueUser = selectedBlue?.let { PkUser(it.accountId, it.userName.ifBlank { "User" }, normalizePkAvatar(it.userImage)) },
-                selectedRedUser = selectedRed?.let { PkUser(it.accountId, it.userName, it.userImage) },
+                selectedRedUser = selectedRed?.let { PkUser(it.accountId, it.userName.ifBlank { "User" }, normalizePkAvatar(it.userImage)) },
                 onBlueCardClick = { activeSheet = PkSheetView.SELECT_BLUE },
                 onRedCardClick = { activeSheet = PkSheetView.SELECT_RED },
                 onHelpClick = { activeSheet = PkSheetView.RULES },
@@ -614,14 +614,14 @@ private fun PkActiveBattleOverlay(
             ) { },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Loading Patti: 90% wide, Full Round (CircleShape), No side wing designs
+        // Top Loading Patti: 90% wide, Full Round (CircleShape), decreased height
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(30.dp)
+                .height(24.dp)
                 .clip(CircleShape)
                 .border(
-                    width = 1.6.dp,
+                    width = 1.4.dp,
                     brush = Brush.horizontalGradient(
                         colors = listOf(
                             Color(0xFFE9CA73),
@@ -734,13 +734,13 @@ private fun PkActiveBattleOverlay(
                         if (idx % 2 == 0) {
                             drawSparkleStar(
                                 center = Offset(px, size.height * ry),
-                                radius = 4.2f * (0.7f + 0.45f * twinkle),
+                                radius = 3.6f * (0.7f + 0.45f * twinkle),
                                 color = Color(0xFFE8FEFF).copy(alpha = twinkle)
                             )
                         } else {
                             drawCircle(
                                 color = Color(0xFFD6FCFF).copy(alpha = twinkle),
-                                radius = 2.0f + 1.1f * twinkle,
+                                radius = 1.8f + 1.0f * twinkle,
                                 center = Offset(px, size.height * ry)
                             )
                         }
@@ -765,13 +765,13 @@ private fun PkActiveBattleOverlay(
                         if (idx % 2 == 0) {
                             drawSparkleStar(
                                 center = Offset(px, size.height * ry),
-                                radius = 4.2f * (0.7f + 0.45f * twinkle),
+                                radius = 3.6f * (0.7f + 0.45f * twinkle),
                                 color = Color(0xFFFFE8EE).copy(alpha = twinkle)
                             )
                         } else {
                             drawCircle(
                                 color = Color(0xFFFFD6DF).copy(alpha = twinkle),
-                                radius = 2.0f + 1.1f * twinkle,
+                                radius = 1.8f + 1.0f * twinkle,
                                 center = Offset(px, size.height * ry)
                             )
                         }
@@ -783,21 +783,21 @@ private fun PkActiveBattleOverlay(
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 10.dp),
+                    .padding(start = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 PkRemoteImage(
                     url = TICKET_ICON_URL,
                     contentDescription = "Left Ticket",
-                    modifier = Modifier.size(19.dp),
+                    modifier = Modifier.size(16.dp),
                     contentScale = ContentScale.Fit,
                     fallbackColor = Color.Transparent
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(
                     text = formatPkScore(blueScore, scoreMode),
                     color = Color(0xFFFFF5DC),
-                    fontSize = 15.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -806,20 +806,20 @@ private fun PkActiveBattleOverlay(
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 10.dp),
+                    .padding(end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = formatPkScore(redScore, scoreMode),
                     color = Color(0xFFFFF5DC),
-                    fontSize = 15.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(4.dp))
                 PkRemoteImage(
                     url = TICKET_ICON_URL,
                     contentDescription = "Right Ticket",
-                    modifier = Modifier.size(19.dp),
+                    modifier = Modifier.size(16.dp),
                     contentScale = ContentScale.Fit,
                     fallbackColor = Color.Transparent
                 )
@@ -904,7 +904,7 @@ private fun PkActiveBattleCard(
     onSendClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isSent by remember(cardImageUrl) { mutableStateOf(false) }
+    var isSent by remember(cardImageUrl, scoreMode) { mutableStateOf(false) }
     val isLoss = result == PkCardResult.LOSS
     val cardBitmap = rememberPkRemoteBitmap(cardImageUrl)
     val cardAspectRatio = remember(cardBitmap) {
@@ -968,7 +968,7 @@ private fun PkActiveBattleCard(
 
             Spacer(Modifier.height((cardHeight * 0.045f).coerceIn(6.dp, 12.dp)))
 
-            // Fake User Name (Bilkul dim nahi hoga)
+            // User Name (Bilkul dim nahi hoga)
             Text(
                 text = userName,
                 color = Color.White,
@@ -1010,6 +1010,11 @@ private fun PkActiveBattleCard(
                 PkCardResult.NONE -> {
                     Spacer(Modifier.weight(1f))
 
+                    val actionLabel = when (scoreMode) {
+                        "Votes" -> if (isVoted) "Voted" else "Vote"
+                        else -> if (isSent) "Sended" else "Send"
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(0.84f)
@@ -1030,20 +1035,19 @@ private fun PkActiveBattleCard(
                     ) {
                         PkRemoteImage(
                             url = voteButtonImageUrl,
-                            contentDescription = if (isVoted) "Voted" else "Vote",
+                            contentDescription = actionLabel,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit,
                             fallbackColor = Color.Transparent
                         )
 
                         Text(
-                            text = when (scoreMode) {
-                                "Votes" -> if (isVoted) "Voted" else "Vote"
-                                else -> if (isSent) "Sended" else "Send"
-                            },
+                            text = actionLabel,
                             color = Color(0xFFFFE7A3),
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+                            lineHeight = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.offset(y = (-2).dp)
                         )
                     }
                 }
@@ -1059,8 +1063,8 @@ private fun PkTimerTrapezoidBadge(
 ) {
     Box(
         modifier = modifier
-            .width(122.dp)
-            .height(28.dp),
+            .width(108.dp)
+            .height(22.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1079,8 +1083,14 @@ private fun PkTimerTrapezoidBadge(
 
             drawPath(
                 path = badgePath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF281915), Color(0xFF3A1815))
+                brush = Brush.horizontalGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color(0xFF0A3E45),
+                        0.35f to Color(0xFF0E6C7A),
+                        0.50f to Color(0xFF5A2A4A),
+                        0.65f to Color(0xFF9E0B24),
+                        1.0f to Color(0xFF5D0716)
+                    )
                 )
             )
 
@@ -1096,21 +1106,21 @@ private fun PkTimerTrapezoidBadge(
             drawPath(
                 path = borderPath,
                 color = Color(0xFFCDA54E),
-                style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round)
             )
         }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(bottom = 2.dp)
+            modifier = Modifier.padding(bottom = 1.dp)
         ) {
-            PkStopwatchMiniIcon(modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(5.dp))
+            PkStopwatchMiniIcon(modifier = Modifier.size(12.dp))
+            Spacer(Modifier.width(4.dp))
             Text(
                 text = formattedTime,
                 color = Color(0xFFFFF4D6),
-                fontSize = 13.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -1347,7 +1357,7 @@ private fun PkSelectPeopleBottomSheet(
         PkRemoteImage(bgImageUrl, null, Modifier.matchParentSize(), ContentScale.FillBounds, fallbackBgColor)
         Column(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                .padding(start = 18.dp, end = 18.dp, top = 30.dp, bottom = 14.dp),
+                .padding(start = 18.dp, end = 18.dp, top = 34.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             for (row in 0 until 3) {
@@ -1369,7 +1379,7 @@ private fun PkSelectPeopleBottomSheet(
                                         Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color.White, modifier = Modifier.size(23.dp))
                                     }
                                 }
-                            } else if (!excluded) {
+                            } else {
                                 Icon(Icons.Default.Add, contentDescription = "Empty seat", tint = plusTint, modifier = Modifier.size(20.dp))
                             }
                         }
@@ -1512,7 +1522,7 @@ private fun PkSelectPersonCard(
             }
         } else {
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                PkRemoteImage(selectedUser.image, selectedUser.name, Modifier.size(44.dp).clip(CircleShape).border(1.5.dp, Color.White, CircleShape), ContentScale.Crop)
+                PkRemoteImage(selectedUser.image, selectedUser.name, Modifier.size(44.dp).clip(CircleShape), ContentScale.Crop)
                 Text(selectedUser.name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
         }
