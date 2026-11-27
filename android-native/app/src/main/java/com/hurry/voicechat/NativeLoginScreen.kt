@@ -938,7 +938,7 @@ private fun legacyGoogleBackendSignIn(context: android.content.Context, data: an
     )
     val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return a Google account.")
     val firebaseToken = Tasks.await(
-        firebaseUser.getIdToken(true),
+        firebaseUser.getIdToken(false),
         60,
         java.util.concurrent.TimeUnit.SECONDS
     ).token ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
@@ -953,7 +953,7 @@ private fun backendEmailAuth(context: android.content.Context, email: String, pa
         Tasks.await(auth.signInWithEmailAndPassword(email, password), 60, java.util.concurrent.TimeUnit.SECONDS)
     }
     val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return an account.")
-    val token = Tasks.await(firebaseUser.getIdToken(true), 60, java.util.concurrent.TimeUnit.SECONDS).token
+    val token = Tasks.await(firebaseUser.getIdToken(false), 60, java.util.concurrent.TimeUnit.SECONDS).token
         ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
     return postAuthJson("/api/auth/firebase", JSONObject().put("idToken", token))
 }
