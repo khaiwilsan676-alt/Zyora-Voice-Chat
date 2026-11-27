@@ -150,6 +150,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                         results = list
                         hasSearched = true
                         searching = false
+                        if (list.isNotEmpty()) addToHistory(q)
                     }
                 }
             })
