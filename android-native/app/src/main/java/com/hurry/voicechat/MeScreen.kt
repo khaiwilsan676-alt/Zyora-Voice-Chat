@@ -483,7 +483,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 36.dp)
+                        .padding(horizontal = 16.dp)
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color(0xFFF3F3F3))
