@@ -353,7 +353,7 @@ fun NativeAvatarFrameOverlay(
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
-            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { scaleX = 1.28f; scaleY = 1.28f }, contentScale = ContentScale.Fit)
+            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { val frameScale = if (selected.optString("itemId") == "a4") 1.23f else 1.28f; scaleX = frameScale; scaleY = frameScale }, contentScale = ContentScale.Fit)
         }
     }
 }
