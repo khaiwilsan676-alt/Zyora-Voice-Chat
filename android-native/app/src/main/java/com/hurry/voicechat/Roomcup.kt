@@ -155,7 +155,11 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     var entries by remember { mutableStateOf(diskDaily?.first ?: emptyList()) }
     var mine by remember { mutableStateOf(diskDaily?.second) }
     // Persisted leaderboard is shown immediately; network refresh happens in background.
-    var periodCache by remember(roomId, userId) { mutableStateOf(if (diskDaily != null) mapOf("daily" to diskDaily) else emptyMap()) }
+    var periodCache by remember(roomId, userId) {
+        mutableStateOf<Map<String, Pair<List<CupEntry>, CupEntry?>>>(
+            if (diskDaily != null) mapOf("daily" to diskDaily) else emptyMap()
+        )
+    }
     var loading by remember { mutableStateOf(diskDaily == null) }
     var refreshTick by remember { mutableIntStateOf(0) }
     
