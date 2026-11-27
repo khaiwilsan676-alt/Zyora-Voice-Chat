@@ -1491,7 +1491,7 @@ private class ChromaKeyVideoRenderer(
 // VIDEO OVERLAY
 // ============================================================
 @Composable
-private fun VideoEffectOverlay(
+internal fun VideoEffectOverlay(
     src: String,
     style: String,
     onFinished: () -> Unit,
