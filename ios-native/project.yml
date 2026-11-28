@@ -3,12 +3,21 @@ options:
   bundleIdPrefix: com.zyora
   deploymentTarget:
     iOS: "16.0"
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 11.0.0
 targets:
   Zyora:
     type: application
     platform: iOS
     sources:
       - Sources
+      - path: GoogleService-Info.plist
+        buildPhase: resources
+    dependencies:
+      - package: Firebase
+        product: FirebaseCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zyora.voicechat
