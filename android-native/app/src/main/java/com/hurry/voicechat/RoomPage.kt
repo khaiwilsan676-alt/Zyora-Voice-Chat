@@ -2116,13 +2116,36 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
-                                        Row(
-                                            Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
-                                            Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Row(
+                                                Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
+                                                Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                            Spacer(Modifier.width(4.dp))
+                                            val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
+                                            if (ownerVipBadge && ownerVipId.isNotBlank()) {
+                                                AsyncImage(
+                                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                                    contentDescription = "VIP ID",
+                                                    contentScale = ContentScale.Fit,
+                                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                                )
+                                                Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                            } else if (roomOwnerAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005")) {
+                                                AsyncImage(
+                                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                                    contentDescription = "Purple ID Badge",
+                                                    contentScale = ContentScale.Fit,
+                                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                                )
+                                                Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                            } else {
+                                                Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                            }
                                         }
                                     }
                                     if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
@@ -2171,26 +2194,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         }
                                     }
                                 }
-                                val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.offset(y = (-3).dp)) {
-                                    if (ownerVipBadge && ownerVipId.isNotBlank()) {
-                                        AsyncImage(
-                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                            contentDescription = "VIP ID",
-                                            contentScale = ContentScale.Fit,
-                                            modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                        )
-                                        Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                    } else when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001", "500002", "500003", "500004", "500005" -> {
-                                            AsyncImage(
-                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                                contentDescription = "Purple ID Badge",
-                                                contentScale = ContentScale.Fit,
-                                                modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                            )
-                                            Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                        }
                                         else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
                                 }
