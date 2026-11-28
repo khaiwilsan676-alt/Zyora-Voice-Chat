@@ -1651,14 +1651,17 @@ fun RoomPage(
                 }
                 if (senderId == accountId) {
                     if (isComboReplay) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
-                    pendingLuckyGiftTransferId = ""
-                    luckyComboPending = false
+                    // Only the acknowledgement for the currently in-flight transfer
+                    // may release the queue; stale responses must not unlock newer sends.
+                    if (transferId == pendingLuckyGiftTransferId) {
+                        pendingLuckyGiftTransferId = ""
+                        luckyComboPending = false
+                    }
                     // A late acknowledgement for a combo tap that was already
                     // allowed to expire must not reopen the button or restart a
                     // fresh five-second sending window.
-                    if (!isComboReplay || showLuckyComboButton) {
+                    if (showLuckyComboButton) {
                         lastLuckyComboPayload = JSONObject(payload.toString())
-                        showLuckyComboButton = true
                         luckyComboTimeLeft = 5
                         luckyComboGeneration++
                     }
@@ -3327,6 +3330,9 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 if (transfer["luckyGift"] == true) {
                     val transferId = transfer["transferId"]?.toString().orEmpty()
                     pendingLuckyGiftTransferId = transferId
+                    // Serialize the first send with subsequent Combo taps so no replay
+                    // can leave before the initial wallet transfer is acknowledged.
+                    luckyComboPending = true
                     // Open the sender's combo window immediately; do not wait for the server echo.
                     // The acknowledgement still remains authoritative for wallet/win amounts.
                     if (transfer["comboReplay"] != true && transferId.isNotBlank()) {
