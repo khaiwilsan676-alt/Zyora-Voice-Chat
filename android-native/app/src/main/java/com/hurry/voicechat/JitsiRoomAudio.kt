@@ -99,6 +99,7 @@ fun JitsiRoomAudio(
         val retryPending = AtomicBoolean(false)
         val voicePermissionRetries = AtomicInteger(0)
         val retryHandler = Handler(Looper.getMainLooper())
+        lateinit var requestVoicePermission: () -> Unit
         fun scheduleVoiceRetry(delayMs: Long = 700L) {
             // A denied seat/mute permission is not a transient error. Limit retries
             // so a stale canSpeak flag cannot spam the server every 500 ms forever.
@@ -113,7 +114,7 @@ fun JitsiRoomAudio(
                 }
             }, delayMs)
         }
-        fun requestVoicePermission() {
+        requestVoicePermission = {
             if (alive.get() && latestCanSpeak && roomSocket.connected()) {
                 roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
                 // room_join and seat state can arrive just after Socket.IO connects.
