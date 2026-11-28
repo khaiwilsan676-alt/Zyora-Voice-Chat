@@ -2943,7 +2943,7 @@ fun Lucky777(
                         todayWin = todayWin,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .offset(y = 3.dp)
+                            .offset(y = 15.dp)
                     )
                 }
 
