@@ -494,7 +494,6 @@ fun RoomPage(
     var luckyComboGeneration by luckyAnimation::comboGeneration
     var luckyComboPending by luckyAnimation::comboPending
     var luckyComboClicksPending by remember(roomId) { mutableIntStateOf(0) }
-    val queuedLuckyComboTransfers = remember(roomId) { mutableStateListOf<JSONObject>() }
     var lastLuckyComboPayload by luckyAnimation::lastComboPayload
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     val seenRoomGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
@@ -1050,35 +1049,10 @@ fun RoomPage(
     // button should dismiss the chat composer.
     val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
 
-    // Keep the Combo button responsive: animate every tap immediately, then
-    // settle wallet transfers one at a time so each server acknowledgement has
-    // its own matching transfer ID and cannot overwrite another pending tap.
-    LaunchedEffect(roomId, luckyComboPending, showLuckyComboButton, queuedLuckyComboTransfers.size, roomSocketRef.value) {
-        // Never flush a queued tap after the five-second combo window has ended.
-        // The expiry effect clears the queue; this guard also closes the recomposition race.
-        if (showLuckyComboButton &&
-            System.currentTimeMillis() < luckyAnimation.comboExpiresAtMs &&
-            !luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
-            val socket = roomSocketRef.value
-            if (socket?.connected() == true) {
-                val transfer = queuedLuckyComboTransfers.removeAt(0)
-                pendingLuckyGiftTransferId = transfer.optString("transferId")
-                luckyComboPending = true
-                socket.emit("coin_transfer", transfer)
-            } else {
-                queuedLuckyComboTransfers.clear()
-                luckyComboClicksPending = 0
-                luckyAnimation.clearPendingComboTaps()
-                roomToastText = "Connection unavailable. Please try again."
-            }
-        }
-    }
-
     // Once the five-second combo window closes, discard taps that have not
     // reached the server. An already-emitted transfer cannot be recalled.
     LaunchedEffect(roomId, showLuckyComboButton) {
         if (!showLuckyComboButton) {
-            queuedLuckyComboTransfers.clear()
             luckyComboClicksPending = 0
             luckyAnimation.clearPendingComboTaps()
         }
@@ -1488,7 +1462,6 @@ fun RoomPage(
                     luckyComboPending = false
                     pendingLuckyGiftTransferId = ""
                     if (failedTransferId.startsWith("combo-")) {
-                        queuedLuckyComboTransfers.clear()
                         luckyComboClicksPending = 0
                         luckyAnimation.clearPendingComboTaps()
                     } else {
