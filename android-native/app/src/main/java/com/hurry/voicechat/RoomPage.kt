@@ -474,7 +474,7 @@ fun RoomPage(
     }
     
     fun saveLastRoomSeat(seatNumber: Int) {
-        appContext.getSharedPreferences("room_settings", Context.MODE_PRIVATE)
+        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
             .edit().putInt("lastSeat_$roomId", seatNumber).apply()
     }
 
