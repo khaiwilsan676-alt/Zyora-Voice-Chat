@@ -687,7 +687,7 @@ internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier =
                 val items = json.optJSONArray("items") ?: JSONArray()
                 writeNativeStoreInventoryCache(appContext, userId, items)
                 (0 until items.length()).mapNotNull { items.optJSONObject(it) }
-                    .any { it.optString("tab") == "Voice" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+                    .any { isNativeVoiceWaveEquipped(it) }
             }.onSuccess { equipped = it }
         }
     }
