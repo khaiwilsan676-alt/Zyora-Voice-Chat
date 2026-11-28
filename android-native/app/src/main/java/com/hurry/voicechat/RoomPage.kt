@@ -357,6 +357,7 @@ fun RoomPage(
     // This keeps non-critical member/admin lookups off the room join critical path.
     var showInfo by remember { mutableStateOf(false) }
     var showRoomShareRequest by remember { mutableStateOf(false) }
+    var showRoomOnlineUsers by remember { mutableStateOf(false) }
     var ownerVipId by remember(roomOwnerAccountId) { mutableStateOf("") }
     var ownerVipBadge by remember(roomOwnerAccountId) { mutableStateOf(false) }
     LaunchedEffect(roomOwnerAccountId, showInfo) {
@@ -2106,12 +2107,22 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 Column(Modifier.fillMaxWidth()) {
                     // Top Room DP card and Top Right Options
                     Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
-                        Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).clickable { showInfo = true }.padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)),contentScale = ContentScale.Crop)
+                        Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).clickable { showInfo = true },contentScale = ContentScale.Crop)
                             Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
-                                    CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
+                                        Row(
+                                            Modifier.clickable { showRoomOnlineUsers = true },
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
+                                            Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
                                     if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
                                         if (!followed) {
                                             AsyncImage(
@@ -2180,8 +2191,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         }
                                         else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
-                                    Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(14.dp))
-                                    Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=10.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -2192,7 +2201,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             if (isRoomOwner) {
                                 Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showSettings = true },contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
                             }
-                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showRoomShareRequest=true },contentAlignment=Alignment.Center) {
+                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showInfo = false; showRoomShareRequest=true },contentAlignment=Alignment.Center) {
                                 Canvas(Modifier.size(17.dp)) {
                                     val p = Path().apply {
                                         moveTo(size.width*.18f,size.height*.82f)
@@ -3116,6 +3125,18 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
 
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
+        if (showRoomOnlineUsers) ActiveUsers(
+            isOpen = true,
+            onClose = { showRoomOnlineUsers = false },
+            roomUsers = activeRoomUsers,
+            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+            roomAdminIds = roomAdminIds,
+            onOpenProfile = { user ->
+                selectedChatProfile = NativeRoomMessage("active-profile-" + user.accountId, "", user.name, user.image, user.accountId)
+                showRoomOnlineUsers = false
+            },
+            onCopyUserId = { id -> clipboard.setText(AnnotatedString(id)); copiedId = id }
+        )
         RoomInfo(
             isOpen=showInfo,
             openShareRequest=showRoomShareRequest,
