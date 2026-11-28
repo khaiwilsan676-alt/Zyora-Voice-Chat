@@ -1672,6 +1672,7 @@ fun RoomPage(
                     if (showLuckyComboButton) {
                         lastLuckyComboPayload = JSONObject(payload.toString())
                         luckyComboTimeLeft = 5
+                        luckyAnimation.comboExpiresAtMs = System.currentTimeMillis() + 5_000L
                         luckyComboGeneration++
                     }
                 }
