@@ -347,6 +347,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 modifier = Modifier.size(84.dp).offset(y = 3.dp),
                                 gemshineOffsetY = 4.dp,
                                 gemshineSizeAdjustment = 5.dp,
+                                loveBeatSizeAdjustment = 5.dp,
                                 fallbackUserIds = listOf(uid)
                             )
                         }
