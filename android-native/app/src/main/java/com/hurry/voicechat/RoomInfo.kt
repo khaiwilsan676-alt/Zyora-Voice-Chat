@@ -347,7 +347,7 @@ fun RoomInfo(
                             drawCircle(Color.White, 1.8.dp.toPx(), androidx.compose.ui.geometry.Offset(size.width * .85f, size.height / 2))
                         }
                     }
-remove Room Info share icon                }
+                }
                 FallbackAsyncImage(
                     model = roomData.roomDp.trim().takeIf {
                         it.isNotBlank() && it != "null" && it != "undefined" &&
