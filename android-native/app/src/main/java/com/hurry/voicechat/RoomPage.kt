@@ -1592,6 +1592,11 @@ fun RoomPage(
                 }
             }
             mainHandler.post {
+                // The sender's combo window is the lifetime of their Lucky animation.
+                // Ignore delayed Socket.IO echoes after Stop/expiry so they cannot
+                // resurrect the banner or launch gift images automatically.
+                if (senderId == accountId && !showLuckyComboButton) return@post
+
                 // Treat a different gift image/recipient mode as a new Lucky Gift,
                 // not as a replay of the previous sender combo. Otherwise the old
                 // notification image can survive even though a new gift was selected.
