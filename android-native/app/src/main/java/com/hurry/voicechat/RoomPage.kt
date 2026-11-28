@@ -2980,6 +2980,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             }
         }
         }
+        @Composable
+        fun RoomPageMenusAndInfo() {
         if(showExitMenu) RoomExitMenu(
             onKeep={showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
             onExit={showExitMenu=false;stopMusicForRoomExit();onClose()},
@@ -3266,6 +3268,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
+        }
+
+        @Composable
+        fun RoomPageGiftAndGames() {
         luckyGiftFlights.forEach { flight ->
             key(flight.id) {
                 LuckyGiftFlightOverlay(
@@ -3444,6 +3450,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
         })
+        }
+
+        @Composable
+        fun RoomPageProfilesAndSheets() {
         selectedChatProfile?.let { profileMessage ->
             // Room chat payloads can arrive with senderAccountId empty even though
             // the sender is currently seated. Resolve that case only when the display
@@ -3885,6 +3895,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 }
             }
         }
+        }
+
+        RoomPageMenusAndInfo()
+        RoomPageGiftAndGames()
+        RoomPageProfilesAndSheets()
+
         
 
     }
