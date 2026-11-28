@@ -110,7 +110,7 @@ private fun writeNativeStoreInventoryCache(context: android.content.Context, use
     for (i in 0 until items.length()) {
         val source = items.optJSONObject(i) ?: continue
         val id = source.optString("itemId")
-        if (id.isBlank() || source.optLong("expiresAt") <= now) continue
+        if (id.isBlank() || (source.optLong("expiresAt") > 0L && source.optLong("expiresAt") <= now)) continue
         snapshot.put(JSONObject(source.toString()))
     }
     context.getSharedPreferences(NativeStoreCachePrefs, android.content.Context.MODE_PRIVATE)
