@@ -578,8 +578,14 @@ fun LuckyAnimationNotificationSlider(
         ) {
             AnimatedVisibility(
                 visible = notice != null && !notice.isExiting,
-                enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
-                exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+                enter = slideInHorizontally(
+                    initialOffsetX = { -it },
+                    animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing),
+                ) + fadeIn(animationSpec = tween(durationMillis = 90)),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { -it },
+                    animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing),
+                ) + fadeOut(animationSpec = tween(durationMillis = 90)),
                 modifier = Modifier.wrapContentWidth()
             ) {
                 if (notice == null) return@AnimatedVisibility
@@ -699,7 +705,7 @@ fun LuckyAnimationNotificationSlider(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .offset(x = 142.dp, y = 29.dp)
+                                .offset(x = 142.dp, y = 31.dp)
                                 .size(0.dp)
                                 .wrapContentSize(align = Alignment.BottomCenter, unbounded = true)
                                 .zIndex(2f),
@@ -854,6 +860,7 @@ private fun LuckyRewardTopBadge(
                 lineHeight = 14.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
+                modifier = Modifier.offset(y = (-3).dp),
                 style = TextStyle(
                     shadow = Shadow(
                         color = Color(0xCC000000),
