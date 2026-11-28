@@ -2145,7 +2145,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     }
                                 }
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.offset(y = (-3).dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.offset(y = (-3).dp)) {
                                     if (ownerVipBadge && ownerVipId.isNotBlank()) {
                                         AsyncImage(
                                             model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
@@ -2153,7 +2153,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
                                         )
-                                        Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                        Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, maxLines = 1, softWrap = false)
                                     } else if (roomOwnerAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005")) {
                                         AsyncImage(
                                             model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
@@ -2161,17 +2161,18 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
                                         )
-                                        Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                        Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, maxLines = 1, softWrap = false)
                                     } else {
-                                        Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                        Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, maxLines = 1, softWrap = false)
                                     }
+                                    Spacer(Modifier.width(8.dp))
                                     Row(
-                                        Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
+                                        Modifier.height(18.dp).wrapContentWidth(unbounded = true).clickable { showRoomCup = true; showRoomCupOnline = true },
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
                                     ) {
                                         Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
-                                        Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                                     }
                                 }
                             }
@@ -2183,7 +2184,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             if (isRoomOwner) {
                                 Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showSettings = true },contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
                             }
-                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showInfo = false; showRoomShareRequest=true },contentAlignment=Alignment.Center) {
+                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showInfo = false; showRoomShareRequest = true },contentAlignment=Alignment.Center) {
                                 Canvas(Modifier.size(17.dp)) {
                                     val p = Path().apply {
                                         moveTo(size.width*.18f,size.height*.82f)
