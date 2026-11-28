@@ -651,13 +651,17 @@ fun EmeraldVoiceWaveEffect(
     }
 }
 
+private fun isNativeVoiceWaveEquipped(item: JSONObject): Boolean =
+    (item.optString("tab").equals("Voice", ignoreCase = true) || item.optString("itemId") == "vw1") &&
+        item.optBoolean("equipped") && item.optLong("expiresAt") > System.currentTimeMillis()
+
 @Composable
 internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier = Modifier) {
     val appContext = LocalContext.current.applicationContext
     var equipped by remember(userId) {
         mutableStateOf(readNativeStoreInventoryCache(appContext, userId).let { cached ->
             (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
-                .any { it.optString("tab") == "Voice" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+                .any { isNativeVoiceWaveEquipped(it) }
         })
     }
     val refreshVersion = nativeVoiceWaveRefreshVersions[userId] ?: 0L
@@ -691,7 +695,7 @@ internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier =
         if (!equipped) return@LaunchedEffect
         val cached = readNativeStoreInventoryCache(appContext, userId)
         val voice = (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
-            .firstOrNull { it.optString("tab") == "Voice" && it.optBoolean("equipped") }
+            .firstOrNull { isNativeVoiceWaveEquipped(it) }
             ?: return@LaunchedEffect
         val remaining = (voice.optLong("expiresAt") - System.currentTimeMillis()).coerceAtLeast(0L)
         if (remaining > 0L) delay(remaining)
