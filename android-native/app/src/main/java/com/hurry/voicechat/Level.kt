@@ -401,11 +401,12 @@ private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
                     )
 
                     val methods = listOf(
-                        Pair("Send Gifts", "1 coins = 1 EXP"),
-                        Pair("Join rooms", "2000 EXP/Day"),
-                        Pair("Share Rooms", "2000 EXP/Day"),
-                        Pair("Take the mic and unmute in your own room", "1 min = 500 exp, 10000 exp/day"),
-                        Pair("Take the mic and unmute in others' rooms", "1 min = 500 exp, 20000 exp/day")
+                        Pair("Gift coins consumption", "600 coins = 1 Exp"),
+                        Pair("Enter the room", "20 Exp/day"),
+                        Pair("Share the room", "20 Exp/day"),
+                        Pair("Stay in your own room (Limited Time)", "10 mins = 10 Exp, 100 Exp/day"),
+                        Pair("Stay in other rooms (Limited Time)", "10 mins = 10 Exp, 200 Exp/day"),
+                        Pair("Participate in activities", "Speed up upgrade")
                     )
 
                     methods.forEachIndexed { index, item ->
