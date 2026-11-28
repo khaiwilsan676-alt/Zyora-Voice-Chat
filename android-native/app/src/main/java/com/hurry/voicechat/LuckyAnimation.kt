@@ -280,10 +280,13 @@ class LuckyAnimationController internal constructor(val roomId: String) {
             if (pendingComboClicks > 0) {
                 pendingComboClicks =
                     (pendingComboClicks - 1).coerceAtLeast(0)
+                // Combo taps already update the notification optimistically.
+                // A server acknowledgement confirms that count; it must not add
+                // another × on top of the user's actual tap.
                 maxOf(
                     normalized.multiplier,
-                    activeCurrent.multiplier + 1,
-                    displayMultiplier + 1,
+                    activeCurrent.multiplier,
+                    displayMultiplier,
                 )
             } else {
                 maxOf(
@@ -354,20 +357,18 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun failCombo() { comboPending = false }
 
     fun optimisticCombo() {
-        if (pendingComboClicks > 0) {
-            pendingComboClicks =
-                (pendingComboClicks - 1).coerceAtLeast(0)
-        }
         val current = notice
-        // Gift quantity is independent from the notification counter.
-        // Lucky notification remains ×1; quantity is charged/sent separately.
-        displayMultiplier = 1
+        // Notification × follows the user's Combo taps immediately (initial gift = ×1).
+        // Keep pendingComboClicks until the matching server acknowledgement arrives.
+        val nextMultiplier = (maxOf(displayMultiplier, current?.multiplier ?: 1) + 1)
+            .coerceAtLeast(2)
+        displayMultiplier = nextMultiplier
         if (current != null) {
             activeGiftKey = luckyNoticeGiftKey(current)
             // Keep the last server-confirmed win visible while the next Combo
-            // transfer is in flight. A new server result replaces it when confirmed.
+            // transfer is in flight; only the × count changes on each tap.
             notice = current.copy(
-                multiplier = 1,
+                multiplier = nextMultiplier,
                 isExiting = false,
             )
             noticeGeneration++
