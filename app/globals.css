@@ -121,47 +121,6 @@ body {
   vertical-align: middle;
 }
 
-.zyora-owner-main input:not([type="checkbox"]):not([type="radio"]) {
-  min-height: 40px;
-}
-
-.zyora-owner-main table tbody tr {
-  min-height: 58px;
-}
-
-.zyora-owner-main button[class*="bg-[#197477]"],
-.zyora-owner-main button[class*="bg-[#168184]"] {
-  border-radius: 8px;
-  font-weight: 700;
-  box-shadow: 0 1px 2px rgba(15, 35, 55, .08);
-}
-
-.zyora-owner-main h1,
-.zyora-owner-main h2,
-.zyora-owner-main h3 {
-  letter-spacing: -.025em;
-}
-
-.zyora-owner-main table thead th {
-  padding-top: 14px;
-  padding-bottom: 14px;
-}
-
-.zyora-owner-main table tbody td {
-  padding-top: 13px;
-  padding-bottom: 13px;
-}
-
-.zyora-owner-sidebar {
-  box-shadow: 8px 0 28px rgba(10, 17, 32, .12);
-}
-
-.zyora-owner-sidebar nav button[aria-current="page"],
-.zyora-owner-sidebar nav button[data-active="true"] {
-  background: rgba(35, 160, 158, .18);
-  color: #f8ffff;
-}
-
 .zyora-owner-main button:not(:disabled) {
   transition: filter .16s ease, box-shadow .16s ease, transform .16s ease;
 }
