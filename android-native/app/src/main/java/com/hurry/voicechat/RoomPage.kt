@@ -2122,17 +2122,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
-                                        Row(
-                                            Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
-                                            Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                                        }
-                                    }
+                                    CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
                                     if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
                                         if (!followed) {
                                             AsyncImage(
@@ -2200,6 +2190,14 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                             Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                         }
                                         else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    }
+                                    Row(
+                                        Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
+                                        Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
