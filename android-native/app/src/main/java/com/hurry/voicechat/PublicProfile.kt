@@ -666,6 +666,7 @@ fun PublicProfileScreen(
                         modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-24).dp).size(90.dp),
                         gemshineOffsetX = (-2).dp, gemshineOffsetY = 0.dp,
                         gemshineSizeAdjustment = 5.dp,
+                        loveBeatSizeAdjustment = 5.dp,
                         fallbackUserIds = listOf(targetUser?.uid.orEmpty(), targetUser?.id.orEmpty())
                     )
                     
