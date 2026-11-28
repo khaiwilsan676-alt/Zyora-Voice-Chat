@@ -81,7 +81,10 @@ fun UserReport(
     targetImage: String,
     targetId: String,
     onDismiss: () -> Unit,
-    idBadgeImage: String? = null
+    idBadgeImage: String? = null,
+    contextPostId: String = "",
+    contextPostText: String = "",
+    contextPostImages: List<String> = emptyList()
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -280,6 +283,9 @@ fun UserReport(
                                         .put("reportedId", targetId)
                                         .put("reportedName", targetName)
                                         .put("reportedPhoto", targetImage)
+                                        .put("reportedPostId", contextPostId)
+                                        .put("reportedPostText", contextPostText)
+                                        .put("reportedPostImages", org.json.JSONArray(contextPostImages))
                                         .put("category", reportCategory)
                                         .put("description", reportDescription.trim())
                                         .put("timestamp", timestamp)
