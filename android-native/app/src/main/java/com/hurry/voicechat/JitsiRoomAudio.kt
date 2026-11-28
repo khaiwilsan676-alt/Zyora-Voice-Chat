@@ -451,10 +451,22 @@ fun JitsiRoomAudio(
                                 speakerQueue.poll()?.let { readyFrames.add(it) }
                             }
                             if (readyFrames.isEmpty() && speakerQueues.isNotEmpty()) {
-                                try {
-                                    speakerQueues.first().poll(20, TimeUnit.MILLISECONDS)?.let { readyFrames.add(it) }
-                                } catch (_: InterruptedException) {
-                                    if (!alive.get()) break
+                                // Never block on just the first speaker: that queue may
+                                // belong to a silent/stopped member while another member
+                                // is actively sending. Check every speaker queue during
+                                // the jitter window so one idle queue cannot mute the room.
+                                val waitDeadline = System.nanoTime() + 20_000_000L
+                                while (readyFrames.isEmpty() && alive.get() &&
+                                    System.nanoTime() < waitDeadline
+                                ) {
+                                    speakerQueues.forEach { speakerQueue ->
+                                        speakerQueue.poll()?.let { readyFrames.add(it) }
+                                    }
+                                    if (readyFrames.isEmpty()) {
+                                        try { Thread.sleep(2) } catch (_: InterruptedException) {
+                                            if (!alive.get()) break
+                                        }
+                                    }
                                 }
                             }
                             readyFrames.forEach { frame ->
