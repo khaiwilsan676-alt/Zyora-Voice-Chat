@@ -59,13 +59,16 @@ fun RoomInfo(
     isRoomFollowed:Boolean=false,
     onToggleRoomFollow:(Boolean)->Unit={},
     onShareToUser:(RoomInfoFollower)->Unit={},
-    onOpenOwnerChat:(RoomInfoFollower)->Unit={}
+    onOpenOwnerChat:(RoomInfoFollower)->Unit={},
+    openShareRequest:Boolean=false,
+    onShareSheetDismissed:()->Unit={}
 ) {
-    if (!isOpen) return
+    if (!isOpen && !openShareRequest) return
     val context = LocalContext.current
     var tab by remember { mutableStateOf(0) }
     
     var showShareSheet by remember { mutableStateOf(false) }
+    LaunchedEffect(openShareRequest) { if (openShareRequest) showShareSheet = true }
     var showDangerMenu by remember { mutableStateOf(false) }
     var showRoomReport by remember { mutableStateOf(false) }
     var roomFans by remember(currentUserId, roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
@@ -318,6 +321,7 @@ fun RoomInfo(
         }
     }
 
+    if (isOpen) {
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
         Column(
@@ -509,8 +513,9 @@ fun RoomInfo(
             }
         }
 
+    }
         if (showShareSheet) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false })
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false; onShareSheetDismissed() })
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -553,6 +558,7 @@ fun RoomInfo(
                                     .clickable {
                                         onShareToUser(fan)
                                         showShareSheet = false
+                                        onShareSheetDismissed()
                                     },
                                 contentScale = ContentScale.FillBounds
                             )
