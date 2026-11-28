@@ -1573,6 +1573,10 @@ fun RoomPage(
                         } else {
                             (luckyGiftNotice?.multiplier ?: multiplier) + 1
                         },
+                        // Every server-confirmed combo result must refresh win data;
+                        // otherwise a genuine win during combo is silently missed.
+                        totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
+                        maxWinTimes = payload.optInt("luckyReturnPercent", 0),
                         isExiting = false
                     )
                 } else {
