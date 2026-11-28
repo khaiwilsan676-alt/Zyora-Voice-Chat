@@ -321,7 +321,8 @@ fun RoomInfo(
         }
     }
 
-    // A share request is a standalone overlay: never render the Room Info panel behind it.
+    // Keep Room Info hidden for a standalone in-room share request, but still render the shared sheet.
+    if (isOpen || openShareRequest) {
     if (isOpen && !openShareRequest) {
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
@@ -496,13 +497,14 @@ fun RoomInfo(
         }
 
     }
-        if (showShareSheet) {
+    }
+        if (showShareSheet || openShareRequest) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false; onShareSheetDismissed() })
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.60f)
+                        .fillMaxHeight(0.70f)
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .background(Color.Black)
                 ) {
