@@ -506,6 +506,24 @@ fun RoomPage(
     var luckyBagClaiming by remember { mutableStateOf(false) }
     var luckyBagClaimError by remember { mutableStateOf<String?>(null) }
     var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
+    // Hold Lucky Gift chat rows until the combo window closes; ordinary gifts remain immediate.
+    var pendingLuckyChatMessages by remember(roomId) { mutableStateOf<List<NativeRoomMessage>>(emptyList()) }
+    var luckyComboWindowWasVisible by remember(roomId) { mutableStateOf(false) }
+    LaunchedEffect(showLuckyComboButton, pendingLuckyChatMessages) {
+        if (showLuckyComboButton) {
+            luckyComboWindowWasVisible = true
+        } else if (luckyComboWindowWasVisible) {
+            if (pendingLuckyChatMessages.isNotEmpty()) {
+                pendingLuckyChatMessages.forEach { pending ->
+                    val existingIndex = messages.indexOfLast { it.id == pending.id }
+                    if (existingIndex >= 0) messages[existingIndex] = pending
+                    else messages.add(pending)
+                }
+                pendingLuckyChatMessages = emptyList()
+            }
+            luckyComboWindowWasVisible = false
+        }
+    }
 
     LaunchedEffect(luckyBagExpiresAt) {
         while (luckyBagExpiresAt > 0L) {
@@ -1471,33 +1489,35 @@ fun RoomPage(
                 val chatGiftName = payload.optString("giftName", "Gift").ifBlank { "Gift" }
                 val chatTimestamp = payload.optLong("timestamp", System.currentTimeMillis())
                 val chatMultiplier = payload.optInt("multiplier", 1).coerceAtLeast(1)
-                val isLuckyComboChat = payload.optBoolean("luckyGift", false) && payload.optBoolean("comboReplay", false)
+                val isLuckyGiftChat = payload.optBoolean("luckyGift", false)
+                val isLuckyComboChat = isLuckyGiftChat && payload.optBoolean("comboReplay", false)
                 mainHandler.post {
-                    if (isLuckyComboChat) {
-                        val previousIndex = messages.indexOfLast {
-                            it.type == "gift" && it.senderAccountId == senderId && it.imageUrl == giftImage
+                    if (isLuckyGiftChat) {
+                        val pendingIndex = pendingLuckyChatMessages.indexOfLast {
+                            it.senderAccountId == senderId && it.imageUrl == giftImage
                         }
-                        if (previousIndex >= 0) {
-                            val previous = messages[previousIndex]
-                            messages[previousIndex] = previous.copy(
-                                giftMultiplier = maxOf(previous.giftMultiplier + 1, chatMultiplier),
-                                timestamp = chatTimestamp
-                            )
-                        } else if (messages.none { it.id == "gift-" + chatTransferId }) {
-                            messages.add(
-                                NativeRoomMessage(
-                                    id = "gift-" + chatTransferId,
-                                    text = chatLabel,
-                                    sender = senderName,
-                                    senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                                    senderAccountId = senderId,
-                                    timestamp = chatTimestamp,
-                                    type = "gift",
-                                    imageUrl = giftImage,
-                                    giftName = chatGiftName,
-                                    giftMultiplier = chatMultiplier
+                        if (isLuckyComboChat && pendingIndex >= 0) {
+                            val previous = pendingLuckyChatMessages[pendingIndex]
+                            pendingLuckyChatMessages = pendingLuckyChatMessages.toMutableList().also { rows ->
+                                rows[pendingIndex] = previous.copy(
+                                    giftMultiplier = maxOf(previous.giftMultiplier + 1, chatMultiplier),
+                                    timestamp = chatTimestamp
                                 )
+                            }
+                        } else if (!isLuckyComboChat) {
+                            val newMessage = NativeRoomMessage(
+                                id = "gift-" + chatTransferId,
+                                text = chatLabel,
+                                sender = senderName,
+                                senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                                senderAccountId = senderId,
+                                timestamp = chatTimestamp,
+                                type = "gift",
+                                imageUrl = giftImage,
+                                giftName = chatGiftName,
+                                giftMultiplier = chatMultiplier
                             )
+                            pendingLuckyChatMessages = pendingLuckyChatMessages + newMessage
                         }
                     } else if (messages.none { it.id == "gift-" + chatTransferId }) {
                         messages.add(
