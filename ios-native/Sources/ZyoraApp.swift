@@ -1,7 +1,12 @@
 import SwiftUI
+import FirebaseCore
 
 @main
 struct ZyoraApp: App {
+    init() {
+        FirebaseApp.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             ZyoraRootView()
