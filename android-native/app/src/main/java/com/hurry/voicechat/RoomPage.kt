@@ -2094,9 +2094,9 @@ fun RoomPage(
         if (musicControllerVisible && miniMusicTrack != null) {
             val onlinePillUser = activeRoomUsers.firstOrNull { it.accountId.isNotBlank() }
             Row(
-                modifier = Modifier.align(Alignment.TopEnd).padding(top = 90.dp, end = 4.dp)
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 90.dp, end = 0.dp)
                     .height(27.dp).widthIn(max = 58.dp)
-                    .clip(RoundedCornerShape(50))
+                    .clip(RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp))
                     .background(Color.Black.copy(alpha = 0.30f))
                     .clickable { showRoomCup = true; showRoomCupOnline = true }
                     .padding(horizontal = 4.dp, vertical = 2.dp),
@@ -2111,11 +2111,11 @@ fun RoomPage(
                     contentScale = ContentScale.Crop
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",
+                    Icon(
+                        Icons.Default.MusicNote,
                         contentDescription = "Music track",
-                        modifier = Modifier.size(11.dp),
-                        contentScale = ContentScale.Fit
+                        tint = Color(0xFF42A5F5),
+                        modifier = Modifier.size(11.dp)
                     )
                     Text(
                         activeRoomUsers.count { it.accountId.isNotBlank() }.toString(),
