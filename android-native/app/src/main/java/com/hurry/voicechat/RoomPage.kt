@@ -1056,7 +1056,8 @@ fun RoomPage(
     LaunchedEffect(roomId, luckyComboPending, showLuckyComboButton, queuedLuckyComboTransfers.size, roomSocketRef.value) {
         // Never flush a queued tap after the five-second combo window has ended.
         // The expiry effect clears the queue; this guard also closes the recomposition race.
-        if (showLuckyComboButton && luckyComboTimeLeft > 0 &&
+        if (showLuckyComboButton &&
+            System.currentTimeMillis() < luckyAnimation.comboExpiresAtMs &&
             !luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
             val socket = roomSocketRef.value
             if (socket?.connected() == true) {
@@ -1523,7 +1524,7 @@ fun RoomPage(
                 // A sender-side combo response must match the exact in-flight tap.
                 // This blocks late/duplicate success events from reopening a stale combo banner.
                 if (payload.optBoolean("comboReplay", false) && senderId == accountId &&
-                    (!luckyComboPending || pendingLuckyGiftTransferId.isBlank() ||
+                    (pendingLuckyGiftTransferId.isBlank() ||
                      transferId != pendingLuckyGiftTransferId)) return@Listener
             }
             val senderName = payload.optString("senderName", "User")
