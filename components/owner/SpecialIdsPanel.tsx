@@ -47,6 +47,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [revokedUserIds, setRevokedUserIds] = useState<string[]>([]);
   const [status, setStatus] = useState('');
 
   const matchingUsers = useMemo(() => {
@@ -61,8 +62,29 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
     const idActive = Boolean(user.vipId && (!user.vipIdExpiresAt || user.vipIdExpiresAt > Date.now()));
     const tagActive = Boolean(user.ownerImageTag && (!user.ownerImageTagExpiresAt || user.ownerImageTagExpiresAt > Date.now()));
     const profileTagActive = PROFILE_TAGS.some(tag => Boolean(user[tag.key] && (!(user as any)[tag.key + 'ExpiresAt'] || (user as any)[tag.key + 'ExpiresAt'] > Date.now())));
-    return idActive || tagActive || profileTagActive;
-  }), [users]);
+    return (idActive || tagActive || profileTagActive) && !revokedUserIds.includes(user.id);
+  }), [users, revokedUserIds]);
+
+  const revokePermanentId = async (user: UserRow) => {
+    if (!user.hurryId || !window.confirm(`Revoke permanent VIP ID for ${user.name || 'this user'}?`)) return;
+    setSaving(true);
+    setStatus('');
+    try {
+      const response = await fetch(apiUrl('/api/owner/special-ids/revoke'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
+        body: JSON.stringify({ recipientAccountId: user.hurryId })
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success) throw new Error(result?.error || 'Could not revoke permanent VIP ID.');
+      setRevokedUserIds(current => [...current, user.id]);
+      setStatus(`Permanent VIP ID revoked for App ID ${user.hurryId}.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not revoke permanent VIP ID.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const assignId = async () => {
     if (!selectedUser || !selectedUser.hurryId || (kind === 'id' ? !/^\d+$/.test(specialId.trim()) : (tagKey === 'ownerImageTag' ? !tagImage : !PROFILE_TAGS.some(tag => tag.key === tagKey))) || (!permanent && (!/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650))) {
@@ -231,7 +253,12 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                       {activeProfileTags.map(tag => <span key={tag.key} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"><img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (tag.image.startsWith('/') ? tag.image.slice(1) : tag.image)} alt={tag.label} className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-700">{tag.label}</span></span>)}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-slate-600">{expiry ? `${remaining ?? 0} days` : 'Permanent'}</td>
+                  <td className="px-3 py-3 text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span>{expiry ? `${remaining ?? 0} days` : 'Permanent'}</span>
+                      {idActive && !user.vipIdExpiresAt && <button type="button" disabled={saving} onClick={() => revokePermanentId(user)} className="rounded-md border border-rose-200 px-2 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50">Revoke</button>}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
