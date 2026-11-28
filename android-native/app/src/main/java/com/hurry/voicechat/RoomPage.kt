@@ -2096,7 +2096,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     // Top Room DP card and Top Right Options
                     Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
                         Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).clickable { showInfo = true },contentScale = ContentScale.Crop)
+                            FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).clickable { if (!showInfo) { showRoomShareRequest = false; showInfo = true } },contentScale = ContentScale.Crop)
                             Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
@@ -3115,7 +3115,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             isOpen=showInfo,
             openShareRequest=showRoomShareRequest,
             onShareSheetDismissed={showRoomShareRequest=false},
-            onClose={showInfo=false},
+            onClose={showInfo=false;showRoomShareRequest=false},
             isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
             roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId,name=roomOwner.name,image=roomOwner.image,vipId=ownerVipId,vipIdBadge=ownerVipBadge),
             roomData=RoomInfoData(roomName,roomImage,announcement,roomId),
