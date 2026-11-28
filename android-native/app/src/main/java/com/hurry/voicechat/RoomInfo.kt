@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -70,23 +72,58 @@ fun RoomInfo(
     
     LaunchedEffect(currentUserId, showShareSheet) {
         if (showShareSheet && currentUserId.isNotBlank()) {
-            roomFans = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                // Show the union of the signed-in user's Fans and Following lists.
-                // SocialFollowApi persists each list locally, so cached rows remain
-                // available if the network is unavailable or the app is reopened.
-                val fans = SocialFollowApi.list(context, currentUserId, "fans")
-                val following = SocialFollowApi.list(context, currentUserId, "following")
-                (fans + following).map {
-                    RoomInfoFollower(
-                        it.accountId.ifBlank { it.uid.ifBlank { it.id } },
-                        it.name, it.image, it.country
-                    )
-                }.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }
-                    .distinctBy { it.accountId }
+            val cachedRows = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val db = NativeIndexDatabase(context)
+                (SocialFollowApi.cachedList(context, currentUserId, "fans") + SocialFollowApi.cachedList(context, currentUserId, "following"))
+                    .mapNotNull { row ->
+                        val id = row.accountId.ifBlank { row.uid.ifBlank { row.id } }
+                        if (id.isBlank() || id == currentUserId) return@mapNotNull null
+                        val p = runCatching { db.loadProfile("room_info_member:$id") ?: db.loadProfile(id) }.getOrNull()
+                        fun valid(v:String)=v.trim().takeIf { it.isNotBlank() && it!="null" && !it.equals("undefined",true) && !it.equals("User",true) && !it.endsWith("/default-avatar.png",true) }.orEmpty()
+                        RoomInfoFollower(id, valid(row.name).ifBlank { valid(p?.optString("name").orEmpty()) },
+                            valid(row.image).ifBlank { valid(p?.optString("image").orEmpty()).ifBlank { valid(p?.optString("avatar").orEmpty()) } },
+                            row.country.ifBlank { p?.optString("country").orEmpty() }, row.gender.ifBlank { p?.optString("gender").orEmpty() })
+                    }.distinctBy { it.accountId }
             }
+            roomFans = cachedRows.filter { it.name.isNotBlank() || it.image.isNotBlank() }
+            val (fans, following) = kotlinx.coroutines.coroutineScope {
+                val a=async(kotlinx.coroutines.Dispatchers.IO) { SocialFollowApi.list(context,currentUserId,"fans") }
+                val b=async(kotlinx.coroutines.Dispatchers.IO) { SocialFollowApi.list(context,currentUserId,"following") }
+                a.await() to b.await()
+            }
+            val rows=(fans+following).mapNotNull { row ->
+                val id=row.accountId.ifBlank { row.uid.ifBlank { row.id } }
+                if(id.isBlank()||id==currentUserId) null else RoomInfoFollower(id,row.name,row.image,row.country,row.gender)
+            }.distinctBy { it.accountId }
+            val limiter=kotlinx.coroutines.sync.Semaphore(6)
+            rows.forEach { row -> launch(kotlinx.coroutines.Dispatchers.IO) {
+                limiter.withPermit {
+                    val db=NativeIndexDatabase(context)
+                    val p=runCatching { db.loadProfile("room_info_member:${row.accountId}") ?: db.loadProfile(row.accountId) }.getOrNull()
+                    fun valid(v:String)=v.trim().takeIf { it.isNotBlank() && it!="null" && !it.equals("undefined",true) && !it.equals("User",true) && !it.endsWith("/default-avatar.png",true) }.orEmpty()
+                    val cn=valid(p?.optString("name").orEmpty())
+                    val ci=valid(p?.optString("image").orEmpty()).ifBlank { valid(p?.optString("avatar").orEmpty()) }
+                    val remote=if(valid(row.name).isBlank()||valid(row.image).isBlank()) runCatching {
+                        ProfilePersistence.load(TargetUser(id=row.accountId,uid=row.accountId,accountId=row.accountId,name=cn,image=ci))
+                    }.getOrNull() else null
+                    fun rv(vararg keys:String)=keys.asSequence().map { valid(remote?.optString(it,"").orEmpty()) }.firstOrNull { it.isNotBlank() }.orEmpty()
+                    val resolved=row.copy(
+                        name=valid(row.name).ifBlank { cn }.ifBlank { rv("name","displayName","userName","nickname") },
+                        image=valid(row.image).ifBlank { ci }.ifBlank { rv("image","avatar","profileImageUrl","dp","photo","photoURL","avatarUrl") },
+                        country=row.country.ifBlank { p?.optString("country").orEmpty() }.ifBlank { remote?.optString("country").orEmpty() },
+                        gender=row.gender.ifBlank { p?.optString("gender").orEmpty() }.ifBlank { remote?.optString("gender").orEmpty() })
+                    if(resolved.name.isNotBlank()||resolved.image.isNotBlank()) {
+                        runCatching {
+                            val saved=db.loadProfile("room_info_member:${row.accountId}")?:org.json.JSONObject()
+                            db.saveProfile("room_info_member:${row.accountId}",saved.put("name",resolved.name).put("image",resolved.image).put("country",resolved.country).put("gender",resolved.gender).put("updatedAt",System.currentTimeMillis()))
+                        }
+                        withContext(kotlinx.coroutines.Dispatchers.Main) { roomFans=roomFans.filterNot { it.accountId==resolved.accountId }+resolved }
+                    }
+                }
+            } }
         }
     }
-    
+
     var ownerVipId by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.vipId) { mutableStateOf(roomOwner.vipId.trim()) }
     var ownerVipBadge by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.vipIdBadge) { mutableStateOf(roomOwner.vipIdBadge) }
     // Use the exact VIP ID state already rendered in the room's top owner card.
@@ -365,7 +402,15 @@ fun RoomInfo(
                 }
 
             Row(
-                Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),
+                Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)
+                    .pointerInput(tab) {
+                        var drag=0f
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag={ _, amount -> drag+=amount },
+                            onDragEnd={ if(drag < -55f && tab==0) tab=1 else if(drag > 55f && tab==1) tab=0; drag=0f },
+                            onDragCancel={ drag=0f }
+                        )
+                    },
                 horizontalArrangement=Arrangement.spacedBy(7.dp)
             ) {
                 listOf("Room info","Members").forEachIndexed { index, label ->
@@ -483,13 +528,12 @@ fun RoomInfo(
                     
                     items(roomFans, key = { "room-share-" + it.accountId }) { fan ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(
-                                model = fan.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
-                                contentDescription = fan.name,
-                                modifier = Modifier.size(42.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Text(fan.name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 10.dp),
+                            if (fan.image.isNotBlank()) {
+                                AsyncImage(model=fan.image,contentDescription=fan.name,modifier=Modifier.size(42.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            } else {
+                                Box(Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha=.10f)))
+                            }
+                            Text(fan.name.takeIf { it.isNotBlank() } ?: " ", Modifier.weight(1f).padding(start = 10.dp),
                                 color = Color.White, fontSize = 14.sp, maxLines = 1)
                             
                             // Ye rahi teri nayi image wali button bss 
