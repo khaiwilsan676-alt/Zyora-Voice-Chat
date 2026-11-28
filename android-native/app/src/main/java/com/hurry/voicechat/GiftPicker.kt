@@ -402,6 +402,7 @@ fun GiftPicker(
                         "giftName" to giftToSend.name,
                         "video" to resolvedGiftVideo,
                         "videoStyle" to (giftToSend.videoStyle ?: "fade"),
+                        "greenRemove" to giftToSend.greenRemove,
                         "timestamp" to System.currentTimeMillis(),
                     ))
                 }
@@ -1651,17 +1652,18 @@ internal fun VideoEffectOverlay(
 }
 
 @Composable
-fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
+fun RoomGiftVideoOverlay(
+    src: String,
+    style: String = "fade",
+    greenRemove: Boolean = false,
+    onFinished: () -> Unit,
+) {
     val resolved = giftAssetUrl(src)
     VideoEffectOverlay(
         src = resolved,
-        // Room banners need a direct TextureView surface; the fade-mask offscreen
-        // layer can prevent the video surface from appearing in this overlay.
-        style = "plain",
-        // Keep notification playback on ExoPlayer's direct TextureView path.
-        // The custom GL chroma SurfaceTexture renderer is not reliable in this
-        // short-lived room banner and can leave the video completely invisible.
-        greenRemove = isGreenScreenGiftVideo(resolved),
+        // Apply the same effect metadata selected by the sender on every room viewer.
+        style = style,
+        greenRemove = greenRemove || isGreenScreenGiftVideo(resolved),
         onFinished = onFinished,
         onStarted = {},
     )
