@@ -241,12 +241,7 @@ fun RoomPage(
     // The room session itself is deliberately not restored.
     val lastMusicPrefs = remember { appContext.getSharedPreferences("zyora_last_room_music", android.content.Context.MODE_PRIVATE) }
     val lastMusicKey = "last_track_$accountId"
-    // Remember the last seat per account and room so reconnecting owners return to it.
-    val lastSeatPrefs = remember { appContext.getSharedPreferences("zyora_last_room_seat", android.content.Context.MODE_PRIVATE) }
-    val lastSeatKey = "last_seat_${roomId}_$accountId"
-    fun saveLastRoomSeat(number: Int) {
-        if (number in 1..15) lastSeatPrefs.edit().putInt(lastSeatKey, number).apply()
-    }
+    // Seat occupancy is live room-session state only; never persist or restore it locally.
     val savedRoomTrack = remember(accountId) {
         runCatching {
             val saved = lastMusicPrefs.getString(lastMusicKey, null) ?: return@runCatching null
@@ -1124,8 +1119,6 @@ fun RoomPage(
         if (!giftEffectEnabled) roomGiftVideoPreview = ""
     }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
-    // The owner gets one automatic attempt on the first authoritative seat snapshot only.
-    val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
     // Preserve live speaker state across room_seats snapshots.
     val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
     val activeMusicSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
@@ -1645,26 +1638,6 @@ fun RoomPage(
                         seats.add(incoming.copy(
                             speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
                         ))
-                    }
-                    val ownerIds = setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).filter { it.isNotBlank() }.toSet()
-                    val savedSeatNumber = lastSeatPrefs.getInt(lastSeatKey, 1).coerceIn(1, 15)
-                    val preferredSeat = normalizedParsed.firstOrNull { it.number == savedSeatNumber }
-                    if (accountId in ownerIds && preferredSeat != null && ownerAutoSeatAttempted.compareAndSet(false, true)) {
-                        val ownerAlreadySeated = normalizedParsed.any { it.occupied && it.accountId in ownerIds }
-                        val targetSeat = if (!preferredSeat.occupied && !preferredSeat.locked) preferredSeat
-                            else normalizedParsed.firstOrNull { !it.occupied && !it.locked }
-                        if (targetSeat != null && !ownerAlreadySeated) {
-                            val ownerUser = JSONObject()
-                                .put("name", latestRoomDisplayName.ifBlank { "User" })
-                                .put("image", latestRoomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL })
-                                .put("accountId", accountId)
-                            saveLastRoomSeat(targetSeat.number)
-                            roomSocket.emit(
-                                "room_seat_action",
-                                JSONObject().put("roomId", roomId).put("userId", accountId)
-                                    .put("action", "take").put("seatNumber", targetSeat.number).put("user", ownerUser)
-                            )
-                        }
                     }
                 }
             }
