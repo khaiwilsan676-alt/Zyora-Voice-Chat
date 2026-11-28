@@ -3275,23 +3275,28 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyAnimationComboButton(
                     visible = true,
-                    enabled = true,
+                    // Never queue a second send while the previous transfer is pending.
+                    // One completed transfer must be followed by one deliberate tap.
+                    enabled = !luckyComboPending && lastLuckyComboPayload != null,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
+                        if (luckyComboPending) return@LuckyAnimationComboButton
                         val previousGift = lastLuckyComboPayload
                         val socket = roomSocketRef.value
-                        if (previousGift != null) {
+                        if (previousGift != null && !luckyComboPending) {
                             if (socket?.connected() != true) {
                                 roomToastText = "Connection unavailable. Please try again."
                             } else {
                                 luckyAnimation.registerComboTap()
                                 val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
-                                val nextMultiplier = (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + 1
                                 val comboTransfer = JSONObject(previousGift.toString())
                                     .put("transferId", nextTransferId)
                                     .put("eventId", nextTransferId)
                                     .put("comboReplay", true)
-                                    .put("multiplier", nextMultiplier)
+                                    // Repeat the selected quantity (for example 999),
+                                    // but keep the notification strip at ×1.
+                                    .put("quantity", previousGift.optInt("quantity", 1).coerceAtLeast(1))
+                                    .put("multiplier", 1)
                                     .put("timestamp", System.currentTimeMillis())
                                 // Show the tap instantly; the queued transfer is settled
                                 // after the previous server acknowledgement to protect wallet state.
