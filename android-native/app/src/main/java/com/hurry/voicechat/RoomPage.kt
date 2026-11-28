@@ -749,6 +749,7 @@ fun RoomPage(
     var pendingRoomInvitationJson by remember { mutableStateOf<String?>(null) }
     var showMenu by remember{mutableStateOf(false)}
     var showPkPage by remember { mutableStateOf(false) }
+    var pkBattleMinimized by remember { mutableStateOf(false) }
     var showStore by remember { mutableStateOf(false) }
     var storeInitialView by remember { mutableStateOf("store") }
     var showExitMenu by remember{mutableStateOf(false)}
@@ -2581,6 +2582,22 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 }
             }
 
+            // Minimized PK stays composed so its timer, votes and scores continue.
+            if (pkBattleMinimized) {
+                AsyncImage(
+                    model = coil3.request.ImageRequest.Builder(appContext)
+                        .data("https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261126_214316.png")
+                        .memoryCacheKey("zyora_pk_room_icon")
+                        .diskCacheKey("zyora_pk_room_icon")
+                        .build(),
+                    contentDescription = "Resume PK Battle",
+                    modifier = Modifier.padding(bottom = 2.dp).size(42.dp).clickable {
+                        pkBattleMinimized = false
+                        showPkPage = true
+                    },
+                    contentScale = ContentScale.Fit
+                )
+            }
             // Minimized Wild Party stays composed and keeps its live round/state.
             // Tapping its logo resumes the exact same running game without reloading.
             if (wildPartyMinimized) {
@@ -2977,9 +2994,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             }
         )
         
-        if (showPkPage) {
+        if (showPkPage || pkBattleMinimized) {
             PKBattlePage(
-                onClose = { showPkPage = false },
+                onClose = { showPkPage = false; pkBattleMinimized = false },
+                onMinimize = { showPkPage = false; pkBattleMinimized = true },
+                isVisible = showPkPage,
                 roomId = roomId,
                 accountId = accountId,
                 userName = roomDisplayName,
