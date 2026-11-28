@@ -971,12 +971,14 @@ private fun GiftCard(
                         } else Modifier
                     ),
             ) {
-                AsyncImage(
-                    model = giftAssetUrl(gift.image),
-                    contentDescription = gift.name,
-                    contentScale = if (gift.noMask || isFitNoFade) ContentScale.Fit else ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                key(gift.id, gift.image) {
+                    AsyncImage(
+                        model = giftAssetUrl(gift.image),
+                        contentDescription = gift.name,
+                        contentScale = if (gift.noMask || isFitNoFade) ContentScale.Fit else ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
 
             Text(
