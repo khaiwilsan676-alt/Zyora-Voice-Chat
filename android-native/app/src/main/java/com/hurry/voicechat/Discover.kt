@@ -236,6 +236,7 @@ fun DiscoverPage(
     var showDiscoverDangerMenu by remember { mutableStateOf(false) }
     var showDiscoverReport by remember { mutableStateOf(false) }
     var isDiscoverUserBlocked by remember(actionPost?.authorId) { mutableStateOf(false) }
+    var reportPostImages by remember { mutableStateOf<List<String>>(emptyList()) }
 
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val currentUserId = remember {
@@ -457,6 +458,16 @@ fun DiscoverPage(
         }
 
         val selectedActionPost = actionPost
+        LaunchedEffect(showDiscoverReport, selectedActionPost?.id) {
+            reportPostImages = if (showDiscoverReport && selectedActionPost != null) {
+                withContext(Dispatchers.IO) {
+                    selectedActionPost.images.take(4).map { image ->
+                        if (image.startsWith("http://") || image.startsWith("https://") || image.startsWith("data:")) image
+                        else discoverEncodeImage(image) ?: image
+                    }
+                }
+            } else emptyList()
+        }
         LaunchedEffect(selectedActionPost?.authorId, currentUserId) {
             val targetId = selectedActionPost?.authorId.orEmpty()
             if (targetId.isNotBlank() && targetId != currentUserId) {
@@ -492,7 +503,7 @@ fun DiscoverPage(
                 targetId = selectedActionPost.authorId,
                 contextPostId = selectedActionPost.id,
                 contextPostText = selectedActionPost.text,
-                contextPostImages = selectedActionPost.images,
+                contextPostImages = reportPostImages,
                 onDismiss = {
                     showDiscoverReport = false
                     actionPost = null
