@@ -651,9 +651,11 @@ fun EmeraldVoiceWaveEffect(
     }
 }
 
-private fun isNativeVoiceWaveEquipped(item: JSONObject): Boolean =
-    (item.optString("tab").equals("Voice", ignoreCase = true) || item.optString("itemId") == "vw1") &&
-        item.optBoolean("equipped") && item.optLong("expiresAt") > System.currentTimeMillis()
+private fun isNativeVoiceWaveEquipped(item: JSONObject): Boolean {
+    val isVoiceItem = item.optString("tab").equals("Voice", ignoreCase = true) || item.optString("itemId") == "vw1"
+    val expiry = item.optLong("expiresAt", 0L)
+    return isVoiceItem && item.optBoolean("equipped") && (expiry <= 0L || expiry > System.currentTimeMillis())
+}
 
 @Composable
 internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier = Modifier) {
