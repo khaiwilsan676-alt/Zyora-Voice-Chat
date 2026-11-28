@@ -359,16 +359,14 @@ class LuckyAnimationController internal constructor(val roomId: String) {
                 (pendingComboClicks - 1).coerceAtLeast(0)
         }
         val current = notice
-        val nextMultiplier = maxOf(
-            current?.multiplier ?: 1,
-            displayMultiplier,
-        ) + 1
-        displayMultiplier = nextMultiplier
+        // Gift quantity is independent from the notification counter.
+        // Lucky notification remains ×1; quantity is charged/sent separately.
+        displayMultiplier = 1
         if (current != null) {
             activeGiftKey = luckyNoticeGiftKey(current)
             // Purana win amount copy nahi hoga -> sirf actual win pe hi reward badge aayega
             notice = current.copy(
-                multiplier = nextMultiplier,
+                multiplier = 1,
                 totalWinAmount = 0L,
                 maxWinTimes = 0,
                 isExiting = false,
@@ -1115,11 +1113,9 @@ fun LuckyGiftFlightOverlay(flight: LuckyGiftFlight, onFinished: () -> Unit) {
                             translationY = (startY + deltaY * fly) - halfImagePx
                             scaleX = 1f
                             scaleY = 1f
-                            alpha = if (fly > 0.68f) {
-                                (1f - ((fly - 0.68f) / 0.32f)).coerceIn(0f, 1f)
-                            } else {
-                                1f
-                            }
+                            // Keep the gift at full original color throughout the flight.
+                            // It disappears only when the animation reaches the avatar.
+                            alpha = 1f
                         }
                     },
             )
