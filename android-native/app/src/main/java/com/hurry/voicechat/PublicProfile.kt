@@ -1126,6 +1126,16 @@ fun PublicProfileScreen(
                                                         ),
                                                         blendMode = BlendMode.DstIn
                                                     )
+                                                    // Keep the top fade, but do not fade the bottom edge
+                                                    // into the white profile background.
+                                                    drawRect(
+                                                        brush = Brush.verticalGradient(
+                                                            0f to Color.Transparent,
+                                                            edgeFade to Color.White,
+                                                            1f to Color.White
+                                                        ),
+                                                        blendMode = BlendMode.DstIn
+                                                    )
                                                 }
                                         )
                                         Text(
