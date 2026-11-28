@@ -232,7 +232,7 @@ fun NotificationController() {
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(if (isGameNotice) 21.dp else 18.dp))
                         AsyncImage(
                             model = notice.giftImage,
                             contentDescription = notice.giftName,
