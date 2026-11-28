@@ -2314,3 +2314,10 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Panel Master Wallet now offers Seller Wallet and Coins Wallet destinations. The selected destination is stored in Master Wallet IndexedDB history and displayed per credit.
 - Seller Wallet credits are allowed only when the recipient has an active owner-controlled seller flag (coinSellerTag, coinSeller, or sellerTag); the Render backend enforces this check, not just the UI.
 - Coins Wallet credits update canonical users.coins and emit wallet_balance_updated. Seller Wallet credits update sellerWalletCoins and emit seller_wallet_balance_updated. Each destination uses its own idempotency key; balances remain separate.
+
+
+## 11. Native update-check correction (2026-11-28)
+
+- Corrected the native Android update checker to query releases from `khaiwilsan676-alt/Zyora-Voice-Chat` and select the `app-debug.apk` asset produced by `.github/workflows/native-2-apk.yml`.
+- This repairs the repository/asset mismatch that prevented the installed app from finding its own published native APK update. No UI, app navigation, authentication, room, voice, wallet, gift, or game logic was changed.
+- Verification pending: native GitHub Actions APK/AAB build and runtime update-check validation.
