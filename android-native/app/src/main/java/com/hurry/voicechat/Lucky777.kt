@@ -897,8 +897,7 @@ private fun L7LoadingPage(
                                     colors = listOf(
                                         Color(0xFF8BE8FF),
                                         Color(0xFF21A6FF),
-                                        Color(0xFF006EE6),
-                                        Color(0xFF0047AB)
+                                        Color(0xFF006EE6),                                        Color(0xFF0047AB)
                                     )
                                 ),
                                 size = size
@@ -1744,8 +1743,8 @@ fun Lucky777(
     var wheelRotation by remember { mutableFloatStateOf(l7TargetAngleForSlice(2)) }
 
     var chipIndex by remember { mutableIntStateOf(1) }
-    var bets by remember { mutableStateOf>(emptyMap()) }
-    var lastBets by remember { mutableStateOf>(emptyMap()) }
+    var bets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var lastBets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var history by remember { mutableStateOf<List<L7Round>>(emptyList()) }
 
     var muted by remember { mutableStateOf(false) }
@@ -1797,8 +1796,7 @@ fun Lucky777(
                 }
             }.filter { it.time >= l7Reset() }.sortedBy { it.round }.takeLast(200)
         }
-        for (step in 1..50) {
-            loadingProgress = step / 50f
+        for (step in 1..50) {            loadingProgress = step / 50f
             delay(24)
         }
         delay(120)
