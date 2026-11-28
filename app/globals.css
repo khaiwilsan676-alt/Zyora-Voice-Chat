@@ -11,22 +11,27 @@ body {
   margin: 0;
 }
 
-
-/* Zyora Owner Panel — consistent voice-platform admin styling.
-   Scoped to the main workspace so room/game UI and the dark sidebar keep
-   their existing visual behavior. */
+/* Zyora Owner workspace — consistent live voice-platform admin UI.
+   Keep the navigation rail dark; all rules are scoped to the workspace. */
 .zyora-owner-main {
-  background: #f3f5f9;
-  color: #172033;
+  background: #f4f6fa;
+  color: #182235;
+  font-feature-settings: "ss01" on;
+}
+
+.zyora-owner-main > div,
+.zyora-owner-main section,
+.zyora-owner-main article {
+  min-width: 0;
 }
 
 .zyora-owner-main div[class*="bg-white"][class*="border"] {
-  border-color: #e5eaf1;
-  box-shadow: 0 5px 18px rgba(22, 34, 56, 0.045);
+  border-color: #e4e9f1;
+  box-shadow: 0 2px 8px rgba(20, 34, 58, .035), 0 10px 28px rgba(20, 34, 58, .025);
 }
 
 .zyora-owner-main div[class*="bg-white"][class*="border"][class*="rounded"] {
-  border-radius: 15px;
+  border-radius: 14px;
 }
 
 .zyora-owner-main div[class*="bg-slate-50"][class*="uppercase"] {
@@ -35,28 +40,73 @@ body {
   letter-spacing: .075em;
 }
 
+/* Consistent compact tag/status pills across user, seller and ID screens. */
+.zyora-owner-main span[class*="inline-flex"][class*="rounded"][class*="border"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 25px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.zyora-owner-main span[class*="inline-flex"][class*="rounded"][class*="border"] img {
+  display: block;
+  flex: 0 0 auto;
+  max-height: 22px;
+  width: auto;
+  object-fit: contain;
+}
+
 .zyora-owner-main input:not([type="checkbox"]):not([type="radio"]),
 .zyora-owner-main select,
 .zyora-owner-main textarea {
-  border-color: #dce3ec;
-  border-radius: 10px;
-  background-color: #fbfcfe;
-  color: #172033;
+  border-color: #dce3ed;
+  border-radius: 9px;
+  background-color: #fff;
+  color: #182235;
   transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
 .zyora-owner-main input:not([type="checkbox"]):not([type="radio"]):focus,
 .zyora-owner-main select:focus,
 .zyora-owner-main textarea:focus {
-  border-color: #197477;
+  border-color: #168184;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(25, 116, 119, .11);
+  box-shadow: 0 0 0 3px rgba(22, 129, 132, .12);
   outline: none;
+}
+
+.zyora-owner-main input::placeholder,
+.zyora-owner-main textarea::placeholder {
+  color: #9aa5b5;
+  font-weight: 500;
+}
+
+.zyora-owner-main table {
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #263247;
 }
 
 .zyora-owner-main table thead tr,
 .zyora-owner-main table tr[class*="bg-slate-50"] {
-  background: #f5f7fb;
+  background: #f6f8fb;
+}
+
+.zyora-owner-main table thead th {
+  color: #68758a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .zyora-owner-main table tbody tr {
@@ -67,12 +117,27 @@ body {
   background: #f7fafc;
 }
 
+.zyora-owner-main table tbody td {
+  vertical-align: middle;
+}
+
 .zyora-owner-main button:not(:disabled) {
   transition: filter .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
 .zyora-owner-main button:not(:disabled):active {
   transform: translateY(1px);
+}
+
+.zyora-owner-main button:focus-visible,
+.zyora-owner-main a:focus-visible {
+  outline: 2px solid #168184;
+  outline-offset: 2px;
+}
+
+.zyora-owner-main [class*="text-[9px]"],
+.zyora-owner-main [class*="text-[10px]"] {
+  line-height: 1.35;
 }
 
 .zyora-owner-sidebar {
@@ -88,5 +153,14 @@ body {
 @media (max-width: 767px) {
   .zyora-owner-main {
     overflow-y: auto;
+  }
+
+  .zyora-owner-main table {
+    font-size: 12px;
+  }
+
+  .zyora-owner-main span[class*="inline-flex"][class*="rounded"][class*="border"] {
+    min-height: 23px;
+    padding: 3px 7px;
   }
 }
