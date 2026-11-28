@@ -3207,16 +3207,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("comboReplay", true)
                                     .put("multiplier", nextMultiplier)
                                     .put("timestamp", System.currentTimeMillis())
-                                val recipientJson = comboTransfer.optJSONArray("recipientIds") ?: JSONArray()
-                                val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
-                                val image = comboTransfer.optString("giftImage").ifBlank { comboTransfer.optString("luckyImage") }
-                                val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
-                                luckyAnimation.launchToRecipients(nextTransferId, resolvedImage, recipientIds, popupAtCenter = true)
+                                // Wait for the server confirmation before changing the
+                                // multiplier or replaying the gift flight.
                                 luckyComboClicksPending += 1
-                                luckyGiftNotice = luckyGiftNotice?.copy(multiplier = nextMultiplier, isExiting = false)
                                 luckyComboPending = true
-                                luckyComboTimeLeft = 5
-                                luckyComboGeneration++
                                 socket.emit("coin_transfer", comboTransfer)
                             }
                         }
@@ -3248,39 +3242,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 } else null
             },
             onSendCoinTransfer = { transfer ->
-                // Start the Lucky image immediately on the Send tap; the server echo
-                // confirms the transfer but must not replay the same visual twice.
-                if (transfer["luckyGift"] == true) {
-                    val optimisticPayload = JSONObject(transfer)
-                    lastLuckyComboPayload = optimisticPayload
-                    pendingLuckyGiftTransferId = optimisticPayload.optString("transferId")
-                    val recipientJson = optimisticPayload.optJSONArray("recipientIds") ?: JSONArray()
-                    val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
-                    val image = optimisticPayload.optString("giftImage").ifBlank { optimisticPayload.optString("luckyImage") }
-                    val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
-                    // Render the Lucky banner on the Send tap; do not wait for the socket echo.
-                    val optimisticRecipientMode = when (optimisticPayload.optString("recipientMode").lowercase()) {
-                        "mic" -> RecipientMode.MIC
-                        "room" -> RecipientMode.ROOM
-                        else -> RecipientMode.SINGLE
-                    }
-                    luckyGiftNotice = LuckyNotice(
-                        id = pendingLuckyGiftTransferId,
-                        senderId = accountId,
-                        senderName = roomDisplayName,
-                        recipientName = optimisticPayload.optString("recipientName", "User").ifBlank { "User" },
-                        senderImage = roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                        giftImage = resolvedImage,
-                        multiplier = optimisticPayload.optInt("multiplier", 1).coerceAtLeast(1),
-                        totalWinAmount = 0L,
-                        maxWinTimes = 0,
-                        recipientMode = optimisticRecipientMode
-                    )
-                    luckyAnimation.launchToRecipients(pendingLuckyGiftTransferId, resolvedImage, recipientIds)
-                    showLuckyComboButton = true
-                    luckyComboTimeLeft = 5
-                    luckyComboGeneration++
-                }
+                // Lucky banner, flight, and Combo timer are created only by the
+                // server's committed coin_transfer_received event.
                 roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
             },
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
