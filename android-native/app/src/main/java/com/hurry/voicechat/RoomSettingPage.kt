@@ -556,7 +556,7 @@ fun RoomSettingPage(
                     ) { draft = state.roomName; sheet = "name" }
 
                     SettingRow(
-                        title = "Room Announcement",
+                        title = "Announcement",
                         value = state.announcement,
                         showDivider = false
                     ) { draft = state.announcement; sheet = "announcement" }
