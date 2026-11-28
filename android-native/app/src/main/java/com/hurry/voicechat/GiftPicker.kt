@@ -250,7 +250,15 @@ fun GiftPicker(
     var selectedMultiplier by remember { mutableStateOf("1") }
     var showMultipliers by remember { mutableStateOf(false) }
     var selectedGift by remember { mutableStateOf<Int?>(null) }
+    var selectedGiftTab by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
+
+    // A selection belongs to the tab where it was made. Clear it immediately
+    // when switching tabs so an old gift can never remain sendable/displayed.
+    LaunchedEffect(activeTab) {
+        selectedGift = null
+        selectedGiftTab = null
+    }
     var isWalletOpen by remember { mutableStateOf(false) }
 
     var showInsufficient by remember { mutableStateOf(false) }
@@ -330,8 +338,9 @@ fun GiftPicker(
     }
 
     fun handleSend() {
-        if (isWalletOpen) return
-        if (selectedGiftObj == null || sending) return
+        if (isWalletOpen || sending) return
+        // Require a fresh, explicit selection from the currently visible tab.
+        if (selectedGiftTab != activeTab || selectedGiftObj == null) return
         if (recipientCount == 0) { triggerInsufficient("Select the user", false); return }
         if (totalSendCost > walletBalance) { triggerInsufficient("Insufficient Balance", true); return }
         if (!canAfford) return
@@ -686,7 +695,10 @@ fun GiftPicker(
                                         gift = gift,
                                         isSelected = selectedGift == gift.id,
                                         activeTab = activeTab,
-                                        onClick = { selectedGift = gift.id },
+                                        onClick = {
+                                            selectedGift = gift.id
+                                            selectedGiftTab = activeTab
+                                        },
                                     )
                                 }
                             }
@@ -703,7 +715,7 @@ fun GiftPicker(
                             // Wallet balance
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable { isWalletOpen = true },
+                                modifier = Modifier.clickable { isWalletOpen = true }.offset(y = (-2).dp),
                             ) {
                                 AsyncImage(
                                     model = giftAssetUrl("/file_00000000e56882119c217d508b6733dc.png"),
@@ -825,7 +837,7 @@ fun GiftPicker(
                                                     color = Color.White.copy(alpha = 0.4f),
                                                     shape = RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)
                                                 )
-                                                .clickable(enabled = selectedGift != null && !sending) {
+                                                .clickable(enabled = selectedGift != null && selectedGiftTab == activeTab && selectedGiftObj != null && !sending) {
                                                     handleSend()
                                                 }
                                                 .padding(vertical = 6.dp),
