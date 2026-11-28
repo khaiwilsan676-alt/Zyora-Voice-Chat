@@ -665,6 +665,7 @@ fun PublicProfileScreen(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
                         modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-24).dp).size(90.dp),
                         gemshineOffsetX = (-2).dp, gemshineOffsetY = 0.dp,
+                        gemshineSizeAdjustment = 5.dp,
                         fallbackUserIds = listOf(targetUser?.uid.orEmpty(), targetUser?.id.orEmpty())
                     )
                     
