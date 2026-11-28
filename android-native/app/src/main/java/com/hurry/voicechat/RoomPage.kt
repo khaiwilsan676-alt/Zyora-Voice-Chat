@@ -233,7 +233,7 @@ fun RoomPage(
     isCovered: Boolean = false
 ) {
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
-    val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
+    val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
     val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002")
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
@@ -2172,7 +2172,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     }
                                 }
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.offset(y = (-3).dp)) {
                                     if (ownerVipBadge && ownerVipId.isNotBlank()) {
                                         AsyncImage(
                                             model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
