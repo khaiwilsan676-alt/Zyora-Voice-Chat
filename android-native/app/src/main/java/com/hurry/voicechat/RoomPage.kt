@@ -1142,6 +1142,8 @@ fun RoomPage(
     val seenRoomVehicleEntryIds = remember(roomId) { mutableStateListOf<String>() }
     val pendingRoomVehicleEntries = remember(roomId) { mutableStateListOf<Pair<String, String>>() }
     var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
+    var roomGiftVideoStyle by remember(roomId) { mutableStateOf("fade") }
+    var roomGiftVideoGreenRemove by remember(roomId) { mutableStateOf(false) }
     // Turning an effect OFF also dismisses an already-running local preview.
     // This is local-only and does not broadcast a setting to other room members.
     LaunchedEffect(entryEffectEnabled) {
@@ -1152,7 +1154,7 @@ fun RoomPage(
         }
     }
     LaunchedEffect(giftEffectEnabled) {
-        if (!giftEffectEnabled) roomGiftVideoPreview = ""
+        if (!giftEffectEnabled) { roomGiftVideoPreview = ""; roomGiftVideoStyle = "fade"; roomGiftVideoGreenRemove = false }
     }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // Preserve live speaker state across room_seats snapshots.
@@ -1251,7 +1253,12 @@ fun RoomPage(
             if (video.isBlank()) return@Listener
             val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
                 else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + video.trimStart('/')
-            mainHandler.post { roomGiftVideoPreview = videoUrl }
+            mainHandler.post {
+                // Keep the sender-selected effect metadata with the remote video.
+                roomGiftVideoPreview = videoUrl
+                roomGiftVideoStyle = payload.optString("videoStyle", "fade").lowercase().takeIf { it in setOf("fade", "pure", "plain") } ?: "fade"
+                roomGiftVideoGreenRemove = payload.optBoolean("greenRemove", false)
+            }
         }
         val vehicleEntryListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
@@ -3333,7 +3340,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
         )
         if (roomGiftVideoPreview.isNotBlank()) {
-            RoomGiftVideoOverlay(src = roomGiftVideoPreview) { roomGiftVideoPreview = "" }
+            RoomGiftVideoOverlay(src = roomGiftVideoPreview, style = roomGiftVideoStyle, greenRemove = roomGiftVideoGreenRemove) {
+                roomGiftVideoPreview = ""
+                roomGiftVideoStyle = "fade"
+                roomGiftVideoGreenRemove = false
+            }
         }
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onDragonBattle={showGames=false;showDragonBattle=true},onLucky777={showGames=false;showLucky777=true})
         if(showRoomTask) Roomtask(roomId=roomId,onBack={showRoomTask=false})
