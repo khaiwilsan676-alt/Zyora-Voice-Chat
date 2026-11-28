@@ -386,6 +386,11 @@ private class DragonBetSoundManager(private val context: Context) {
     @Volatile private var released = false
 
     private val sfxSampleRate = 22050
+    // AudioTrack creation/playback and its hold interval must never run on the UI thread.
+    // A single worker also avoids creating a new thread for every card-turn sound.
+    private val sfxExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+        Thread(task, "dragon-battle-sfx").apply { isDaemon = true }
+    }
 
     // Crisp, clear card-turn / card-flip paper swish-snap PCM buffer
     private val cardFlipPcm: ShortArray by lazy {
@@ -531,42 +536,58 @@ private class DragonBetSoundManager(private val context: Context) {
 
     private fun playStaticPcm(pcm: ShortArray, holdMs: Long) {
         if (muted || released) return
+        // AudioTrack setup and the sound-duration wait used to execute on the caller.
+        // When triggered by a Compose event this could block the main thread for 165–270 ms.
         runCatching {
-            val byteSize = pcm.size * 2
-            val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                AudioTrack.Builder()
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_GAME)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            sfxExecutor.execute {
+                if (muted || released) return@execute
+                var track: AudioTrack? = null
+                try {
+                    val byteSize = pcm.size * 2
+                    track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        AudioTrack.Builder()
+                            .setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_GAME)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                    .build()
+                            )
+                            .setAudioFormat(
+                                AudioFormat.Builder()
+                                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                    .setSampleRate(sfxSampleRate)
+                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                    .build()
+                            )
+                            .setBufferSizeInBytes(byteSize)
+                            .setTransferMode(AudioTrack.MODE_STATIC)
                             .build()
-                    )
-                    .setAudioFormat(
-                        AudioFormat.Builder()
-                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(sfxSampleRate)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                            .build()
-                    )
-                    .setBufferSizeInBytes(byteSize)
-                    .setTransferMode(AudioTrack.MODE_STATIC)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                AudioTrack(
-                    android.media.AudioManager.STREAM_MUSIC,
-                    sfxSampleRate,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    byteSize,
-                    AudioTrack.MODE_STATIC
-                )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        AudioTrack(
+                            android.media.AudioManager.STREAM_MUSIC,
+                            sfxSampleRate,
+                            AudioFormat.CHANNEL_OUT_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT,
+                            byteSize,
+                            AudioTrack.MODE_STATIC
+                        )
+                    }
+                    if (muted || released) return@execute
+                    track.write(pcm, 0, pcm.size)
+                    track.play()
+                    Thread.sleep(holdMs)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (_: Exception) {
+                    // Sound effects are best-effort and must not disrupt game input/UI.
+                } finally {
+                    track?.let { active ->
+                        runCatching { if (active.playState == AudioTrack.PLAYSTATE_PLAYING) active.stop() }
+                        runCatching { active.release() }
+                    }
+                }
             }
-            track.write(pcm, 0, pcm.size)
-            track.play()
-            Thread.sleep(holdMs)
-            runCatching { track.stop() }
-            runCatching { track.release() }
         }
     }
 
@@ -585,6 +606,7 @@ private class DragonBetSoundManager(private val context: Context) {
             betPool.clear()
             bgmPlayer?.let { runCatching { it.stop(); it.release() } }
             bgmPlayer = null
+            sfxExecutor.shutdownNow()
         }
     }
 }
