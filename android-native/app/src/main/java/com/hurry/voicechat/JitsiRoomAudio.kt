@@ -102,12 +102,15 @@ fun JitsiRoomAudio(
         fun requestVoicePermission() {
             if (alive.get() && latestCanSpeak && roomSocket.connected()) {
                 roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+                // room_join and seat state can arrive just after Socket.IO connects.
+                // The server may silently ignore an early start; retry until it replies.
+                scheduleVoiceRetry(1000L)
             }
         }
         fun scheduleVoiceRetry(delayMs: Long = 700L) {
             // A denied seat/mute permission is not a transient error. Limit retries
             // so a stale canSpeak flag cannot spam the server every 500 ms forever.
-            if (!alive.get() || !latestCanSpeak || voicePermissionRetries.get() >= 3 ||
+            if (!alive.get() || !latestCanSpeak ||
                 !retryPending.compareAndSet(false, true)
             ) return
             retryHandler.postDelayed({
@@ -192,6 +195,7 @@ fun JitsiRoomAudio(
 
         fun failCaptureStart() {
             recording.set(false)
+            voiceAllowed.set(false)
             onSpeakingChanged(false)
             if (roomSocket.connected()) {
                 roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
@@ -382,15 +386,18 @@ fun JitsiRoomAudio(
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId) return@Listener
             val allowed = data.optBoolean("allowed", false) && latestCanSpeak
+            retryPending.set(false)
+            retryHandler.removeCallbacksAndMessages(null)
             voiceAllowed.set(allowed)
             if (allowed) {
-                retryPending.set(false)
                 voicePermissionRetries.set(0)
                 startCapture()
             } else {
                 stopCapture()
-                // Retry transient seat-state/permission races while still unmuted.
-                scheduleVoiceRetry(500L)
+                // Permanent denials must not create a request loop. Retry only
+                // unclassified/transient responses while the local seat is enabled.
+                val reason = data.optString("reason")
+                if (reason.isBlank() && latestCanSpeak) scheduleVoiceRetry(1000L)
             }
         }
         fun createOutputTrack(isVoicePacket: Boolean): AudioTrack? {
