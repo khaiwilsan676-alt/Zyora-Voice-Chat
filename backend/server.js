@@ -3666,14 +3666,20 @@ io.on("connection", (socket) => {
         return;
       }
       const diamondCredit = Math.max(0, Math.floor(diamondAmount));
-      for (const recipientId of validRecipients) {
-        await applyCoinTransferDelta(recipientId, diamondCredit, eventId,
-          "coinTransferDiamondCredits", "diamonds", 1);
-      }
+      // These deltas target independent MongoDB user documents in the normal
+      // case. Apply them concurrently so the Lucky result is not delayed by
+      // serial recipient writes; each update remains atomic and idempotent.
+      const walletDeltas = validRecipients.map((recipientId) =>
+        applyCoinTransferDelta(recipientId, diamondCredit, eventId,
+          "coinTransferDiamondCredits", "diamonds", 1)
+      );
       if (luckyReturnAmount > 0) {
-        await applyCoinTransferDelta(sender, luckyReturnAmount, eventId,
-          "coinTransferReturnCredits", "coins", 1);
+        walletDeltas.push(
+          applyCoinTransferDelta(sender, luckyReturnAmount, eventId,
+            "coinTransferReturnCredits", "coins", 1)
+        );
       }
+      await Promise.all(walletDeltas);
 
       // Publish the confirmed transfer immediately after durable wallet deltas.
       // Recipient profile lookups and received-gift history are non-critical UI
