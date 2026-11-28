@@ -538,7 +538,12 @@ fun LuckyAnimationNotificationSlider(
                 }
             }
 
-            // Win image & coins value SIRF jab actual win ho (> 0L) aur naya win event ho
+            // A loss resets the comparison so two consecutive equal-value wins
+            // still count as separate server-confirmed win events.
+            if (notice.totalWinAmount <= 0L) {
+                lastRewardedWinAmount = 0L
+            }
+            // Win image & coins value only for a positive server-confirmed result.
             val isGenuineNewWin = notice.totalWinAmount > 0L && (
                 notice.id != lastRewardedNoticeId ||
                     notice.totalWinAmount != lastRewardedWinAmount
