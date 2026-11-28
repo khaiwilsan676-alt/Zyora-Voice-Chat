@@ -1,8 +1,21 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.graphics.SurfaceTexture
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.opengl.EGL14
+import android.opengl.EGLConfig
+import android.opengl.EGLContext
+import android.opengl.EGLDisplay
+import android.opengl.EGLSurface
+import android.opengl.GLES11Ext
+import android.opengl.GLES20
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
+import android.view.Surface
+import android.view.TextureView
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -37,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
@@ -58,7 +72,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 import java.util.Calendar
+import java.util.concurrent.atomic.AtomicBoolean
 
 // GITHUB LINK AUTO-ADDER
 private const val FAMILY_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
@@ -108,6 +126,29 @@ private data class RewardModalData(
     val title: String,
     val isWinnerReward: Boolean,
     val type: String
+)
+
+private data class FamilySupportTargetRow(
+    val lv: String,
+    val target: String,
+    val totalBonus: String,
+    val leaderCoins: String,
+    val top1Coins: String,
+    val top2Coins: String,
+    val top3Coins: String
+)
+
+private val familySupportTargetRows = listOf(
+    FamilySupportTargetRow("1", "96M", "6.720M", "480K", "1.920M", "1.440M", "960K"),
+    FamilySupportTargetRow("2", "180M", "12.600M", "900K", "3.600M", "2.700M", "1.800M"),
+    FamilySupportTargetRow("3", "360M", "28.800M", "2.160M", "8.640M", "6.480M", "4.320M"),
+    FamilySupportTargetRow("4", "600M", "52.800M", "4.080M", "16.320M", "12.240M", "8.160M"),
+    FamilySupportTargetRow("5", "900M", "79.200M", "6.120M", "24.480M", "18.360M", "12.240M"),
+    FamilySupportTargetRow("6", "1320M", "116.160M", "8.976M", "35.904M", "26.928M", "17.952M"),
+    FamilySupportTargetRow("7", "1800M", "158.400M", "12.240M", "48.960M", "36.720M", "24.480M"),
+    FamilySupportTargetRow("8", "3000M", "264M", "20.400M", "81.600M", "61.200M", "40.800M"),
+    FamilySupportTargetRow("9", "6000M", "528M", "40.800M", "163.200M", "122.400M", "81.600M"),
+    FamilySupportTargetRow("10", "12000M", "1,056M", "81.600M", "326.400M", "244.800M", "163.200M")
 )
 
 @Composable
@@ -385,7 +426,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ra
 
                 // 1 frame Middle m 1 row, 2nd row m 2,3 frame
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp), avatarSize = 137.dp)
+                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp), avatarSize = 134.dp)
                     Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
                         FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
@@ -437,7 +478,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ra
                                 1 -> "IMG_20261115_135356.png"
                                 else -> "IMG_20261115_135419.png"
                             }
-                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp, avatarSize = if (index == 0) 52.dp else 65.dp * 0.85f)
+                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp, avatarSize = if (index == 0) 49.dp else 65.dp * 0.85f)
                             
                             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -569,11 +610,10 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 8.dp, end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                 Spacer(Modifier.weight(1f))
-                FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
             }
 
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp), avatarSize = 137.dp)
+                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp), avatarSize = 134.dp)
                 Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
                     FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
@@ -652,8 +692,225 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 onClick = onOpenModal,
                 label = "TOP4-10 Family"
             )
+            Spacer(Modifier.height(20.dp))
+
+            // IMAGE 1: FAMILY SUPPORT TARGET TABLE (TOP1-3)
+            FamilySupportTargetTable()
+
+            Spacer(Modifier.height(22.dp))
+
+            // IMAGE 2: FAMILY SUPPORT INFO SECTION
+            FamilySupportInfoSection()
+
             Spacer(Modifier.height(60.dp))
         }
+    }
+}
+
+@Composable
+private fun FamilySupportTargetTable() {
+    val outerBorderColor = Color(0xFFD9B27A)
+    val gridLineColor = Color(0xFF7B3331)
+    val rowBgColor = Color(0xFF4A1012)
+    val headerBrush = Brush.verticalGradient(listOf(Color(0xFFA9382E), Color(0xFF791F17)))
+    val headerTextColor = Color(0xFFFFEED8)
+    val cellTextColor = Color(0xFFF3DDD0)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(rowBgColor)
+            .border(1.5.dp, outerBorderColor, RoundedCornerShape(4.dp))
+    ) {
+        // TABLE HEADER
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                .background(headerBrush),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.weight(0.55f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                Text("Lv.", color = headerTextColor, fontSize = 10.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 1)
+            }
+            Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+            Box(Modifier.weight(0.95f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                Text("Target", color = headerTextColor, fontSize = 10.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 1)
+            }
+            Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+            Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                Text("Total\nBonus", color = headerTextColor, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+            }
+            Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+            Box(Modifier.weight(1.05f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                Text("Leader\nCoins", color = headerTextColor, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+            }
+            Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+            Column(Modifier.weight(3.45f).fillMaxHeight()) {
+                // TOP1-3 GOLDEN PILL HEADER
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .padding(horizontal = 6.dp, vertical = 5.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Brush.verticalGradient(listOf(Color(0xFFFFF4C7), Color(0xFFF6CB6F)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "TOP1-3",
+                        color = Color(0xFF7B1E15),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Canvas(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 8.dp)
+                            .size(width = 8.dp, height = 5.dp)
+                    ) {
+                        val path = Path().apply {
+                            moveTo(0f, 0f)
+                            lineTo(size.width, 0f)
+                            lineTo(size.width / 2f, size.height)
+                            close()
+                        }
+                        drawPath(path, color = Color(0xFF9C2217))
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(gridLineColor))
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text("Top1\nCoins", color = headerTextColor, fontSize = 10.sp, lineHeight = 11.5.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                    }
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                    Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text("Top2\nCoins", color = headerTextColor, fontSize = 10.sp, lineHeight = 11.5.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                    }
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                    Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text("Top3\nCoins", color = headerTextColor, fontSize = 10.sp, lineHeight = 11.5.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+        }
+
+        // TABLE ROWS (LV. 1 - 10)
+        familySupportTargetRows.forEach { row ->
+            Box(Modifier.fillMaxWidth().height(1.dp).background(gridLineColor))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .background(rowBgColor),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.weight(0.55f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Text(row.lv, color = cellTextColor, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                }
+                Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                Box(Modifier.weight(0.95f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Text(row.target, color = cellTextColor, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                }
+                Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Text(row.totalBonus, color = cellTextColor, fontSize = 9.5.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                }
+                Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                Box(Modifier.weight(1.05f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Text(row.leaderCoins, color = cellTextColor, fontSize = 9.5.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                }
+                Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                Row(
+                    modifier = Modifier.weight(3.45f).fillMaxHeight(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text(row.top1Coins, color = cellTextColor, fontSize = 9.5.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                    }
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                    Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text(row.top2Coins, color = cellTextColor, fontSize = 9.5.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                    }
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(gridLineColor))
+                    Box(Modifier.weight(1.15f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Text(row.top3Coins, color = cellTextColor, fontSize = 9.5.sp, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilySupportInfoSection() {
+    val barColor = Color(0xFFE5A93C)
+    val headingColor = Color(0xFFF3C677)
+    val bodyColor = Color(0xFFEAD7C7)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        // SECTION 1
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(5.dp).height(14.dp).background(barColor))
+            Spacer(Modifier.width(8.dp))
+            Text("What is Family Support?", color = headingColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Family members can make family contribution by sending gifts. The higher the total contribution, the higher the reward level and the richer the bonus. Please refer to the reward table for specific reward rules.",
+            color = bodyColor,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp
+        )
+
+        Spacer(Modifier.height(22.dp))
+
+        // SECTION 2
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(5.dp).height(14.dp).background(barColor))
+            Spacer(Modifier.width(8.dp))
+            Text("How to get family support bonus?", color = headingColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "1. Gifting by family members.\n1 Coin = 1 Contribution\n2. Lucky gifts are calculated 20% of coins value.\n3. Only members who contribute more than 1.2M per week can receive the Top 20 rewards.",
+            color = bodyColor,
+            fontSize = 13.5.sp,
+            lineHeight = 21.sp
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Tips: If you leave the family, both your family ranking and contribution will be cleared.",
+            color = bodyColor,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp
+        )
+
+        Spacer(Modifier.height(22.dp))
+
+        // SECTION 3
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(5.dp).height(14.dp).background(barColor))
+            Spacer(Modifier.width(8.dp))
+            Text("When can i get the family support bonus?", color = headingColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "The bonus will be sent at 00:00 local time base on the rules.",
+            color = bodyColor,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp
+        )
     }
 }
 
@@ -734,16 +991,10 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
                                 cacheVideo = false
                             )
                         } else {
-                            // Frame video: remove its black/green backing so only the
-                            // animated frame remains transparent over the Family card.
-                            StoreVideoPreview(
+                            // Frame video: remove black background cleanly
+                            FamilyBlackKeyVideo(
                                 url = familyAsset(item.thumbnail),
-                                modifier = Modifier.fillMaxSize(),
-                                pause = false,
-                                removeGreenScreen = true,
-                                mute = true,
-                                loop = true,
-                                cacheVideo = false
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     } else {
@@ -787,6 +1038,346 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
             Spacer(Modifier.height(2.dp))
             Text(item.title, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.offset(y = (-3).dp))
         }
+    }
+}
+
+// BLACK BACKGROUND REMOVER VIDEO PLAYER FOR FRAME VIDEOS
+@Composable
+private fun FamilyBlackKeyVideo(url: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val player = remember(url) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            repeatMode = Player.REPEAT_MODE_ONE
+            volume = 0f
+            playWhenReady = true
+            prepare()
+            play()
+        }
+    }
+    val renderer = remember(url, player) {
+        BlackKeyVideoRenderer(
+            onVideoSurfaceReady = { surface ->
+                player.setVideoSurface(surface)
+                if (!player.isPlaying) player.play()
+            },
+            onVideoSurfaceDestroyed = {
+                runCatching { player.setVideoSurface(null) }
+            }
+        )
+    }
+
+    DisposableEffect(player, renderer) {
+        onDispose {
+            runCatching { player.setVideoSurface(null) }
+            runCatching { player.release() }
+            renderer.release()
+        }
+    }
+
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            TextureView(ctx).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                isOpaque = false
+                surfaceTextureListener = renderer
+            }
+        }
+    )
+}
+
+private class BlackKeyVideoRenderer(
+    private val onVideoSurfaceReady: (Surface) -> Unit,
+    private val onVideoSurfaceDestroyed: () -> Unit
+) : TextureView.SurfaceTextureListener {
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var renderThread: HandlerThread? = null
+    private var renderHandler: Handler? = null
+
+    private var eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
+    private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
+    private var eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
+
+    private var program = 0
+    private var textureId = 0
+    private var aPositionLoc = -1
+    private var aTexCoordLoc = -1
+    private var uTexMatrixLoc = -1
+    private var uTextureLoc = -1
+
+    private var videoSurfaceTexture: SurfaceTexture? = null
+    private var videoSurface: Surface? = null
+
+    private var viewWidth = 1
+    private var viewHeight = 1
+    private val released = AtomicBoolean(false)
+    private val texMatrix = FloatArray(16)
+
+    private val vertexBuffer: FloatBuffer = ByteBuffer
+        .allocateDirect(QUAD_VERTICES.size * 4)
+        .order(ByteOrder.nativeOrder())
+        .asFloatBuffer()
+        .apply { put(QUAD_VERTICES); position(0) }
+
+    private val texCoordBuffer: FloatBuffer = ByteBuffer
+        .allocateDirect(QUAD_TEX_COORDS.size * 4)
+        .order(ByteOrder.nativeOrder())
+        .asFloatBuffer()
+        .apply { put(QUAD_TEX_COORDS); position(0) }
+
+    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+        released.set(false)
+        viewWidth = width.coerceAtLeast(1)
+        viewHeight = height.coerceAtLeast(1)
+        val thread = HandlerThread("FamilyBlackKeyGL").apply { start() }
+        renderThread = thread
+        val handler = Handler(thread.looper)
+        renderHandler = handler
+
+        handler.post {
+            if (released.get()) return@post
+            if (!initEgl(surface) || !initGl()) {
+                releaseGlResources()
+                return@post
+            }
+            GLES20.glViewport(0, 0, viewWidth, viewHeight)
+            GLES20.glClearColor(0f, 0f, 0f, 0f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+
+            val vst = SurfaceTexture(textureId)
+            videoSurfaceTexture = vst
+            vst.setOnFrameAvailableListener({
+                renderHandler?.post { drawFrame() }
+            }, handler)
+            val outSurface = Surface(vst)
+            videoSurface = outSurface
+            mainHandler.post {
+                if (!released.get()) onVideoSurfaceReady(outSurface)
+            }
+        }
+    }
+
+    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+        renderHandler?.post {
+            viewWidth = width.coerceAtLeast(1)
+            viewHeight = height.coerceAtLeast(1)
+        }
+    }
+
+    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+        release()
+        return true
+    }
+
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
+
+    fun release() {
+        if (!released.compareAndSet(false, true)) return
+        mainHandler.post { onVideoSurfaceDestroyed() }
+        val handler = renderHandler
+        val thread = renderThread
+        renderHandler = null
+        renderThread = null
+        if (handler != null) {
+            handler.post {
+                releaseGlResources()
+                thread?.quitSafely()
+            }
+        } else {
+            thread?.quitSafely()
+        }
+    }
+
+    private fun initEgl(outputSurface: SurfaceTexture): Boolean {
+        eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+        if (eglDisplay == EGL14.EGL_NO_DISPLAY) return false
+        val version = IntArray(2)
+        if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) return false
+
+        val configAttribs = intArrayOf(
+            EGL14.EGL_RED_SIZE, 8,
+            EGL14.EGL_GREEN_SIZE, 8,
+            EGL14.EGL_BLUE_SIZE, 8,
+            EGL14.EGL_ALPHA_SIZE, 8,
+            EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+            EGL14.EGL_SURFACE_TYPE, EGL14.EGL_WINDOW_BIT,
+            EGL14.EGL_NONE
+        )
+        val configs = arrayOfNulls<EGLConfig>(1)
+        val numConfigs = IntArray(1)
+        if (!EGL14.eglChooseConfig(eglDisplay, configAttribs, 0, configs, 0, 1, numConfigs, 0) || numConfigs[0] <= 0) {
+            return false
+        }
+        val config = configs[0] ?: return false
+
+        val contextAttribs = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE)
+        eglContext = EGL14.eglCreateContext(eglDisplay, config, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
+        if (eglContext == EGL14.EGL_NO_CONTEXT) return false
+
+        val surfaceAttribs = intArrayOf(EGL14.EGL_NONE)
+        eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, config, outputSurface, surfaceAttribs, 0)
+        if (eglSurface == EGL14.EGL_NO_SURFACE) return false
+
+        return EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
+    }
+
+    private fun initGl(): Boolean {
+        val vertexShader = compileShader(GLES20.GL_VERTEX_SHADER, VERTEX_SHADER)
+        val fragmentShader = compileShader(GLES20.GL_FRAGMENT_SHADER, FRAGMENT_SHADER)
+        if (vertexShader == 0 || fragmentShader == 0) return false
+
+        program = GLES20.glCreateProgram()
+        GLES20.glAttachShader(program, vertexShader)
+        GLES20.glAttachShader(program, fragmentShader)
+        GLES20.glLinkProgram(program)
+        GLES20.glDeleteShader(vertexShader)
+        GLES20.glDeleteShader(fragmentShader)
+
+        val linkStatus = IntArray(1)
+        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
+        if (linkStatus[0] == 0) {
+            GLES20.glDeleteProgram(program)
+            program = 0
+            return false
+        }
+
+        aPositionLoc = GLES20.glGetAttribLocation(program, "aPosition")
+        aTexCoordLoc = GLES20.glGetAttribLocation(program, "aTexCoord")
+        uTexMatrixLoc = GLES20.glGetUniformLocation(program, "uTexMatrix")
+        uTextureLoc = GLES20.glGetUniformLocation(program, "sTexture")
+
+        val textures = IntArray(1)
+        GLES20.glGenTextures(1, textures, 0)
+        textureId = textures[0]
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+        return true
+    }
+
+    private fun compileShader(type: Int, source: String): Int {
+        val shader = GLES20.glCreateShader(type)
+        GLES20.glShaderSource(shader, source)
+        GLES20.glCompileShader(shader)
+        val compiled = IntArray(1)
+        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0)
+        if (compiled[0] == 0) {
+            GLES20.glDeleteShader(shader)
+            return 0
+        }
+        return shader
+    }
+
+    private fun drawFrame() {
+        if (released.get() || eglSurface == EGL14.EGL_NO_SURFACE || program == 0) return
+        val vst = videoSurfaceTexture ?: return
+        runCatching {
+            vst.updateTexImage()
+            vst.getTransformMatrix(texMatrix)
+
+            GLES20.glViewport(0, 0, viewWidth, viewHeight)
+            GLES20.glClearColor(0f, 0f, 0f, 0f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+
+            GLES20.glUseProgram(program)
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
+            GLES20.glUniform1i(uTextureLoc, 0)
+            GLES20.glUniformMatrix4fv(uTexMatrixLoc, 1, false, texMatrix, 0)
+
+            vertexBuffer.position(0)
+            GLES20.glEnableVertexAttribArray(aPositionLoc)
+            GLES20.glVertexAttribPointer(aPositionLoc, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+
+            texCoordBuffer.position(0)
+            GLES20.glEnableVertexAttribArray(aTexCoordLoc)
+            GLES20.glVertexAttribPointer(aTexCoordLoc, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
+
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+            GLES20.glDisableVertexAttribArray(aPositionLoc)
+            GLES20.glDisableVertexAttribArray(aTexCoordLoc)
+
+            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+        }
+    }
+
+    private fun releaseGlResources() {
+        runCatching { videoSurfaceTexture?.setOnFrameAvailableListener(null) }
+        runCatching { videoSurface?.release() }
+        runCatching { videoSurfaceTexture?.release() }
+        videoSurface = null
+        videoSurfaceTexture = null
+
+        if (textureId != 0) {
+            GLES20.glDeleteTextures(1, intArrayOf(textureId), 0)
+            textureId = 0
+        }
+        if (program != 0) {
+            GLES20.glDeleteProgram(program)
+            program = 0
+        }
+        if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
+            EGL14.eglMakeCurrent(eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
+            if (eglSurface != EGL14.EGL_NO_SURFACE) {
+                EGL14.eglDestroySurface(eglDisplay, eglSurface)
+                eglSurface = EGL14.EGL_NO_SURFACE
+            }
+            if (eglContext != EGL14.EGL_NO_CONTEXT) {
+                EGL14.eglDestroyContext(eglDisplay, eglContext)
+                eglContext = EGL14.EGL_NO_CONTEXT
+            }
+            EGL14.eglReleaseThread()
+            eglDisplay = EGL14.EGL_NO_DISPLAY
+        }
+    }
+
+    companion object {
+        private val QUAD_VERTICES = floatArrayOf(
+            -1f, -1f,
+             1f, -1f,
+            -1f,  1f,
+             1f,  1f
+        )
+
+        private val QUAD_TEX_COORDS = floatArrayOf(
+            0f, 0f,
+            1f, 0f,
+            0f, 1f,
+            1f, 1f
+        )
+
+        private const val VERTEX_SHADER = """
+            attribute vec4 aPosition;
+            attribute vec4 aTexCoord;
+            uniform mat4 uTexMatrix;
+            varying vec2 vTexCoord;
+            void main() {
+                gl_Position = aPosition;
+                vTexCoord = (uTexMatrix * aTexCoord).xy;
+            }
+        """
+
+        private const val FRAGMENT_SHADER = """
+            #extension GL_OES_EGL_image_external : require
+            precision mediump float;
+            varying vec2 vTexCoord;
+            uniform samplerExternalOES sTexture;
+            void main() {
+                vec4 c = texture2D(sTexture, vTexCoord);
+                float peak = max(max(c.r, c.g), c.b);
+                float alpha = smoothstep(0.06, 0.24, peak);
+                gl_FragColor = vec4(c.rgb * alpha, alpha);
+            }
+        """
     }
 }
 
@@ -880,17 +1471,24 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
 
                 Box(contentModifier) {
                     if (isVideo) {
-                        StoreVideoPreview(
-                            url = familyAsset(url),
-                            modifier = Modifier.fillMaxSize(),
-                            pause = false,
-                            topFade = if (type == "vehicle") 0.10f else 0f,
-                            bottomFade = if (type == "vehicle") 0.15f else 0f,
-                            removeGreenScreen = isFrameVideo,
-                            mute = type != "vehicle",
-                            loop = true,
-                            cacheVideo = false
-                        )
+                        if (isFrameVideo) {
+                            FamilyBlackKeyVideo(
+                                url = familyAsset(url),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            StoreVideoPreview(
+                                url = familyAsset(url),
+                                modifier = Modifier.fillMaxSize(),
+                                pause = false,
+                                topFade = if (type == "vehicle") 0.10f else 0f,
+                                bottomFade = if (type == "vehicle") 0.15f else 0f,
+                                removeGreenScreen = false,
+                                mute = type != "vehicle",
+                                loop = true,
+                                cacheVideo = false
+                            )
+                        }
                     } else {
                         AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     }
