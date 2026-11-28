@@ -754,7 +754,7 @@ export default function StaffPanel() {
     setIsLoggedIn(true);
   };
 
-  const [activeTab, setActiveTab] = useState('manage_users');
+  const [activeTab, setActiveTab] = useState('dashboard');
   useEffect(() => {
     if (!isLoggedIn || !ownerSessionToken || !['game_wild_party', 'game_dragon_battle'].includes(activeTab)) return;
     let active = true;
@@ -1930,6 +1930,96 @@ export default function StaffPanel() {
       </aside>
 
       <main className="zyora-owner-main flex-1 flex flex-col h-full bg-[#f5f6f8] overflow-hidden md:pl-[260px]">
+
+        {activeTab === 'dashboard' && (
+          <div className="h-full overflow-y-auto bg-[#f5f6f8] p-5 md:p-8">
+            <div className="mx-auto w-full max-w-[1440px] space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#197477]">ZYORA CONTROL CENTER</p>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900 md:text-3xl">Dashboard</h2>
+                  <p className="mt-1 text-sm text-slate-500">Your platform overview and administration shortcuts.</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-500 shadow-sm">
+                  <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
+                  Owner session active
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { label: 'Registered users', value: users.length, note: 'Accounts in user management', icon: '👥', tone: 'teal', tab: 'manage_users' },
+                  { label: 'Feedback inbox', value: feedbacks.length, note: 'User feedback records', icon: '💬', tone: 'blue', tab: 'feedback' },
+                  { label: 'Support conversations', value: supportChats.length, note: 'Saved support conversations', icon: '🎧', tone: 'violet', tab: 'ai_chats' },
+                  { label: 'Private messages', value: privateMessages.length, note: 'Messages available to monitor', icon: '✉️', tone: 'amber', tab: 'tickets' },
+                ].map((item) => (
+                  <button key={item.label} type="button" onClick={() => setActiveTab(item.tab)} className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#197477]/40 hover:shadow-md">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-500">{item.label}</p>
+                        <p className="mt-3 text-3xl font-black tracking-tight text-slate-900">{Number(item.value || 0).toLocaleString()}</p>
+                      </div>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 text-xl ring-1 ring-slate-100">{item.icon}</span>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-400">{item.note}</p>
+                    <p className="mt-4 text-xs font-extrabold text-[#197477]">Open section <span aria-hidden="true">→</span></p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_1fr]">
+                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                    <div>
+                      <h3 className="font-extrabold text-slate-900">Recently registered users</h3>
+                      <p className="mt-0.5 text-xs text-slate-400">Latest accounts from the user database</p>
+                    </div>
+                    <button type="button" onClick={() => setActiveTab('manage_users')} className="rounded-lg px-3 py-2 text-xs font-extrabold text-[#197477] hover:bg-[#197477]/10">View all</button>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {users.slice().sort((a, b) => new Date(b.registerTime || b.lastLoginAt || 0).getTime() - new Date(a.registerTime || a.lastLoginAt || 0).getTime()).slice(0, 6).map((user, index) => (
+                      <div key={user.id || user.uid || index} className="flex items-center gap-3 px-5 py-3">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                          {user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm font-black text-slate-500">{String(user.name || 'U').charAt(0).toUpperCase()}</div>}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-slate-800">{user.name || 'Unnamed user'}</p>
+                          <p className="truncate text-xs text-slate-400">App ID: {user.longId || user.hurryId || '—'}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">{user.role || 'User'}</span>
+                      </div>
+                    ))}
+                    {users.length === 0 && <p className="px-5 py-10 text-center text-sm text-slate-400">{loadingUsers ? 'Loading users…' : 'No user records available.'}</p>}
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="font-extrabold text-slate-900">Quick administration</h3>
+                  <p className="mt-1 text-xs text-slate-400">Jump directly to the tools you use most.</p>
+                  <div className="mt-4 grid grid-cols-1 gap-2">
+                    {[
+                      { label: 'Manage users', detail: 'Profiles, roles and account controls', icon: '👤', tab: 'manage_users' },
+                      { label: 'Live room management', detail: 'Room list and room controls', icon: '🎙️', tab: 'manage_rooms' },
+                      { label: 'Wallet & seller center', detail: 'Master wallet and seller accounts', icon: '💳', tab: 'wallet' },
+                      { label: 'Reports & moderation', detail: 'Review reports and account bans', icon: '🛡️', tab: 'reports' },
+                      { label: 'Gift catalogue', detail: 'Manage available gifts and prices', icon: '🎁', tab: 'gift_catalog' },
+                      { label: 'Game management', detail: 'Wild Party and Dragon Battle', icon: '🎮', tab: 'game_wild_party' },
+                    ].map((item) => (
+                      <button key={item.tab} type="button" onClick={() => setActiveTab(item.tab)} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition-colors hover:border-[#197477]/30 hover:bg-[#197477]/5">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-lg">{item.icon}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-slate-800">{item.label}</span>
+                          <span className="mt-0.5 block text-xs text-slate-400">{item.detail}</span>
+                        </span>
+                        <span className="text-lg text-slate-300">›</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'manage_users' && !selectedManageUser && (
           <div className="flex flex-col h-full bg-[#f5f6f8]">
@@ -3386,7 +3476,7 @@ export default function StaffPanel() {
           </div>
         )}
 
-        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_wild_party' && activeTab !== 'game_dragon_battle' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'special_ids' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
+        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_wild_party' && activeTab !== 'game_dragon_battle' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'special_ids' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && activeTab !== 'dashboard' && (
           <div className="p-8 max-w-5xl mx-auto w-full">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
               <h2 className="text-xl font-bold text-slate-800 capitalize">
