@@ -1113,29 +1113,6 @@ fun PublicProfileScreen(
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier
                                                 .size(62.dp)
-                                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                                .drawWithContent {
-                                                    drawContent()
-                                                    val edgeFade = 0.12f
-                                                    drawRect(
-                                                        brush = Brush.horizontalGradient(
-                                                            0f to Color.Transparent,
-                                                            edgeFade to Color.White,
-                                                            (1f - edgeFade) to Color.White,
-                                                            1f to Color.Transparent
-                                                        ),
-                                                        blendMode = BlendMode.DstIn
-                                                    )
-                                                    drawRect(
-                                                        brush = Brush.verticalGradient(
-                                                            0f to Color.Transparent,
-                                                            edgeFade to Color.White,
-                                                            (1f - edgeFade) to Color.White,
-                                                            1f to Color.Transparent
-                                                        ),
-                                                        blendMode = BlendMode.DstIn
-                                                    )
-                                                }
                                         )
                                         Text(
                                             text = "×$giftCount",
