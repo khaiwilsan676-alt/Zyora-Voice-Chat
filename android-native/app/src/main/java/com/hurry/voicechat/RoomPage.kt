@@ -2179,7 +2179,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         }
                                         else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
-                                    }
                                     Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(14.dp))
                                     Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=10.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                 }
