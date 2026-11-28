@@ -1467,8 +1467,7 @@ fun RoomPage(
                 } else if (failedTransferId == pendingLuckyGiftTransferId) {
                     luckyComboPending = false
                     pendingLuckyGiftTransferId = ""
-                    {
-                        showLuckyComboButton = false
+                    showLuckyComboButton = false
                         lastLuckyComboPayload = null
                         luckyComboTimeLeft = 0
                         luckyAnimation.clearNotice()
