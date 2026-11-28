@@ -92,17 +92,16 @@ fun NotificationController() {
             val id = payload.optString("id")
             val amount = payload.optLong("win", 0L)
             val game = payload.optString("game").lowercase()
-            if (id.isBlank() || amount < 5_000_000L || (game != "wildparty" && game != "dragonbattle" && game != "lucky777")) return@Listener
+            if (id.isBlank() || amount < 5_000_000L || (game != "wildparty" && game != "dragonbattle")) return@Listener
             val dragonBattle = game == "dragonbattle"
-            val lucky777 = game == "lucky777"
             addNotice(
                 RoomBroadcastNotice(
                     id = id,
                     avatar = payload.optString("avatar").ifBlank { ZYORA_NOTIFICATION_PUBLIC + "default-avatar.png" },
                     name = payload.optString("name").ifBlank { "User" },
-                    detail = "Win " + amount.toString() + " • " + when { lucky777 -> "Lucky 777"; dragonBattle -> "Dragon Battle"; else -> "Wild Party" },
-                    giftImage = ZYORA_NOTIFICATION_PUBLIC + when { lucky777 -> "Lucky777.png"; dragonBattle -> "IMG_20261121_020906.png"; else -> "file_000000009d808211b8ffb7c2183b4ef5.png" },
-                    giftName = when { lucky777 -> "Lucky 777"; dragonBattle -> "Dragon Battle"; else -> "Wild Party" }
+                    detail = "Win " + amount.toString() + " • " + if (dragonBattle) "Dragon Battle" else "Wild Party",
+                    giftImage = ZYORA_NOTIFICATION_PUBLIC + if (dragonBattle) "IMG_20261121_020906.png" else "file_000000009d808211b8ffb7c2183b4ef5.png",
+                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party"
                 )
             )
         }
@@ -233,7 +232,7 @@ fun NotificationController() {
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(16.dp))
                         AsyncImage(
                             model = notice.giftImage,
                             contentDescription = notice.giftName,
