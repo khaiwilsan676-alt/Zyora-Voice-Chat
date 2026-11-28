@@ -10,3 +10,83 @@ body {
 body {
   margin: 0;
 }
+
+
+/* Zyora Owner Panel — consistent voice-platform admin styling.
+   Scoped to the main workspace so room/game UI and the dark sidebar keep
+   their existing visual behavior. */
+.zyora-owner-main {
+  background: #f3f5f9;
+  color: #172033;
+}
+
+.zyora-owner-main div[class*="bg-white"][class*="border"] {
+  border-color: #e5eaf1;
+  box-shadow: 0 5px 18px rgba(22, 34, 56, 0.045);
+}
+
+.zyora-owner-main div[class*="bg-white"][class*="border"][class*="rounded"] {
+  border-radius: 15px;
+}
+
+.zyora-owner-main div[class*="bg-slate-50"][class*="uppercase"] {
+  background: #f5f7fb;
+  color: #68758a;
+  letter-spacing: .075em;
+}
+
+.zyora-owner-main input:not([type="checkbox"]):not([type="radio"]),
+.zyora-owner-main select,
+.zyora-owner-main textarea {
+  border-color: #dce3ec;
+  border-radius: 10px;
+  background-color: #fbfcfe;
+  color: #172033;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.zyora-owner-main input:not([type="checkbox"]):not([type="radio"]):focus,
+.zyora-owner-main select:focus,
+.zyora-owner-main textarea:focus {
+  border-color: #197477;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(25, 116, 119, .11);
+  outline: none;
+}
+
+.zyora-owner-main table thead tr,
+.zyora-owner-main table tr[class*="bg-slate-50"] {
+  background: #f5f7fb;
+}
+
+.zyora-owner-main table tbody tr {
+  transition: background-color .14s ease;
+}
+
+.zyora-owner-main table tbody tr:hover {
+  background: #f7fafc;
+}
+
+.zyora-owner-main button:not(:disabled) {
+  transition: filter .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.zyora-owner-main button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.zyora-owner-sidebar {
+  background: #171b2b;
+  border-color: #252d43;
+}
+
+.zyora-owner-sidebar nav > div,
+.zyora-owner-sidebar nav button {
+  border-radius: 8px;
+}
+
+@media (max-width: 767px) {
+  .zyora-owner-main {
+    overflow-y: auto;
+  }
+}

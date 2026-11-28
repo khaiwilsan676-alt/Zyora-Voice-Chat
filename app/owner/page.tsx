@@ -503,7 +503,7 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
               }}
               className={`flex items-center gap-3 px-6 py-2.5 pl-[52px] text-[13px] font-bold transition-colors w-full text-left
                 ${activeItem === item.id
-                  ? 'text-white bg-[#8a92ff]/20 border-l-[3px] border-[#8a92ff]'
+                  ? 'text-white bg-[#197477]/25 border-l-[3px] border-[#42b8ae]'
                   : 'text-gray-300 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'}
               `}
             >
@@ -1865,7 +1865,7 @@ export default function StaffPanel() {
   return (
     <div className="flex h-screen bg-[#f5f6f8] font-sans overflow-hidden">
 
-      <aside className="fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] translate-x-0">
+      <aside className="zyora-owner-sidebar fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] translate-x-0">
 
         <div className="p-6 pb-4 flex items-center justify-between">
           <div>
@@ -1929,7 +1929,7 @@ export default function StaffPanel() {
         </nav>
       </aside>
 
-      <main className="flex-1 flex flex-col h-full bg-[#f5f6f8] overflow-hidden md:pl-[260px]">
+      <main className="zyora-owner-main flex-1 flex flex-col h-full bg-[#f5f6f8] overflow-hidden md:pl-[260px]">
 
         {activeTab === 'manage_users' && !selectedManageUser && (
           <div className="flex flex-col h-full bg-[#f5f6f8]">
