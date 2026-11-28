@@ -364,11 +364,10 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         displayMultiplier = 1
         if (current != null) {
             activeGiftKey = luckyNoticeGiftKey(current)
-            // Purana win amount copy nahi hoga -> sirf actual win pe hi reward badge aayega
+            // Keep the last server-confirmed win visible while the next Combo
+            // transfer is in flight. A new server result replaces it when confirmed.
             notice = current.copy(
                 multiplier = 1,
-                totalWinAmount = 0L,
-                maxWinTimes = 0,
                 isExiting = false,
             )
             noticeGeneration++
