@@ -355,6 +355,7 @@ fun RoomPage(
     // Room-info-only data is loaded when the sheet is opened, not during room entry.
     // This keeps non-critical member/admin lookups off the room join critical path.
     var showInfo by remember { mutableStateOf(false) }
+    var showRoomShareRequest by remember { mutableStateOf(false) }
     var ownerVipId by remember(roomOwnerAccountId) { mutableStateOf("") }
     var ownerVipBadge by remember(roomOwnerAccountId) { mutableStateOf(false) }
     LaunchedEffect(roomOwnerAccountId, showInfo) {
@@ -2179,18 +2180,32 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
                                 }
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.offset(y=(-3).dp)) {
+                                    Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(14.dp))
+                                    Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=10.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                }
                             }
                         }
                         Spacer(Modifier.weight(1f))
                         // Right aligned Top Icons
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                            Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showRoomCupOnline=true;showRoomCup=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                                Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
-                                Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                            }
-                            val isRoomOwner = accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }
+pill                            val isRoomOwner = accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }
                             if (isRoomOwner) {
                                 Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showSettings = true },contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
+                            }
+                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showRoomShareRequest=true },contentAlignment=Alignment.Center) {
+                                Canvas(Modifier.size(17.dp)) {
+                                    val p = Path().apply {
+                                        moveTo(size.width*.18f,size.height*.82f)
+                                        quadraticTo(size.width*.18f,size.height*.35f,size.width*.52f,size.height*.35f)
+                                        lineTo(size.width*.52f,size.height*.14f)
+                                        lineTo(size.width*.94f,size.height*.50f)
+                                        lineTo(size.width*.52f,size.height*.86f)
+                                        lineTo(size.width*.52f,size.height*.65f)
+                                        quadraticTo(size.width*.30f,size.height*.65f,size.width*.18f,size.height*.82f)
+                                    }
+                                    drawPath(p,Color.White,style=Stroke(width=1.8.dp.toPx(),join=StrokeJoin.Round,cap=StrokeCap.Round))
+                                }
                             }
                             Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
                         }
@@ -3102,8 +3117,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
 
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
-        if(showInfo) RoomInfo(
-            isOpen=true,
+        RoomInfo(
+            isOpen=showInfo,
+            openShareRequest=showRoomShareRequest,
+            onShareSheetDismissed={showRoomShareRequest=false},
             onClose={showInfo=false},
             isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
             roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId,name=roomOwner.name,image=roomOwner.image,vipId=ownerVipId,vipIdBadge=ownerVipBadge),
