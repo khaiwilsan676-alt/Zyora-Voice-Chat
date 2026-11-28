@@ -2071,41 +2071,50 @@ fun RoomPage(
             else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
-        // Keep the cup pill at the left; pin the compact music/online pill to the far right.
-        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 90.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically) {
+        // Keep the existing Cup and Music pills in their original left-side row.
+        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 90.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.height(22.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.20f)).clickable { showRoomCupOnline = false; showRoomCup = true }.padding(horizontal = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(Icons.Default.EmojiEvents, contentDescription = "Top Cup", tint = Color(0xFFFFD54F), modifier = Modifier.size(15.dp))
                 RoomDailyCupTotal(roomId)
             }
+            if (musicControllerVisible && miniMusicTrack != null) {
+                Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(20.dp),contentScale = ContentScale.Fit)
+                    Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 60.dp).basicMarquee(iterations = Int.MAX_VALUE))
+                }
+            }
         }
         if (musicControllerVisible && miniMusicTrack != null) {
-            val musicPillUser = activeRoomUsers.firstOrNull { it.accountId.isNotBlank() }
+            val onlinePillUser = activeRoomUsers.firstOrNull { it.accountId.isNotBlank() }
             Row(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 90.dp, end = 4.dp)
-                    .height(30.dp).widthIn(max = 142.dp)
+                    .height(27.dp).widthIn(max = 58.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(Color.Black.copy(alpha = 0.32f))
+                    .background(Color.Black.copy(alpha = 0.30f))
                     .clickable { showRoomCup = true; showRoomCupOnline = true }
-                    .padding(start = 4.dp, end = 8.dp),
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 AsyncImage(
-                    model = musicPillUser?.image?.takeIf { it.isNotBlank() }
+                    model = onlinePillUser?.image?.takeIf { it.isNotBlank() }
                         ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
                     contentDescription = "Room user",
-                    modifier = Modifier.size(19.dp).clip(CircleShape),
+                    modifier = Modifier.size(17.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
-                Column(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(miniMusicTrack?.name.orEmpty(), color = Color.White, fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 102.dp))
-                    Text(activeRoomUsers.count { it.accountId.isNotBlank() }.toString(),
-                        color = Color.White.copy(alpha = 0.82f), fontSize = 8.sp, maxLines = 1)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    AsyncImage(
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",
+                        contentDescription = "Music track",
+                        modifier = Modifier.size(11.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(
+                        activeRoomUsers.count { it.accountId.isNotBlank() }.toString(),
+                        color = Color.White, fontSize = 8.sp, lineHeight = 8.sp,
+                        fontWeight = FontWeight.SemiBold, maxLines = 1
+                    )
                 }
             }
         }
