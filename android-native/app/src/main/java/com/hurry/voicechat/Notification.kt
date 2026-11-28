@@ -15,7 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -140,24 +144,36 @@ fun NotificationController() {
                 .padding(top = 6.dp)
         ) {
             activeNotice?.let { notice ->
-                Box(
+                val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
+                val bannerModifier = if (isGameNotice) {
                     Modifier
                         .fillMaxWidth()
                         .height(124.dp)
-                ) {
+                } else {
+                    Modifier
+                        .fillMaxWidth()
+                        .height(124.dp)
+                        .offset(y = (-12).dp)
+                }
+
+                Box(bannerModifier) {
                     AsyncImage(
-                        model = ZYORA_NOTIFICATION_PUBLIC + if (
-                            notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
-                        ) "IMG_20261127_151231.png" else "IMG_20261127_152115.png",
+                        model = ZYORA_NOTIFICATION_PUBLIC + if (isGameNotice) {
+                            "IMG_20261127_151231.png"
+                        } else {
+                            "IMG_20261127_152115.png"
+                        },
                         contentDescription = null,
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier.fillMaxSize()
                     )
-                    val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
                     Row(
                         Modifier
                             .fillMaxSize()
-                            .padding(start = if (isGameNotice) 8.dp else 10.dp, end = 10.dp),
+                            .padding(
+                                start = if (isGameNotice) 8.dp else 16.dp,
+                                end = if (isGameNotice) 8.dp else 16.dp
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
@@ -191,10 +207,19 @@ fun NotificationController() {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        "$secondsLeft",
-                                        color = Color.White,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
+                                        text = "$secondsLeft",
+                                        style = TextStyle(
+                                            color = Color.White,
+                                            fontSize = 9.sp,
+                                            lineHeight = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center,
+                                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                            lineHeightStyle = LineHeightStyle(
+                                                alignment = LineHeightStyle.Alignment.Center,
+                                                trim = LineHeightStyle.Trim.Both
+                                            )
+                                        )
                                     )
                                 }
                             }
@@ -212,7 +237,7 @@ fun NotificationController() {
                             model = notice.giftImage,
                             contentDescription = notice.giftName,
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(if (isGameNotice) 48.dp else 36.dp)
                         )
                     }
                 }
