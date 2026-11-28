@@ -168,8 +168,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   };
 
   return (
-    <section className="w-full max-w-none space-y-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4"><div><p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#168184]">CATALOGUE TOOLS</p><h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">Grant Store Assets</h3><p className="mt-1 text-xs text-slate-500">Select a Zyora user, choose an asset and set its validity.</p></div><span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">{ASSETS.length} assets</span></div>
+    <section className="w-full max-w-none rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="space-y-4">
         <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="h-12 w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" inputMode="numeric" />
         {user && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">

@@ -163,7 +163,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
 
       <div className="space-y-2">
         <label className="block text-xs font-bold text-slate-600">Special ID / Tags</label>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1"><button type="button" onClick={() => setKind("id")} className={`rounded-md px-4 py-2 text-xs font-bold transition-colors ${kind === 'id' ? 'bg-white text-[#176f72] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Special ID</button><button type="button" onClick={() => setKind("tag")} className={`rounded-md px-4 py-2 text-xs font-bold transition-colors ${kind === 'tag' ? 'bg-white text-[#176f72] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Image Tag</button></div>
+        <div className="flex gap-2"><button type="button" onClick={() => setKind("id")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Special ID</button><button type="button" onClick={() => setKind("tag")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Image Tag</button></div>
         <div className="flex flex-wrap items-center gap-2">
           {kind === "id" ? <input
             id="special-id-value"
@@ -178,11 +178,15 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
               {PROFILE_TAGS.map(tag => <option key={tag.key} value={tag.key}>{tag.label}</option>)}
             </select>
             {tagKey === 'ownerImageTag' ? (
-              <div className="flex h-12 w-20 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-2"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag preview" title="Official Image Tag" className="max-h-8 max-w-full object-contain" /></div>
+              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+                <img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag preview" className="h-8 max-w-[76px] object-contain" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">Official Image Tag</span>
+              </div>
             ) : (() => {
               const selectedTag = PROFILE_TAGS.find(tag => tag.key === tagKey);
-              return selectedTag ? <div className="flex h-12 w-24 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-2">
-                <img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (selectedTag.image.startsWith('/') ? selectedTag.image.slice(1) : selectedTag.image)} alt={selectedTag.label} title={selectedTag.label} className="max-h-8 max-w-full object-contain" />
+              return selectedTag ? <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+                <img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (selectedTag.image.startsWith('/') ? selectedTag.image.slice(1) : selectedTag.image)} alt={selectedTag.label} className="h-8 max-w-[90px] object-contain" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">{selectedTag.label}</span>
               </div> : null;
             })()}
           </div>}
@@ -244,9 +248,9 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                   <td className="px-3 py-3 font-semibold text-slate-700">{user.hurryId || '—'}</td>
                   <td className="px-3 py-3 font-semibold text-slate-700">
                     <span className="inline-flex items-center gap-2">
-                      {idActive && <span className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-200 bg-white px-2"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official ID" title="Official ID" className="h-5 w-auto object-contain" /><b className="text-xs font-bold text-slate-800">{user.vipId}</b></span>}
-                      {tagActive && <span className="inline-flex h-8 w-12 items-center justify-center rounded-md border border-slate-200 bg-white p-1"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag" title="Official Image Tag" className="max-h-6 max-w-full object-contain" /></span>}
-                      {activeProfileTags.map(tag => <span key={tag.key} title={tag.label} aria-label={tag.label} className="inline-flex h-8 w-12 items-center justify-center rounded-md border border-slate-200 bg-white p-1"><img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (tag.image.startsWith('/') ? tag.image.slice(1) : tag.image)} alt={tag.label} className="max-h-6 max-w-full object-contain" /></span>)}
+                      {idActive && <><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official ID" className="h-5 w-auto object-contain" />{user.vipId}</>}
+                      {tagActive && <span className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag" className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-violet-700">Official Image Tag</span></span>}
+                      {activeProfileTags.map(tag => <span key={tag.key} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"><img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (tag.image.startsWith('/') ? tag.image.slice(1) : tag.image)} alt={tag.label} className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-700">{tag.label}</span></span>)}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-slate-600">
