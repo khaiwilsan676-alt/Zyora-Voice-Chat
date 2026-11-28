@@ -2623,6 +2623,18 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     contentScale = ContentScale.Fit
                 )
             }
+            // Lucky 777 shortcut stays directly before the room banner while minimized.
+            if (lucky777Minimized) {
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261127_231318.png",
+                    contentDescription = "Resume Lucky 777",
+                    modifier = Modifier.padding(bottom = 2.dp).size(48.dp).clickable {
+                        lucky777Minimized = false
+                        showLucky777 = true
+                    },
+                    contentScale = ContentScale.Fit
+                )
+            }
             Column(horizontalAlignment=Alignment.CenterHorizontally, modifier = Modifier.offset(y = 6.dp)) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(52.dp, 72.dp).clip(RoundedCornerShape(8.dp))) { page ->
                     AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
