@@ -884,7 +884,7 @@ private fun LuckyRewardTopBadge(
                 model = LUCKY_COIN_ICON_URL,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(16.dp).offset(y = (-1).dp),
             )
             Spacer(Modifier.width(2.dp))
             Text(
