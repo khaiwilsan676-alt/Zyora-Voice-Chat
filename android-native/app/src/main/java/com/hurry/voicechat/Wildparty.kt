@@ -135,7 +135,7 @@ private fun wpOutcome(round:Int):Pair<WpMode,Int>{
   else -> WpMode.SINGLE to floor(((roll-9.0)/91.0)*4).toInt().coerceIn(0,3)
  }
 }
-private fun wpFormat(v:Long)=when{v>=1_000_000->"${"%.1f".format(v/1_000_000.0).removeSuffix(".0")}M";v>=1000->"${"%.0f".format(v/1000.0)}K";else->v.toString()}
+private fun wpFormat(v:Long)=when{v>=1_000_000_000L->"${"%.1f".format(v/1_000_000_000.0).removeSuffix(".0")}B";v>=1_000_000L->"${"%.1f".format(v/1_000_000.0).removeSuffix(".0")}M";v>=1000L->"${"%.1f".format(v/1000.0).removeSuffix(".0")}K";else->v.toString()}
 private fun wpFormatTime(timeMillis: Long): String {
  val c = Calendar.getInstance().apply { timeInMillis = timeMillis }
  return String.format("%02d-%02d %02d:%02d", c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
@@ -1100,7 +1100,7 @@ private fun WpBottomBalanceBar(
    horizontalArrangement = Arrangement.spacedBy(3.dp)
   ) {
    Text(
-    if (balance >= 100_000_000L) wpFormat(balance) else balance.toString(),
+    wpFormat(balance),
     color = goldColor,
     fontSize = 13.sp,
     fontWeight = FontWeight.Black,
