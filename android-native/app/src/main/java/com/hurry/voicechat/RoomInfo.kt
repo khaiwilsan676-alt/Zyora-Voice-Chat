@@ -347,26 +347,7 @@ fun RoomInfo(
                             drawCircle(Color.White, 1.8.dp.toPx(), androidx.compose.ui.geometry.Offset(size.width * .85f, size.height / 2))
                         }
                     }
-                    Box(
-                        Modifier.size(34.dp).clip(CircleShape)
-                            .background(Color.White.copy(alpha=0.15f))
-                            .clickable { showShareSheet = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Canvas(Modifier.size(16.dp)) {
-                            val path = Path().apply {
-                                moveTo(size.width * .15f, size.height * .85f)
-                                quadraticTo(size.width * .15f, size.height * .35f, size.width * .5f, size.height * .35f)
-                                lineTo(size.width * .5f, size.height * .15f)
-                                lineTo(size.width * .95f, size.height * .5f)
-                                lineTo(size.width * .5f, size.height * .85f)
-                                lineTo(size.width * .5f, size.height * .65f)
-                                quadraticTo(size.width * .3f, size.height * .65f, size.width * .15f, size.height * .85f)
-                            }
-                            drawPath(path, Color.White, style = Stroke(width = 1.8.dp.toPx(), join = StrokeJoin.Round, cap = StrokeCap.Round))
-                        }
-                    }
-                }
+remove Room Info share icon                }
                 FallbackAsyncImage(
                     model = roomData.roomDp.trim().takeIf {
                         it.isNotBlank() && it != "null" && it != "undefined" &&
@@ -515,14 +496,15 @@ fun RoomInfo(
 
     }
         if (showShareSheet) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false; onShareSheetDismissed() })
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.50f)
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                    .background(Color.Black)
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false; onShareSheetDismissed() })
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.50f)
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                        .background(Color.Black)
+                ) {
                 Text(
                     text = "Share in Zyora",
                     color = Color.White,
@@ -565,6 +547,7 @@ fun RoomInfo(
                         }
                     }
                 }
+            }
             }
         }
         if (showDangerMenu) {
