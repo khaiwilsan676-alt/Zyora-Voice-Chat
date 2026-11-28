@@ -1438,6 +1438,7 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
             val reason = payload.optString("reason")
+            luckyAnimation.clearPendingComboTaps()
             mainHandler.post {
                 luckyComboPending = false
                 if (payload.optString("transferId").startsWith("combo-")) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
@@ -1461,18 +1462,23 @@ fun RoomPage(
         val luckyGiftReceivedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
-            val senderId = payload.optString("senderId")
+            val senderId = payload.optString("senderId").trim()
+            val transferId = payload.optString("transferId").trim()
+            val eventTimestamp = payload.optLong("timestamp", 0L)
+            val giftImageRaw = payload.optString("giftImage").ifBlank { payload.optString("luckyImage") }.trim()
+            val recipientCheck = payload.optJSONArray("recipientIds") ?: JSONArray()
+            val eventAge = System.currentTimeMillis() - eventTimestamp
+            if (senderId.isBlank() || transferId.isBlank() || giftImageRaw.isBlank() ||
+                recipientCheck.length() == 0 || eventTimestamp <= 0L ||
+                eventAge !in -30_000L..120_000L) return@Listener
             val senderName = payload.optString("senderName", "User")
             val senderImageRaw = payload.optString("senderImage")
-            val giftImageRaw = payload.optString("giftImage").ifBlank { payload.optString("luckyImage") }
             val giftImage = when {
                 giftImageRaw.isBlank() -> ""
                 giftImageRaw.startsWith("http", true) -> giftImageRaw
                 else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + giftImageRaw.trimStart('/')
             }
-            val chatTransferId = payload.optString("transferId").ifBlank {
-                "gift-" + payload.optLong("timestamp", System.currentTimeMillis())
-            }
+            val chatTransferId = transferId
             if (seenRoomGiftTransferIds.add(chatTransferId)) {
                 if (seenRoomGiftTransferIds.size > 250) {
                     synchronized(seenRoomGiftTransferIds) {
@@ -3173,22 +3179,23 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         }
         luckyGiftNotice?.let { notice ->
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().offset(y = 12.dp).zIndex(250f)) {
-                LuckyAnimationNotificationSlider(notice = notice)
+                LuckyAnimationNotificationSlider(notice = notice, controller = luckyAnimation)
             }
         }
         if (showLuckyComboButton) {
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyAnimationComboButton(
                     visible = true,
+                    enabled = !luckyComboPending,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
                         val previousGift = lastLuckyComboPayload
                         val socket = roomSocketRef.value
-                        if (previousGift != null) {
+                        if (previousGift != null && !luckyComboPending) {
                             if (socket?.connected() != true) {
                                 roomToastText = "Connection unavailable. Please try again."
                             } else {
-                                // Each tap is its own idempotent transaction; never wait for a prior acknowledgement.
+                                luckyAnimation.registerComboTap()
                                 val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
                                 val nextMultiplier = (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + 1
                                 val comboTransfer = JSONObject(previousGift.toString())
