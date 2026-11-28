@@ -4186,7 +4186,7 @@ private fun RoomSeatInviteDialog(
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
             }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
-                if (seat.occupied) NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.size(seatSize * 1.9f))
+                if (seat.occupied) NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.requiredSize(seatSize * 1.9f))
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
                 else if(seat.occupied) {
                     FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.requiredSize(seatSize + 1.dp).clip(CircleShape),contentScale=ContentScale.Crop)
