@@ -1039,7 +1039,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                                         .getString("accountId", "").orEmpty().trim()
                                 ).filter { it.isNotBlank() }.toSet()
                                 if (seller.uid !in ownIds && seller.accountId !in ownIds) {
-                                    onChat(seller.uid, seller.name, seller.image)
+                                    onChat(seller.accountId, seller.name, seller.image)
                                 }
                             },
                         contentScale = ContentScale.Crop
