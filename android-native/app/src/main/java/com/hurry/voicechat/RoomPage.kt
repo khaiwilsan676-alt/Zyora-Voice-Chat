@@ -3242,8 +3242,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 } else null
             },
             onSendCoinTransfer = { transfer ->
-                // Lucky banner, flight, and Combo timer are created only by the
-                // server's committed coin_transfer_received event.
+                // Track the pending ID only for failure cleanup; do not display anything
+                // until the server confirms the wallet transaction.
+                if (transfer["luckyGift"] == true) {
+                    pendingLuckyGiftTransferId = transfer["transferId"]?.toString().orEmpty()
+                }
                 roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
             },
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
