@@ -145,18 +145,12 @@ fun NotificationController() {
         ) {
             activeNotice?.let { notice ->
                 val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
-                val bannerModifier = if (isGameNotice) {
-                    Modifier
-                        .fillMaxWidth()
-                        .height(124.dp)
-                } else {
-                    Modifier
-                        .fillMaxWidth()
-                        .height(124.dp)
-                        .offset(y = (-12).dp)
-                }
 
-                Box(bannerModifier) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(124.dp)
+                ) {
                     AsyncImage(
                         model = ZYORA_NOTIFICATION_PUBLIC + if (isGameNotice) {
                             "IMG_20261127_151231.png"
@@ -165,7 +159,11 @@ fun NotificationController() {
                         },
                         contentDescription = null,
                         contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = if (isGameNotice) {
+                            Modifier.fillMaxSize()
+                        } else {
+                            Modifier.fillMaxSize().offset(y = (-12).dp)
+                        }
                     )
                     Row(
                         Modifier
@@ -174,7 +172,8 @@ fun NotificationController() {
                                 start = if (isGameNotice) 8.dp else 16.dp,
                                 end = if (isGameNotice) 8.dp else 16.dp
                             ),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         AsyncImage(
                             model = notice.avatar,
@@ -184,7 +183,7 @@ fun NotificationController() {
                         )
                         Spacer(Modifier.width(6.dp))
                         Column(
-                            Modifier.weight(1f),
+                            modifier = Modifier.weight(1f, fill = false),
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -233,6 +232,7 @@ fun NotificationController() {
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+                        Spacer(Modifier.width(8.dp))
                         AsyncImage(
                             model = notice.giftImage,
                             contentDescription = notice.giftName,
