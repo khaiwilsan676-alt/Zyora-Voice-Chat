@@ -760,7 +760,8 @@ fun NativeAvatarFrameOverlay(
     gemshineOffsetX: Dp = 0.dp,
     gemshineOffsetY: Dp = 4.dp,
     ninjaNeoSizeAdjustment: Dp = 0.dp,
-    gemshineSizeAdjustment: Dp = 0.dp
+    gemshineSizeAdjustment: Dp = 0.dp,
+    loveBeatSizeAdjustment: Dp = 0.dp
 ) {
     val appContext = LocalContext.current.applicationContext
     val lookupIds = remember(userId, fallbackUserIds) { (listOf(userId) + fallbackUserIds).filter { it.isNotBlank() }.distinct() }
@@ -846,6 +847,7 @@ fun NativeAvatarFrameOverlay(
                     val sizeAdjustment = when (frameId) {
                         "a4" -> ninjaNeoSizeAdjustment
                         "a5" -> gemshineSizeAdjustment
+                        "a6" -> loveBeatSizeAdjustment
                         else -> 0.dp
                     }
                     val adjustmentScale = if (size.minDimension > 0f) (size.minDimension + sizeAdjustment.toPx()) / size.minDimension else 1f
