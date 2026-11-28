@@ -846,7 +846,7 @@ private fun LuckyRewardTopBadge(
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-26).dp),
+                .offset(y = (-28).dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
