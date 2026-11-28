@@ -492,6 +492,7 @@ fun RoomPage(
     var luckyComboGeneration by luckyAnimation::comboGeneration
     var luckyComboPending by luckyAnimation::comboPending
     var luckyComboClicksPending by remember(roomId) { mutableIntStateOf(0) }
+    val queuedLuckyComboTransfers = remember(roomId) { mutableStateListOf<JSONObject>() }
     var lastLuckyComboPayload by luckyAnimation::lastComboPayload
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     val seenRoomGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
@@ -1047,6 +1048,26 @@ fun RoomPage(
     // button should dismiss the chat composer.
     val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
 
+    // Keep the Combo button responsive: animate every tap immediately, then
+    // settle wallet transfers one at a time so each server acknowledgement has
+    // its own matching transfer ID and cannot overwrite another pending tap.
+    LaunchedEffect(roomId, luckyComboPending, queuedLuckyComboTransfers.size, roomSocketRef.value) {
+        if (!luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
+            val socket = roomSocketRef.value
+            if (socket?.connected() == true) {
+                val transfer = queuedLuckyComboTransfers.removeAt(0)
+                pendingLuckyGiftTransferId = transfer.optString("transferId")
+                luckyComboPending = true
+                socket.emit("coin_transfer", transfer)
+            } else {
+                queuedLuckyComboTransfers.clear()
+                luckyComboClicksPending = 0
+                luckyAnimation.clearPendingComboTaps()
+                roomToastText = "Connection unavailable. Please try again."
+            }
+        }
+    }
+
     LaunchedEffect(showChat, roomSocketRef.value) {
         roomSocketRef.value?.takeIf { it.connected() }?.emit(
             "room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", showChat)
@@ -1439,17 +1460,21 @@ fun RoomPage(
             if (payload.optString("roomId") != roomId) return@Listener
             val reason = payload.optString("reason")
             mainHandler.post {
-                luckyAnimation.clearPendingComboTaps()
-                luckyComboPending = false
-                if (payload.optString("transferId").startsWith("combo-")) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
                 val failedTransferId = payload.optString("transferId").ifBlank { payload.optString("eventId") }
-                if (pendingLuckyGiftTransferId.isNotBlank() && failedTransferId == pendingLuckyGiftTransferId) {
+                if (failedTransferId == pendingLuckyGiftTransferId) {
+                    luckyComboPending = false
                     pendingLuckyGiftTransferId = ""
-                    showLuckyComboButton = false
-                    lastLuckyComboPayload = null
-                    luckyComboTimeLeft = 0
-                    luckyAnimation.clearNotice()
-                    pendingLuckyChatMessages = emptyList()
+                    if (failedTransferId.startsWith("combo-")) {
+                        queuedLuckyComboTransfers.clear()
+                        luckyComboClicksPending = 0
+                        luckyAnimation.clearPendingComboTaps()
+                    } else {
+                        showLuckyComboButton = false
+                        lastLuckyComboPayload = null
+                        luckyComboTimeLeft = 0
+                        luckyAnimation.clearNotice()
+                        pendingLuckyChatMessages = emptyList()
+                    }
                 }
                 val balance = payload.optLong("balance", -1L)
                 if (balance >= 0L) roomWalletBalance = balance
@@ -3194,12 +3219,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyAnimationComboButton(
                     visible = true,
-                    enabled = !luckyComboPending,
+                    enabled = true,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
                         val previousGift = lastLuckyComboPayload
                         val socket = roomSocketRef.value
-                        if (previousGift != null && !luckyComboPending) {
+                        if (previousGift != null) {
                             if (socket?.connected() != true) {
                                 roomToastText = "Connection unavailable. Please try again."
                             } else {
@@ -3212,11 +3237,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("comboReplay", true)
                                     .put("multiplier", nextMultiplier)
                                     .put("timestamp", System.currentTimeMillis())
-                                // Replay the combo immediately; win coins still come only from the server.
+                                // Show the tap instantly; the queued transfer is settled
+                                // after the previous server acknowledgement to protect wallet state.
                                 luckyComboClicksPending += 1
-                                luckyComboPending = true
-                                pendingLuckyGiftTransferId = nextTransferId
                                 luckyAnimation.optimisticCombo()
+                                queuedLuckyComboTransfers.add(comboTransfer)
                                 val comboRecipientsJson = previousGift.optJSONArray("recipientIds") ?: JSONArray()
                                 val comboRecipients = (0 until comboRecipientsJson.length())
                                     .map { comboRecipientsJson.optString(it) }
@@ -3224,7 +3249,6 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 val comboImage = previousGift.optString("giftImage")
                                     .ifBlank { previousGift.optString("luckyImage") }
                                 luckyAnimation.launchToRecipients(nextTransferId, comboImage, comboRecipients)
-                                socket.emit("coin_transfer", comboTransfer)
                             }
                         }
                     },
