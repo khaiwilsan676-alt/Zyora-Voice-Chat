@@ -1092,7 +1092,8 @@ fun PublicProfileScreen(
                     Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Gift")
                         if (receivedGifts.isNotEmpty()) {
-                            val giftRowsHeight = ((receivedGifts.size + 3) / 4 * 88).coerceAtLeast(88)
+                            val giftRowCount = ((receivedGifts.size + 3) / 4).coerceAtLeast(1)
+                            val giftRowsHeight = giftRowCount * 88 + (giftRowCount - 1) * 6
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(4),
                                 modifier = Modifier.fillMaxWidth().height(giftRowsHeight.dp),
@@ -1123,16 +1124,6 @@ fun PublicProfileScreen(
                                                             edgeFade to Color.White,
                                                             (1f - edgeFade) to Color.White,
                                                             1f to Color.Transparent
-                                                        ),
-                                                        blendMode = BlendMode.DstIn
-                                                    )
-                                                    // Keep the top fade, but do not fade the bottom edge
-                                                    // into the white profile background.
-                                                    drawRect(
-                                                        brush = Brush.verticalGradient(
-                                                            0f to Color.Transparent,
-                                                            edgeFade to Color.White,
-                                                            1f to Color.White
                                                         ),
                                                         blendMode = BlendMode.DstIn
                                                     )
