@@ -1,17 +1,22 @@
 package com.hurry.voicechat
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -25,18 +30,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -69,9 +77,12 @@ import java.net.HttpURLConnection
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private val StoreBlue = Color(0xFF1D4ED8)
 private val StoreBg = Color(0xFFF5F6F8)
@@ -222,8 +233,7 @@ private val nativeStoreTabs = listOf(
     NativeStoreTab("Vehicle", "Vehicle", "IMG_20260913_090019.png"),
     NativeStoreTab("Avatar Frame", "Frame", "IMG_20260913_090057.png"),
     NativeStoreTab("Theme", "Theme", "IMG_20260913_090137.png"),
-    NativeStoreTab("Chat Bubble", "Bubble", "IMG_20260913_090116.png"),
-    NativeStoreTab("ID", "ID", "IMG_20260913_090150.png")
+    NativeStoreTab("Voice", "Voice", "IMG_20261128_125432.png")
 )
 
 private val nativeStoreItems = listOf(
@@ -233,9 +243,9 @@ private val nativeStoreItems = listOf(
     NativeStoreItem("v3", "Blaze Runner", "IMG_20261023_125318.png", "Vehicle", 5, 549999, "5D", "alioss_19_2025120517555513292~2.mp4"),
     NativeStoreItem("v4", "Star Rider", "IMG_20261023_125335.png", "Vehicle", 5, 500000, "5D", "alioss_19_2025121720314422497~2.mp4"),
     NativeStoreItem("v5", "Sky Drift", "IMG_20261023_125357.png", "Vehicle", 5, 259000, "5D", "alioss_19_2026021110563339968~2.mp4"),
-    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025092202374953873~2.mp4"), 
-    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025080802251364763~2.mp4"), 
-    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202291646319~2.mp4"), 
+    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025092202374953873~2.mp4"),
+    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025080802251364763~2.mp4"),
+    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202291646319~2.mp4"),
     NativeStoreItem("v9", "Galaxy Surfer", "IMG_20261023_125416.png", "Vehicle", 5, 359999, "5D", "alioss_17_2025041211424496804~2.mp4"),
 
     NativeStoreItem("a1", "Crown Wings", "IMG_20261021_192009.png", "Avatar Frame", 5, 250000, "3D", video = "VID_20260905_024534_955_bsl.mp4"),
@@ -246,7 +256,7 @@ private val nativeStoreItems = listOf(
     NativeStoreItem("a6", "Love Beat", "file_00000000445482119241b60988ca201a.png", "Avatar Frame", 5, 300000, "3D"),
     NativeStoreItem("a7", "Golden Aura", "file_00000000406482119e4e67fbbe323a54.png", "Avatar Frame", 5, 199000, "3D"),
     NativeStoreItem("a8", "Happy birthday", "file_00000000c21482118a018264cecee76c.png", "Avatar Frame", 5, 500000, "3D", video = "gemini_generated_video_c02dfa3d~2.mp4"),
-    
+
     NativeStoreItem("t1", "Seafood", "IMG-20260904-WA0004.jpg", "Theme", 4, 2700000, "30D"),
     NativeStoreItem("t2", "Night Sky", "IMG-20260904-WA0005.jpg", "Theme", 5, 2400000, "30D"),
     NativeStoreItem("t3", "Seafood", "IMG-20260904-WA0006.jpg", "Theme", 4, 2700000, "30D"),
@@ -256,15 +266,389 @@ private val nativeStoreItems = listOf(
     NativeStoreItem("t7", "Painted Skies", "IMG-20261024-WA0021.jpg", "Theme", 5, 899999, "30D"),
     NativeStoreItem("t8", "Solace nature", "IMG-20261024-WA0022.jpg", "Theme", 5, 700000, "30D"),
     NativeStoreItem("t9", "Time light", "IMG-20261024-WA0023.jpg", "Theme", 5, 1000000, "30D"),
-    
-    NativeStoreItem("c1", "1", "file_000000003d888211822aa6837fe5013c.png", "Chat Bubble", 4, 500000, "3D"),
-    NativeStoreItem("c2", "2", "file_000000006044821186ff566329797142.png", "Chat Bubble", 4, 250000, "2D"),
-    NativeStoreItem("c3", "3", "file_00000000c44c81f598f62ae8a45e13a7.png", "Chat Bubble", 5, 300000, "3D"),
-    NativeStoreItem("c4", "4", "IMG_20260920_122831.png", "Chat Bubble", 4, 246000, "3D"),
-    NativeStoreItem("c5", "5", "IMG_20260920_122743.png", "Chat Bubble", 4, 159000, "3D"),
-    NativeStoreItem("c6", "6", "IMG_20260920_121752.png", "Chat Bubble", 4, 200000, "3D"),
-    NativeStoreItem("i1", "ID Badge 8", "1784533036732~2.jpg", "ID", 5, 10000000, "3D", ownedByDefault = true)
+
+    NativeStoreItem("vw1", "Emerald Wave", "", "Voice", 5, 300000, "3D")
 )
+
+private data class VoiceStarSpec(
+    val angleDeg: Float,
+    val radiusFrac: Float,
+    val sizeFrac: Float,
+    val rotationDeg: Float,
+    val phaseOffset: Float
+)
+
+private data class VoiceOrbSpec(
+    val angleDeg: Float,
+    val radiusFrac: Float,
+    val sizeFrac: Float,
+    val isYellow: Boolean,
+    val phaseOffset: Float
+)
+
+private val emeraldVoiceStars = listOf(
+    VoiceStarSpec(-65f, 0.80f, 0.056f, 12f, 0.0f),
+    VoiceStarSpec(-42f, 0.72f, 0.036f, 25f, 0.9f),
+    VoiceStarSpec(-18f, 0.77f, 0.052f, -10f, 1.8f),
+    VoiceStarSpec(18f, 0.82f, 0.038f, 18f, 2.5f),
+    VoiceStarSpec(52f, 0.74f, 0.034f, -15f, 3.2f),
+    VoiceStarSpec(118f, 0.82f, 0.052f, 8f, 4.1f),
+    VoiceStarSpec(155f, 0.86f, 0.034f, -20f, 4.9f),
+    VoiceStarSpec(182f, 0.74f, 0.044f, 15f, 5.4f),
+    VoiceStarSpec(-148f, 0.76f, 0.055f, -12f, 1.3f),
+    VoiceStarSpec(-122f, 0.83f, 0.036f, 20f, 2.7f)
+)
+
+private val emeraldVoiceOrbs = listOf(
+    VoiceOrbSpec(-86f, 0.77f, 0.022f, true, 0.4f),
+    VoiceOrbSpec(-54f, 0.87f, 0.018f, false, 1.1f),
+    VoiceOrbSpec(-28f, 0.88f, 0.024f, true, 2.0f),
+    VoiceOrbSpec(-4f, 0.69f, 0.020f, false, 2.9f),
+    VoiceOrbSpec(28f, 0.76f, 0.022f, true, 3.7f),
+    VoiceOrbSpec(70f, 0.85f, 0.020f, false, 4.4f),
+    VoiceOrbSpec(96f, 0.79f, 0.026f, true, 5.1f),
+    VoiceOrbSpec(132f, 0.72f, 0.020f, false, 0.8f),
+    VoiceOrbSpec(142f, 0.89f, 0.028f, true, 1.6f),
+    VoiceOrbSpec(166f, 0.79f, 0.024f, true, 2.4f),
+    VoiceOrbSpec(-172f, 0.86f, 0.026f, true, 3.3f),
+    VoiceOrbSpec(-135f, 0.67f, 0.018f, false, 4.2f),
+    VoiceOrbSpec(-112f, 0.74f, 0.022f, true, 5.0f),
+    VoiceOrbSpec(-98f, 0.88f, 0.016f, false, 5.8f)
+)
+
+private fun buildVoiceWaveRingPath(
+    cx: Float,
+    cy: Float,
+    baseRadius: Float,
+    amp1: Float,
+    freq1: Int,
+    phase1: Float,
+    amp2: Float,
+    freq2: Int,
+    phase2: Float,
+    steps: Int = 96
+): Path {
+    val path = Path()
+    val twoPi = (2.0 * PI).toFloat()
+    for (i in 0..steps) {
+        val theta = (i.toFloat() / steps) * twoPi
+        val r = baseRadius + amp1 * sin(freq1 * theta + phase1) + amp2 * cos(freq2 * theta + phase2)
+        val x = cx + r * cos(theta)
+        val y = cy + r * sin(theta)
+        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+    }
+    path.close()
+    return path
+}
+
+private fun DrawScope.drawVoiceStar(
+    center: Offset,
+    outerRadius: Float,
+    rotationDeg: Float,
+    alpha: Float
+) {
+    val safeAlpha = alpha.coerceIn(0f, 1f)
+    if (safeAlpha <= 0.01f || outerRadius <= 0.5f) return
+
+    val glowRadius = outerRadius * 2.8f
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                Color(0xFFFFF176).copy(alpha = 0.65f * safeAlpha),
+                Color(0xFF76FF03).copy(alpha = 0.25f * safeAlpha),
+                Color.Transparent
+            ),
+            center = center,
+            radius = glowRadius
+        ),
+        radius = glowRadius,
+        center = center
+    )
+
+    val innerRadius = outerRadius * 0.43f
+    val startRad = ((rotationDeg - 90f) * PI / 180.0).toFloat()
+    val stepRad = (PI / 5.0).toFloat()
+    val starPath = Path()
+    for (i in 0 until 10) {
+        val r = if (i % 2 == 0) outerRadius else innerRadius
+        val angle = startRad + i * stepRad
+        val x = center.x + r * cos(angle)
+        val y = center.y + r * sin(angle)
+        if (i == 0) starPath.moveTo(x, y) else starPath.lineTo(x, y)
+    }
+    starPath.close()
+
+    drawPath(path = starPath, color = Color(0xFFFFEA00).copy(alpha = 0.95f * safeAlpha))
+    drawCircle(
+        color = Color(0xFFFFFFCC).copy(alpha = 0.85f * safeAlpha),
+        radius = outerRadius * 0.24f,
+        center = center
+    )
+}
+
+@Composable
+fun EmeraldVoiceWaveEffect(
+    animated: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val phase: Float
+    val pulseProgress: Float
+    val breath: Float
+
+    if (animated) {
+        val transition = rememberInfiniteTransition(label = "emerald_voice_wave")
+        phase = transition.animateFloat(
+            initialValue = 0f,
+            targetValue = (2.0 * PI).toFloat(),
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 3600, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "wave_phase"
+        ).value
+        pulseProgress = transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "wave_pulse"
+        ).value
+        breath = transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1400, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "wave_breath"
+        ).value
+    } else {
+        phase = 0.65f
+        pulseProgress = 0.35f
+        breath = 0.55f
+    }
+
+    Canvas(modifier = modifier) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val center = Offset(cx, cy)
+        val maxR = min(size.width, size.height) / 2f
+        if (maxR <= 2f) return@Canvas
+
+        val glowBoost = 0.88f + 0.22f * breath
+
+        // 1. Ambient emerald radial ring halo
+        drawCircle(
+            brush = Brush.radialGradient(
+                0.0f to Color.Transparent,
+                0.44f to Color.Transparent,
+                0.56f to Color(0xFF00E676).copy(alpha = 0.34f * glowBoost),
+                0.70f to Color(0xFF059669).copy(alpha = 0.28f * glowBoost),
+                0.86f to Color(0xFF065F46).copy(alpha = 0.16f * glowBoost),
+                0.98f to Color(0xFF064E3B).copy(alpha = 0.05f),
+                1.0f to Color.Transparent,
+                center = center,
+                radius = maxR
+            ),
+            radius = maxR,
+            center = center
+        )
+
+        // 2. Inner silky glowing wavy emerald ribbons (exact overlapping energy look)
+        val innerRibbon1 = buildVoiceWaveRingPath(
+            cx = cx, cy = cy,
+            baseRadius = maxR * (0.58f + (if (animated) 0.015f * sin(phase) else 0f)),
+            amp1 = maxR * 0.032f, freq1 = 3, phase1 = phase,
+            amp2 = maxR * 0.018f, freq2 = 2, phase2 = -phase * 0.8f
+        )
+        drawPath(
+            path = innerRibbon1,
+            color = Color(0xFF00E676).copy(alpha = 0.28f * glowBoost),
+            style = Stroke(width = maxR * 0.11f, cap = StrokeCap.Round)
+        )
+        drawPath(
+            path = innerRibbon1,
+            color = Color(0xFF10B981).copy(alpha = 0.78f),
+            style = Stroke(width = maxR * 0.044f, cap = StrokeCap.Round)
+        )
+        drawPath(
+            path = innerRibbon1,
+            color = Color(0xFF86EFAC).copy(alpha = 0.92f),
+            style = Stroke(width = maxR * 0.016f, cap = StrokeCap.Round)
+        )
+
+        val innerRibbon2 = buildVoiceWaveRingPath(
+            cx = cx, cy = cy,
+            baseRadius = maxR * (0.635f + (if (animated) 0.016f * cos(phase) else 0f)),
+            amp1 = maxR * 0.034f, freq1 = 2, phase1 = -phase * 1.15f + 1.1f,
+            amp2 = maxR * 0.016f, freq2 = 4, phase2 = phase * 0.9f
+        )
+        drawPath(
+            path = innerRibbon2,
+            color = Color(0xFF00C853).copy(alpha = 0.26f * glowBoost),
+            style = Stroke(width = maxR * 0.095f, cap = StrokeCap.Round)
+        )
+        drawPath(
+            path = innerRibbon2,
+            color = Color(0xFF34D399).copy(alpha = 0.72f),
+            style = Stroke(width = maxR * 0.030f, cap = StrokeCap.Round)
+        )
+        drawPath(
+            path = innerRibbon2,
+            color = Color(0xFFA7F3D0).copy(alpha = 0.80f),
+            style = Stroke(width = maxR * 0.012f, cap = StrokeCap.Round)
+        )
+
+        val midRibbon = buildVoiceWaveRingPath(
+            cx = cx, cy = cy,
+            baseRadius = maxR * 0.71f,
+            amp1 = maxR * 0.028f, freq1 = 3, phase1 = phase * 0.75f + 2.3f,
+            amp2 = maxR * 0.014f, freq2 = 5, phase2 = -phase
+        )
+        drawPath(
+            path = midRibbon,
+            color = Color(0xFF059669).copy(alpha = 0.30f),
+            style = Stroke(width = maxR * 0.075f, cap = StrokeCap.Round)
+        )
+        drawPath(
+            path = midRibbon,
+            color = Color(0xFF22C55E).copy(alpha = 0.62f),
+            style = Stroke(width = maxR * 0.022f, cap = StrokeCap.Round)
+        )
+
+        // 3. Outer concentric wave rings — static in Card, expanding live voice waves in Preview
+        if (animated) {
+            for (k in 0 until 3) {
+                val p = (pulseProgress + k / 3f) % 1f
+                val rippleR = maxR * (0.55f + 0.44f * p)
+                val rippleAlpha = sin(p * PI.toFloat()).coerceIn(0f, 1f)
+                val ripplePath = buildVoiceWaveRingPath(
+                    cx = cx, cy = cy,
+                    baseRadius = rippleR,
+                    amp1 = maxR * 0.022f * (1f - 0.35f * p), freq1 = 3, phase1 = phase + k * 2.1f,
+                    amp2 = maxR * 0.012f, freq2 = 2, phase2 = -phase * 0.7f + k
+                )
+                drawPath(
+                    path = ripplePath,
+                    color = Color(0xFF00E676).copy(alpha = 0.34f * rippleAlpha),
+                    style = Stroke(width = maxR * (0.065f - 0.03f * p), cap = StrokeCap.Round)
+                )
+                drawPath(
+                    path = ripplePath,
+                    color = Color(0xFF69F0AE).copy(alpha = 0.85f * rippleAlpha),
+                    style = Stroke(width = maxR * (0.022f - 0.01f * p), cap = StrokeCap.Round)
+                )
+            }
+            // Delicate outer framing wave ring
+            val outerGuide = buildVoiceWaveRingPath(
+                cx = cx, cy = cy,
+                baseRadius = maxR * 0.91f,
+                amp1 = maxR * 0.018f, freq1 = 2, phase1 = -phase * 0.6f,
+                amp2 = maxR * 0.010f, freq2 = 4, phase2 = phase * 0.5f
+            )
+            drawPath(
+                path = outerGuide,
+                color = Color(0xFF10B981).copy(alpha = 0.32f),
+                style = Stroke(width = maxR * 0.018f, cap = StrokeCap.Round)
+            )
+        } else {
+            val outerRing1 = buildVoiceWaveRingPath(
+                cx = cx, cy = cy,
+                baseRadius = maxR * 0.80f,
+                amp1 = maxR * 0.022f, freq1 = 2, phase1 = 1.4f,
+                amp2 = maxR * 0.012f, freq2 = 4, phase2 = 0.3f
+            )
+            drawPath(
+                path = outerRing1,
+                color = Color(0xFF059669).copy(alpha = 0.36f),
+                style = Stroke(width = maxR * 0.055f, cap = StrokeCap.Round)
+            )
+            drawPath(
+                path = outerRing1,
+                color = Color(0xFF4ADE80).copy(alpha = 0.58f),
+                style = Stroke(width = maxR * 0.016f, cap = StrokeCap.Round)
+            )
+
+            val outerRing2 = buildVoiceWaveRingPath(
+                cx = cx, cy = cy,
+                baseRadius = maxR * 0.90f,
+                amp1 = maxR * 0.020f, freq1 = 3, phase1 = 2.7f,
+                amp2 = maxR * 0.010f, freq2 = 2, phase2 = 1.1f
+            )
+            drawPath(
+                path = outerRing2,
+                color = Color(0xFF10B981).copy(alpha = 0.24f),
+                style = Stroke(width = maxR * 0.045f, cap = StrokeCap.Round)
+            )
+            drawPath(
+                path = outerRing2,
+                color = Color(0xFF6EE7B7).copy(alpha = 0.42f),
+                style = Stroke(width = maxR * 0.012f, cap = StrokeCap.Round)
+            )
+
+            val outerRing3 = buildVoiceWaveRingPath(
+                cx = cx, cy = cy,
+                baseRadius = maxR * 0.96f,
+                amp1 = maxR * 0.012f, freq1 = 2, phase1 = 0.5f,
+                amp2 = maxR * 0.008f, freq2 = 3, phase2 = 2.0f
+            )
+            drawPath(
+                path = outerRing3,
+                color = Color(0xFF34D399).copy(alpha = 0.24f),
+                style = Stroke(width = maxR * 0.010f, cap = StrokeCap.Round)
+            )
+        }
+
+        // 4. Luminous golden & lime bokeh orbs
+        emeraldVoiceOrbs.forEach { orb ->
+            val driftRad = if (animated) 0.03f * sin(phase + orb.phaseOffset) else 0f
+            val angleRad = ((orb.angleDeg * PI / 180.0).toFloat()) + (if (animated) phase * 0.12f else 0f)
+            val r = maxR * (orb.radiusFrac + driftRad)
+            val pos = Offset(cx + r * cos(angleRad), cy + r * sin(angleRad))
+            val orbR = maxR * orb.sizeFrac
+            val twinkle = if (animated) 0.65f + 0.35f * sin(phase * 2f + orb.phaseOffset) else 0.92f
+            val coreColor = if (orb.isYellow) Color(0xFFFFF59D) else Color(0xFFB9F6CA)
+            val haloColor = if (orb.isYellow) Color(0xFFFFD600) else Color(0xFF00E676)
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        coreColor.copy(alpha = 0.95f * twinkle),
+                        haloColor.copy(alpha = 0.45f * twinkle),
+                        Color.Transparent
+                    ),
+                    center = pos,
+                    radius = orbR * 3.0f
+                ),
+                radius = orbR * 3.0f,
+                center = pos
+            )
+            drawCircle(
+                color = coreColor.copy(alpha = 0.95f * twinkle),
+                radius = orbR * 0.72f,
+                center = pos
+            )
+        }
+
+        // 5. Golden 5-point stars scattered along the rings
+        emeraldVoiceStars.forEach { star ->
+            val waveShift = if (animated) 0.025f * sin(phase * 1.5f + star.phaseOffset) else 0f
+            val angleRad = ((star.angleDeg * PI / 180.0).toFloat()) + (if (animated) phase * 0.18f else 0f)
+            val r = maxR * (star.radiusFrac + waveShift)
+            val pos = Offset(cx + r * cos(angleRad), cy + r * sin(angleRad))
+            val scalePulse = if (animated) 0.85f + 0.25f * sin(phase * 2f + star.phaseOffset) else 1f
+            val starAlpha = if (animated) 0.75f + 0.25f * cos(phase * 2f + star.phaseOffset) else 0.96f
+            drawVoiceStar(
+                center = pos,
+                outerRadius = maxR * star.sizeFrac * scalePulse,
+                rotationDeg = star.rotationDeg + (if (animated) (phase * 18f) else 0f),
+                alpha = starAlpha
+            )
+        }
+    }
+}
 
 @Composable
 fun NativeAvatarFrameOverlay(
@@ -843,13 +1227,19 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 )
             }
             Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 nativeStoreTabs.forEach { tab ->
                     val active = activeTab == tab.id
+                    var useVoiceFallbackIcon by remember(tab.id) { mutableStateOf(false) }
+                    val tabIconUrl = if (tab.id == "Voice") {
+                        if (useVoiceFallbackIcon) StoreAssetBase + tab.icon else ZyoraStoreAssetBase + tab.icon
+                    } else {
+                        StoreAssetBase + tab.icon
+                    }
                     Box(
-                        Modifier.width(63.dp).height(80.dp).clip(RoundedCornerShape(6.dp))
+                        Modifier.weight(1f).height(80.dp).clip(RoundedCornerShape(6.dp))
                             .background(if (active) Color.Transparent else Color(0x33FFFFFF))
                             .clickable { activeTab = tab.id },
                         contentAlignment = Alignment.Center
@@ -859,7 +1249,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                 model = StoreAssetBase + "IMG_20260913_090226.png",
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
+                                contentScale = ContentScale.FillBounds
                             )
                         }
                         Column(
@@ -867,7 +1257,12 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            AsyncImage(model = StoreAssetBase + tab.icon, contentDescription = tab.label, modifier = Modifier.size(40.dp))
+                            AsyncImage(
+                                model = tabIconUrl,
+                                contentDescription = tab.label,
+                                modifier = Modifier.size(40.dp),
+                                onError = { if (tab.id == "Voice" && !useVoiceFallbackIcon) useVoiceFallbackIcon = true }
+                            )
                             Spacer(Modifier.height(3.dp))
                             Text(tab.label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                         }
@@ -876,20 +1271,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
             }
         }
 
-        if (activeTab == "ID") {
-            Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardGrey).padding(20.dp)) {
-                    Text("Customize ID", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Spacer(Modifier.height(16.dp))
-                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF333333)).padding(14.dp), contentAlignment = Alignment.Center) {
-                        Text("Start Your Customization Journey", fontSize = 14.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.Medium)
-                    }
-                }
-                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF333333)).clickable { }.padding(14.dp), contentAlignment = Alignment.Center) {
-                    Text("Customize", color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
-                }
-            }
-        } else if (visibleItems.isEmpty()) {
+        if (visibleItems.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (isBag) AsyncImage(model = StoreAssetBase + "file_0000000047308211a02722299d1fda2e.png", contentDescription = "No data", modifier = Modifier.size(120.dp))
@@ -930,10 +1312,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     val theme = item.tab == "Theme"
                     val isVehicle = item.tab == "Vehicle"
                     val isFrame = item.tab == "Avatar Frame"
-                    val isBubble = item.tab == "Chat Bubble" // Check added for Chat Bubble
+                    val isVoice = item.tab == "Voice"
                     val owned = ownedIds.contains(item.id) || item.ownedByDefault
                     val equipped = equippedIds.contains(item.id)
-                    
+
                     Box(
                         Modifier.fillMaxWidth().then(if (theme) Modifier.height(200.dp) else Modifier.wrapContentHeight())
                             .clip(RoundedCornerShape(5.dp))
@@ -947,48 +1329,61 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                 contentScale = ContentScale.Crop
                             )
                         }
-                        
+
                         Column(
                             Modifier.fillMaxWidth().padding(5.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             if (!theme) {
-                                // Bag mirrors the Store card preview. Vehicle MP4s are reserved
-                                // for the existing room-entry toast, never played inside Bag.
-                                val previewVideo = item.image
-                                if (previewVideo.endsWith(".mp4", ignoreCase = true)) {
-                                    val isV1 = item.id == "v1"
-                                    val removeGreen = if (isVehicle) isV1 else true
-                                    val mediaModifier = if (isVehicle && !isV1) {
-                                        Modifier.fillMaxWidth().wrapContentHeight()
-                                    } else {
-                                        Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
+                                if (isVoice) {
+                                    // Static Voice wave inside card only — no avatar, no animation
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        EmeraldVoiceWaveEffect(
+                                            animated = false,
+                                            modifier = Modifier.size(114.dp)
+                                        )
                                     }
-                                    val gridBottomFade = if (isVehicle) {
-                                        when (item.id) {
-                                            "v2", "v4", "v6" -> 0.15f
-                                            else -> 0.1f
-                                        }
-                                    } else 0f
-                                    StoreVideoPreview(
-                                        url = nativeStoreAssetUrl(item, previewVideo),
-                                        modifier = mediaModifier,
-                                        pause = true,
-                                        topFade = if (isVehicle) 0.1f else 0f,
-                                        bottomFade = gridBottomFade,
-                                        removeGreenScreen = removeGreen,
-                                        mute = item.id == "a8",
-                                        loop = !isVehicle,
-                                        cacheVideo = isVehicle
-                                    )
                                 } else {
-                                    val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
-                                    AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
+                                    // Bag mirrors the Store card preview. Vehicle MP4s are reserved
+                                    // for the existing room-entry toast, never played inside Bag.
+                                    val previewVideo = item.image
+                                    if (previewVideo.endsWith(".mp4", ignoreCase = true)) {
+                                        val isV1 = item.id == "v1"
+                                        val removeGreen = if (isVehicle) isV1 else true
+                                        val mediaModifier = if (isVehicle && !isV1) {
+                                            Modifier.fillMaxWidth().wrapContentHeight()
+                                        } else {
+                                            Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
+                                        }
+                                        val gridBottomFade = if (isVehicle) {
+                                            when (item.id) {
+                                                "v2", "v4", "v6" -> 0.15f
+                                                else -> 0.1f
+                                            }
+                                        } else 0f
+                                        StoreVideoPreview(
+                                            url = nativeStoreAssetUrl(item, previewVideo),
+                                            modifier = mediaModifier,
+                                            pause = true,
+                                            topFade = if (isVehicle) 0.1f else 0f,
+                                            bottomFade = gridBottomFade,
+                                            removeGreenScreen = removeGreen,
+                                            mute = item.id == "a8",
+                                            loop = !isVehicle,
+                                            cacheVideo = isVehicle
+                                        )
+                                    } else {
+                                        val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
+                                        AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
+                                    }
                                 }
                             } else {
                                 Spacer(Modifier.weight(1f).fillMaxWidth().height(80.dp))
                             }
-                            
+
                             // Image based stars
                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
                                 repeat(5) { index ->
@@ -1214,7 +1609,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             Box(Modifier.width(230.dp).height(480.dp).border(4.dp, Color.Yellow, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.Transparent)) {
                                 AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
-                            
+
                             // Image based stars for dialog
                             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                 repeat(5) { index ->
@@ -1225,7 +1620,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     }
                                 }
                             }
-                            
+
                             Text(item.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
@@ -1271,14 +1666,14 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     Text("Cancel", fontWeight = FontWeight.Bold)
                                 }
                             }
-                            
+
                             val frameOffsetY = when (item.id) {
                                 "a3" -> (-72).dp // Moved slightly up from -65.dp
                                 "a5" -> (-60).dp
                                 "a6" -> (-62).dp
                                 else -> (-55).dp
                             }
-                            
+
                             val frameSize = when (item.id) {
                                 "a3" -> 130.dp
                                 "a6" -> 120.dp
@@ -1306,62 +1701,65 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             }
                         }
                     }
-                    "Chat Bubble" -> {
-                        Column(
-                            Modifier.width(260.dp).background(CardGrey, RoundedCornerShape(22.dp)).padding(top = 20.dp, bottom = 16.dp, start = 16.dp, end = 16.dp).clickable(enabled = false) {},
-                            horizontalAlignment = Alignment.CenterHorizontally
+                    "Voice" -> {
+                        Box(
+                            Modifier.width(300.dp).height(300.dp).background(CardGrey, RoundedCornerShape(16.dp)).clickable(enabled = false) {},
+                            contentAlignment = Alignment.BottomCenter
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                                Box(Modifier.size(16.dp).border(5.dp, Color(0xFF333333), CircleShape).background(CardGrey))
-                                Spacer(Modifier.width(8.dp))
-                                Text("3D", color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                            }
-                            Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
-                                AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize())
-                                Text(
-                                    "Zyora",
-                                    color = Color.White,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    style = androidx.compose.ui.text.TextStyle(
-                                        shadow = Shadow(color = Color(0xE6FFD700), blurRadius = 12f)
-                                    )
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                                AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(28.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("%,d".format(item.price), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp).alpha(0.6f)) {
-                                AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("%,d".format(item.price * 2), fontSize = 14.sp, color = Color.Gray, textDecoration = TextDecoration.LineThrough)
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Spacer(Modifier.height(40.dp))
+                                Text(item.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                                    Text("◷", color = Color.LightGray, fontSize = 18.sp)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(item.duration, color = Color.LightGray, fontSize = 13.sp)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
+                                    AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("%,d".format(item.price), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                                val isOwned = ownedIds.contains(item.id)
+                                val isEquipped = equippedIds.contains(item.id)
+                                Button(
+                                    onClick = { tryItem = null },
+                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = StoreBlue)
+                                ) {
+                                    Text(if (isOwned) if (isEquipped) "Equipped" else "Equip" else "Buy", fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = { tryItem = null },
+                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.LightGray),
+                                    border = BorderStroke(1.dp, Color.Gray)
+                                ) {
+                                    Text("Cancel", fontWeight = FontWeight.Bold)
+                                }
                             }
 
-                            Button(
-                                onClick = {
-                                    // Use the canonical server-backed purchase flow.
-                                    tryItem = null
-                                },
-                                modifier = Modifier.fillMaxWidth().height(42.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C88C))
+                            // Animated voice wave radiating from BEHIND the user avatar
+                            Box(
+                                Modifier.align(Alignment.TopCenter).offset(y = (-72).dp).size(144.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("Buy", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = { tryItem = null },
-                                modifier = Modifier.fillMaxWidth().height(42.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333), contentColor = Color(0xFF9CA3AF))
-                            ) {
-                                Text("Cancel", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                EmeraldVoiceWaveEffect(
+                                    animated = true,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Box(
+                                    Modifier.size(76.dp).clip(CircleShape).background(Color.Gray),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("U", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
-                    else -> { 
+                    else -> {
                         val alignBottom = item.id == "v9" || item.id == "v7" || item.id == "v2" || item.id == "v10"
-                        
+
                         val topFadeVal = when (item.id) {
                             "v10" -> 0.05f
                             "v9", "v7", "v6" -> 0.15f
@@ -1369,15 +1767,15 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                         }
                         val bottomFadeVal = when (item.id) {
                             "v10" -> 0.05f
-                            "v2", "v4", "v6" -> 0.15f 
+                            "v2", "v4", "v6" -> 0.15f
                             "v9", "v7" -> 0.0f
                             else -> 0.10f
                         }
-                        
+
                         Box(
                             Modifier
                                 .fillMaxSize()
-                                .clickable(enabled = false) {}, 
+                                .clickable(enabled = false) {},
                             contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
                         ) {
                             val isV1 = item.id == "v1"
@@ -1406,7 +1804,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
 
     if (sendItem != null) {
         ModalBottomSheet(
-            onDismissRequest = { sendItem = null; searchQuery = "" }, 
+            onDismissRequest = { sendItem = null; searchQuery = "" },
             containerColor = Color(0xFF1E1E1E),
             dragHandle = {}, // Top line (drag handle) ko hata diya
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) // Corner md (kam) kar diya
@@ -1419,7 +1817,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     .padding(horizontal = 20.dp)
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Top Left Back Icon & Middle Heading "Gift"
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Icon(
@@ -1433,7 +1831,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     )
                     Text("Gift", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Input bar (Contact text remove kar diya and corner md (kam) kar diya)
@@ -1442,24 +1840,24 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp)) // pehle CircleShape tha, ab thoda kam round hai
                         .background(Color(0xFF2A2A2A))
-                        .padding(horizontal = 14.dp, vertical = 11.dp), 
+                        .padding(horizontal = 14.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("⌕", fontSize = 20.sp, color = Color.Gray)
                     Spacer(Modifier.width(8.dp))
                     BasicTextField(
-                        value = searchQuery, 
-                        onValueChange = { searchQuery = it }, 
-                        singleLine = true, 
-                        modifier = Modifier.fillMaxWidth(), 
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White), 
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White),
                         decorationBox = { inner ->
                             if (searchQuery.isEmpty()) Text("Search friends...", fontSize = 14.sp, color = Color(0xFF9CA3AF))
                             inner()
                         }
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
                 giftSearchUsers.forEach { target ->
                     val targetName = target.optString("name", "User")
@@ -1548,15 +1946,15 @@ private fun StoreChromaImage(
                         val r = (color ushr 16) and 0xFF
                         val g = (color ushr 8) and 0xFF
                         val b = color and 0xFF
-                        
+
                         val maxRB = max(r, b)
                         val greenness = g - maxRB
-                        
-                        val edge0 = 10.2f  
-                        val edge1 = 38.25f 
+
+                        val edge0 = 10.2f
+                        val edge1 = 38.25f
                         val t = ((greenness.toFloat() - edge0) / (edge1 - edge0)).coerceIn(0f, 1f)
                         val blend = t * t * (3f - 2f * t)
-                        
+
                         val despilledG = min(g, maxRB + 13)
 
                         val finalAlpha = (a * (1f - blend)).roundToInt().coerceIn(0, 255)
@@ -1579,9 +1977,9 @@ private fun StoreChromaImage(
 
 @Composable
 fun StoreVideoPreview(
-    url: String, 
-    modifier: Modifier = Modifier, 
-    pause: Boolean = false, 
+    url: String,
+    modifier: Modifier = Modifier,
+    pause: Boolean = false,
     topFade: Float = 0f,
     bottomFade: Float = 0f,
     removeGreenScreen: Boolean = false,
@@ -1632,15 +2030,15 @@ fun StoreVideoPreview(
             }
         }
     }
-    var isVideoReady by remember(url) { mutableStateOf(false) } 
+    var isVideoReady by remember(url) { mutableStateOf(false) }
     var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     val chromaMatrix = remember {
         ColorMatrix(floatArrayOf(
-            1f, 0f, 0f, 0f, 0f,     
-            0f, 1f, 0f, 0f, 0f,     
-            0f, 0f, 1f, 0f, 0f,     
-            2.5f, -4f, 2.5f, 1f, 0f 
+            1f, 0f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f, 0f,
+            0f, 0f, 1f, 0f, 0f,
+            2.5f, -4f, 2.5f, 1f, 0f
         ))
     }
 
@@ -1661,7 +2059,7 @@ fun StoreVideoPreview(
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
-                
+
                 val stops = mutableListOf<Pair<Float, Color>>()
                 if (topFade > 0f) {
                     stops.add(0.0f to Color.Transparent)
@@ -1669,7 +2067,7 @@ fun StoreVideoPreview(
                 } else {
                     stops.add(0.0f to Color.Black)
                 }
-                
+
                 if (bottomFade > 0f) {
                     stops.add(1f - bottomFade to Color.Black)
                     stops.add(1.0f to Color.Transparent)
@@ -1706,7 +2104,7 @@ fun StoreVideoPreview(
                 factory = { ctx ->
                     val textureView = TextureView(ctx)
                     textureView.isOpaque = false
-                    
+
                     val mediaPlayer = MediaPlayer()
                     val released = AtomicBoolean(false)
                     var outputSurface: Surface? = null
