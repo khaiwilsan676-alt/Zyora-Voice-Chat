@@ -48,6 +48,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -166,8 +167,21 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
                 // Authenticate first. A device-slot lookup before Firebase auth
                 // incorrectly blocks official identities before their real ID is known.
+                var accountCreated = false
                 val user = withContext(Dispatchers.IO) {
-                    backendEmailAuth(context, email.trim(), password, create)
+                    try {
+                        backendEmailAuth(context, email.trim(), password, false)
+                    } catch (authError: Throwable) {
+                        val missingAccount = authError is FirebaseAuthInvalidUserException ||
+                            authError.message.orEmpty().let { message ->
+                                message.contains("user-not-found", ignoreCase = true) ||
+                                    message.contains("no user record", ignoreCase = true) ||
+                                    message.contains("EMAIL_NOT_FOUND", ignoreCase = true)
+                            }
+                        if (!missingAccount) throw authError
+                        accountCreated = true
+                        backendEmailAuth(context, email.trim(), password, true)
+                    }
                 }
                 val deviceLock = if (isOfficialAuthUser(user)) JSONObject().put("allowed", true) else withContext(Dispatchers.IO) {
                     verifyDeviceGoogleAccount(user, context, "Email/Password")
@@ -188,7 +202,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     .putString("idToken", user.optString("idToken"))
                     .remove("banReason")
                     .apply()
-                if (create) {
+                if (accountCreated) {
                     authPrefs.edit()
                         .putBoolean("needsProfileSetup", true)
                         .putBoolean("profileSetupComplete", false)
@@ -613,17 +627,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 ) {
                     if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF2563EB), strokeWidth = 2.dp)
                     else Text("Log in", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { submitEmailAuth(true) },
-                    enabled = !loading && email.isNotBlank() && password.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .8f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White, disabledContentColor = Color.White.copy(alpha = .4f))
-                ) {
-                    Text("Sign up", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(28.dp))
             }
