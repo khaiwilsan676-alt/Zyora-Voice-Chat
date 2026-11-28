@@ -157,15 +157,11 @@ fun NotificationController() {
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        key(notice.id) {
-                            VideoEffectOverlay(
-                                src = notice.video,
-                                style = "plain",
-                                onFinished = {},
-                                onStarted = {},
-                                forceNoGreenRemove = true
-                            )
-                        }
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF352319))
+                        )
                     }
                     val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
                     Row(
