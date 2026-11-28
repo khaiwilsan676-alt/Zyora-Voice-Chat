@@ -2116,84 +2116,17 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
-                                        Row(
-                                            Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
-                                            Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                                        }
-                                    }
-                                    if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
-                                        if (!followed) {
-                                            AsyncImage(
-                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_003419.png",
-                                                contentDescription = "Follow room",
-                                                modifier = Modifier.size(26.dp).clickable {
-                                            val next = !followed
-                                            followed = next
-                                            onFollowToggle(roomId, next)
-                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                                                runCatching {
-                                                    val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
-                                                    val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
-                                                    val url = if (next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
-                                                    val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
-                                                        requestMethod = if (next) "POST" else "DELETE"
-                                                        connectTimeout = 8000
-                                                        readTimeout = 8000
-                                                        if (next) {
-                                                            doOutput = true
-                                                            setRequestProperty("Content-Type", "application/json")
-                                                        }
-                                                    }
-                                                    if (next) {
-                                                        val payload = JSONObject()
-                                                            .put("userId", accountId)
-                                                            .put("roomId", roomId)
-                                                            .put("roomName", roomName)
-                                                            .put("roomImage", roomImage)
-                                                            .put("roomCountry", roomOwner.country)
-                                                            .put("followerName", roomDisplayName)
-                                                            .put("followerImage", roomDisplayImage)
-                                                            .put("followerCountry", cachedCurrentProfile?.optString("country").orEmpty().ifBlank { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getString("country", "").orEmpty() })
-                                                        conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                                                    }
-                                                    conn.responseCode
-                                                    conn.disconnect()
-                                                }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Row(
+                                                Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
+                                                Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                                             }
-                                        
-                                                },
-                                                contentScale = ContentScale.Fit
-                                            )
-                                        }
-                                    }
-                                }
-                                val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.offset(y = (-3).dp)) {
-                                    if (ownerVipBadge && ownerVipId.isNotBlank()) {
-                                        AsyncImage(
-                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                            contentDescription = "VIP ID",
-                                            contentScale = ContentScale.Fit,
-                                            modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                        )
-                                        Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                    } else when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001", "500002", "500003", "500004", "500005" -> {
-                                            AsyncImage(
-                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                                contentDescription = "Purple ID Badge",
-                                                contentScale = ContentScale.Fit,
-                                                modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                            )
-                                            Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                        }
-                                        else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                    }
-                                }
+                                            Spacer(Modifier.width(4.dp))
+            
                             }
                         }
                         Spacer(Modifier.weight(1f))
