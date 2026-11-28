@@ -758,7 +758,9 @@ fun NativeAvatarFrameOverlay(
     modifier: Modifier = Modifier,
     fallbackUserIds: List<String> = emptyList(),
     gemshineOffsetX: Dp = 0.dp,
-    gemshineOffsetY: Dp = 4.dp
+    gemshineOffsetY: Dp = 4.dp,
+    ninjaNeoSizeAdjustment: Dp = 0.dp,
+    gemshineSizeAdjustment: Dp = 0.dp
 ) {
     val appContext = LocalContext.current.applicationContext
     val lookupIds = remember(userId, fallbackUserIds) { (listOf(userId) + fallbackUserIds).filter { it.isNotBlank() }.distinct() }
@@ -837,7 +839,23 @@ fun NativeAvatarFrameOverlay(
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
-            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { val frameId = selected.optString("itemId"); val isAdjustedFrame = frameId == "a5" || frameId == "a6"; val frameScale = if (isAdjustedFrame) 1.33f else if (frameId == "a4") 1.23f else 1.28f; scaleX = frameScale; scaleY = frameScale; if (isAdjustedFrame) { translationX = gemshineOffsetX.toPx(); translationY = -gemshineOffsetY.toPx() } }, contentScale = ContentScale.Fit)
+            if (image.isNotBlank()) AsyncImage(model = nativeStoreAssetUrl(NativeStoreItem(selected.optString("itemId"), "", "", "Avatar Frame", 0, 0, ""), image), contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer {
+                    val frameId = selected.optString("itemId")
+                    val isAdjustedFrame = frameId == "a5" || frameId == "a6"
+                    val frameScale = if (isAdjustedFrame) 1.33f else if (frameId == "a4") 1.23f else 1.28f
+                    val sizeAdjustment = when (frameId) {
+                        "a4" -> ninjaNeoSizeAdjustment
+                        "a5" -> gemshineSizeAdjustment
+                        else -> 0.dp
+                    }
+                    val adjustmentScale = if (size.minDimension > 0f) (size.minDimension + sizeAdjustment.toPx()) / size.minDimension else 1f
+                    scaleX = frameScale * adjustmentScale
+                    scaleY = frameScale * adjustmentScale
+                    if (isAdjustedFrame) {
+                        translationX = gemshineOffsetX.toPx()
+                        translationY = -gemshineOffsetY.toPx()
+                    }
+                }, contentScale = ContentScale.Fit)
         }
     }
 }
