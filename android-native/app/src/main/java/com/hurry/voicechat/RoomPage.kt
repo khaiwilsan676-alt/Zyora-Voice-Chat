@@ -490,6 +490,10 @@ fun RoomPage(
     var luckyNoticeGeneration by luckyAnimation::noticeGeneration
     var showLuckyComboButton by luckyAnimation::showComboButton
     var pendingLuckyGiftTransferId by remember(roomId) { mutableStateOf("") }
+    // Track every rapid Combo request independently; one in-flight tap must not block the next.
+    val pendingLuckyComboTransferIds = remember(roomId) {
+        java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    }
     var luckyComboTimeLeft by luckyAnimation::comboTimeLeft
     var luckyComboGeneration by luckyAnimation::comboGeneration
     var luckyComboPending by luckyAnimation::comboPending
@@ -1458,13 +1462,12 @@ fun RoomPage(
             val reason = payload.optString("reason")
             mainHandler.post {
                 val failedTransferId = payload.optString("transferId").ifBlank { payload.optString("eventId") }
-                if (failedTransferId == pendingLuckyGiftTransferId) {
+                if (pendingLuckyComboTransferIds.remove(failedTransferId)) {
+                    luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
+                } else if (failedTransferId == pendingLuckyGiftTransferId) {
                     luckyComboPending = false
                     pendingLuckyGiftTransferId = ""
-                    if (failedTransferId.startsWith("combo-")) {
-                        luckyComboClicksPending = 0
-                        luckyAnimation.clearPendingComboTaps()
-                    } else {
+                    {
                         showLuckyComboButton = false
                         lastLuckyComboPayload = null
                         luckyComboTimeLeft = 0
@@ -1497,8 +1500,7 @@ fun RoomPage(
                 // A sender-side combo response must match the exact in-flight tap.
                 // This blocks late/duplicate success events from reopening a stale combo banner.
                 if (payload.optBoolean("comboReplay", false) && senderId == accountId &&
-                    (pendingLuckyGiftTransferId.isBlank() ||
-                     transferId != pendingLuckyGiftTransferId)) return@Listener
+                    !pendingLuckyComboTransferIds.contains(transferId)) return@Listener
             }
             val senderName = payload.optString("senderName", "User")
             val senderImageRaw = payload.optString("senderImage")
@@ -1632,10 +1634,12 @@ fun RoomPage(
                     )
                 }
                 if (senderId == accountId) {
-                    if (isComboReplay) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
-                    // Only the acknowledgement for the currently in-flight transfer
-                    // may release the queue; stale responses must not unlock newer sends.
-                    if (transferId == pendingLuckyGiftTransferId) {
+                    if (isComboReplay) {
+                        pendingLuckyComboTransferIds.remove(transferId)
+                        luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
+                    }
+                    // The initial send owns the startup lock; each Combo tap is tracked separately.
+                    if (!isComboReplay && transferId == pendingLuckyGiftTransferId) {
                         pendingLuckyGiftTransferId = ""
                         luckyComboPending = false
                     }
@@ -3248,8 +3252,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyAnimationComboButton(
                     visible = true,
-                    // Never queue a second send while the previous transfer is pending.
-                    // One completed transfer must be followed by one deliberate tap.
+                    // Only the first Lucky Gift acknowledgement gates the button.
+                    // After that, rapid Combo taps are sent independently without waiting.
                     enabled = !luckyComboPending && lastLuckyComboPayload != null,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
@@ -3271,12 +3275,9 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("quantity", previousGift.optInt("quantity", 1).coerceAtLeast(1))
                                     .put("multiplier", 1)
                                     .put("timestamp", System.currentTimeMillis())
-                                // Show the tap instantly; the queued transfer is settled
-                                // after the previous server acknowledgement to protect wallet state.
-                                // Authorize exactly this tap and send it immediately.
-                                // Do not defer or replay queued combo transfers later.
-                                pendingLuckyGiftTransferId = nextTransferId
-                                luckyComboPending = true
+                                // Fire each tap immediately. Keep independent IDs so responses
+                                // can settle out of order without blocking subsequent Combo taps.
+                                pendingLuckyComboTransferIds.add(nextTransferId)
                                 luckyComboClicksPending += 1
                                 luckyAnimation.optimisticCombo()
                                 val comboRecipientsJson = previousGift.optJSONArray("recipientIds") ?: JSONArray()
