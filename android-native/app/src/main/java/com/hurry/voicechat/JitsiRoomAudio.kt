@@ -425,6 +425,11 @@ fun JitsiRoomAudio(
                     // Prime voice with two 20 ms frames once, absorbing initial
                     // Socket.IO scheduling jitter without adding recurring latency.
                     var voicePlaybackPrimed = false
+                    // Reuse the PCM mixing buffers for every 20 ms frame. This
+                    // removes two recurring allocations per frame without changing
+                    // the audio mix, queue timing, gain, or AudioTrack write cadence.
+                    val mixedBuffer = if (isVoicePacket) LongArray(ROOM_VOICE_FRAME_BYTES / 2) else null
+                    val voiceOutputBuffer = if (isVoicePacket) ByteArray(ROOM_VOICE_FRAME_BYTES) else null
                     while (alive.get()) {
                         val packet = if (isVoicePacket) {
                             if (!latestPlaybackVoiceEnabled) {
@@ -434,7 +439,8 @@ fun JitsiRoomAudio(
                             }
                             // Mix the next available frame immediately; keep the original
                             // real-time playback cadence and avoid adding an extra wait.
-                            val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
+                            val mixed = mixedBuffer ?: break
+                            mixed.fill(0L)
                             var activeSpeakers = 0
                             val speakerQueues = voiceSpeakerQueues.values.toList()
                             // Drain packets already ready from every speaker first. If the
@@ -470,7 +476,7 @@ fun JitsiRoomAudio(
                             val peak = mixed.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1L).toDouble()
                             val peakGuard = minOf(1.0, 32700.0 / (peak * baseGain.coerceAtLeast(0.000001)))
                             val gain = baseGain * peakGuard
-                            ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
+                            (voiceOutputBuffer ?: break).also { output ->
                                 mixed.forEachIndexed { index, sum ->
                                     val sample = (sum * gain).toInt()
                                         .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
