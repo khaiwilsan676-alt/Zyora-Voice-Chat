@@ -2554,8 +2554,8 @@ fun Lucky777(
     var wheelRotation by remember { mutableFloatStateOf(l7TargetAngleForSlice(2)) }
 
     var chipIndex by remember { mutableIntStateOf(1) }
-    var bets by remember { mutableStateOf>(emptyMap()) }
-    var lastBets by remember { mutableStateOf>(emptyMap()) }
+    var bets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var lastBets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var history by remember { mutableStateOf<List<L7Round>>(emptyList()) }
 
     var muted by remember { mutableStateOf(false) }
