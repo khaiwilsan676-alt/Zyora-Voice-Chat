@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -44,6 +46,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
+import java.util.Locale
 import kotlin.math.*
 
 private const val LUCKY777_BASE =
@@ -97,7 +100,10 @@ private data class L7Round(
     val winner: String,
     val time: Long,
     val myBet: Long = 0L,
-    val winAmount: Long = 0L
+    val winAmount: Long = 0L,
+    val betsMap: Map<String, Long> = emptyMap(),
+    val balanceBefore: Long = 0L,
+    val balanceAfter: Long = 0L
 )
 
 private val l7BetItems = listOf(
@@ -106,8 +112,8 @@ private val l7BetItems = listOf(
     L7Item("Watermelon", LUCKY777_WATERMELON, 2, LUCKY777_X2)
 )
 
-// Exact 9-slice wheel order matching reference images:
-// Slice 0 = 777 (Pink), then alternating Watermelon & Peach around the circle
+// Exact 9-slice wheel order matching reference image:
+// Slice 0 = 777 (Pink), then alternating Watermelon (Royal Blue) & Peach (Sky Blue)
 private val l7WheelSlices = listOf(
     "777",
     "Watermelon",
@@ -164,19 +170,24 @@ private fun l7TargetAngleForSlice(sliceIndex: Int): Float {
 }
 
 private fun l7Format(v: Long): String = when {
-    v >= 1_000_000L -> "${"%.1f".format(v / 1_000_000.0).removeSuffix(".0")}M"
-    v >= 1000L -> "${"%.0f".format(v / 1000.0)}K"
+    v >= 1_000_000L -> "${"%.1f".format(Locale.US, v / 1_000_000.0).removeSuffix(".0")}M"
+    v >= 1000L -> "${"%.0f".format(Locale.US, v / 1000.0)}K"
     else -> v.toString()
 }
 
-private fun l7FormatTime(timeMillis: Long): String {
+private fun l7FormatComma(v: Long): String = String.format(Locale.US, "%,d", v)
+
+private fun l7FormatRecordTime(timeMillis: Long): String {
     val c = Calendar.getInstance().apply { timeInMillis = timeMillis }
     return String.format(
-        "%02d-%02d %02d:%02d",
-        c.get(Calendar.MONTH) + 1,
+        Locale.US,
+        "%02d/%02d/%04d %02d:%02d:%02d",
         c.get(Calendar.DAY_OF_MONTH),
+        c.get(Calendar.MONTH) + 1,
+        c.get(Calendar.YEAR),
         c.get(Calendar.HOUR_OF_DAY),
-        c.get(Calendar.MINUTE)
+        c.get(Calendar.MINUTE),
+        c.get(Calendar.SECOND)
     )
 }
 
@@ -256,6 +267,158 @@ private fun L7WinnerAvatarPlaceholder(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun L7WinnerFruitBadge(
+    winKey: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.size(184.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Radiating white light beams + halo glow + stars + sparkles + confetti
+        Canvas(Modifier.fillMaxSize()) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val center = Offset(cx, cy)
+            val maxR = size.minDimension / 2f
+
+            // Soft white outer halo glow
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.White.copy(alpha = 0.90f),
+                        0.55f to Color.White.copy(alpha = 0.42f),
+                        0.82f to Color.White.copy(alpha = 0.12f),
+                        1.0f to Color.Transparent
+                    ),
+                    center = center,
+                    radius = maxR * 0.92f
+                ),
+                radius = maxR * 0.92f,
+                center = center
+            )
+
+            // 12 Radiating sunburst light beams
+            val rayCount = 12
+            for (i in 0 until rayCount) {
+                val angleDeg = i * (360f / rayCount) - 90f
+                val halfSpread = if (i % 2 == 0) 9.5f else 6.0f
+                val rayLen = if (i % 2 == 0) maxR * 0.98f else maxR * 0.86f
+                val a1 = Math.toRadians((angleDeg - halfSpread).toDouble())
+                val a2 = Math.toRadians((angleDeg + halfSpread).toDouble())
+                val aMid = Math.toRadians(angleDeg.toDouble())
+
+                val rayPath = Path().apply {
+                    moveTo(cx, cy)
+                    lineTo(cx + (cos(a1) * rayLen).toFloat(), cy + (sin(a1) * rayLen).toFloat())
+                    lineTo(cx + (cos(a2) * rayLen).toFloat(), cy + (sin(a2) * rayLen).toFloat())
+                    close()
+                }
+                drawPath(
+                    path = rayPath,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.72f),
+                            Color.White.copy(alpha = 0.28f),
+                            Color.Transparent
+                        ),
+                        start = center,
+                        end = Offset(cx + (cos(aMid) * rayLen).toFloat(), cy + (sin(aMid) * rayLen).toFloat())
+                    )
+                )
+            }
+
+            // Helper: 5-point golden star
+            fun drawStar5(x: Float, y: Float, outerR: Float, innerR: Float, color: Color) {
+                val p = Path()
+                for (k in 0 until 10) {
+                    val r = if (k % 2 == 0) outerR else innerR
+                    val rad = Math.toRadians((k * 36.0) - 90.0)
+                    val px = x + (cos(rad) * r).toFloat()
+                    val py = y + (sin(rad) * r).toFloat()
+                    if (k == 0) p.moveTo(px, py) else p.lineTo(px, py)
+                }
+                p.close()
+                drawPath(p, color = color)
+            }
+
+            // Helper: 4-point white sparkle
+            fun drawSparkle4(x: Float, y: Float, r: Float, color: Color = Color.White) {
+                val inner = r * 0.24f
+                val p = Path().apply {
+                    moveTo(x, y - r)
+                    lineTo(x + inner, y - inner)
+                    lineTo(x + r, y)
+                    lineTo(x + inner, y + inner)
+                    lineTo(x, y + r)
+                    lineTo(x - inner, y + inner)
+                    lineTo(x - r, y)
+                    lineTo(x - inner, y - inner)
+                    close()
+                }
+                drawPath(p, color = color)
+            }
+
+            // Helper: tiny confetti shard
+            fun drawShard(x: Float, y: Float, dx1: Float, dy1: Float, dx2: Float, dy2: Float, color: Color) {
+                val p = Path().apply {
+                    moveTo(x, y)
+                    lineTo(x + dx1, y + dy1)
+                    lineTo(x + dx2, y + dy2)
+                    close()
+                }
+                drawPath(p, color = color)
+            }
+
+            // Golden stars (matching screenshot positions)
+            drawStar5(cx - maxR * 0.50f, cy - maxR * 0.44f, 5.5.dp.toPx(), 2.6.dp.toPx(), Color(0xFFFFD83D))
+            drawStar5(cx + maxR * 0.64f, cy + maxR * 0.22f, 5.2.dp.toPx(), 2.4.dp.toPx(), Color(0xFFFFD83D))
+            drawStar5(cx - maxR * 0.62f, cy + maxR * 0.28f, 3.6.dp.toPx(), 1.7.dp.toPx(), Color(0xFFFFDF5D))
+            drawStar5(cx + maxR * 0.60f, cy + maxR * 0.04f, 3.2.dp.toPx(), 1.5.dp.toPx(), Color(0xFFFFDF5D))
+
+            // Crisp white 4-point sparkles
+            drawSparkle4(cx - maxR * 0.65f, cy - maxR * 0.14f, 6.dp.toPx())
+            drawSparkle4(cx - maxR * 0.64f, cy + maxR * 0.05f, 3.8.dp.toPx())
+            drawSparkle4(cx + maxR * 0.42f, cy + maxR * 0.46f, 4.2.dp.toPx())
+            drawSparkle4(cx + maxR * 0.62f, cy - maxR * 0.16f, 3.5.dp.toPx())
+
+            // Colorful mini confetti triangles
+            drawShard(cx - maxR * 0.42f, cy - maxR * 0.64f, 5.dp.toPx(), 11.dp.toPx(), -3.dp.toPx(), 9.dp.toPx(), Color(0xFF42D9FF))
+            drawShard(cx - maxR * 0.52f, cy + maxR * 0.56f, 10.dp.toPx(), -9.dp.toPx(), 5.dp.toPx(), -1.dp.toPx(), Color(0xFFFF5E5E))
+            drawShard(cx + maxR * 0.54f, cy + maxR * 0.42f, 10.dp.toPx(), 5.dp.toPx(), 7.dp.toPx(), 11.dp.toPx(), Color(0xFFB36BFF))
+            drawShard(cx + maxR * 0.52f, cy - maxR * 0.52f, 9.dp.toPx(), -4.dp.toPx(), 4.dp.toPx(), -9.dp.toPx(), Color(0xFF4BFF5C))
+        }
+
+        // Glossy White Circular Badge
+        Box(
+            modifier = Modifier
+                .size(112.dp)
+                .shadow(elevation = 10.dp, shape = CircleShape, clip = false)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.White,
+                            0.74f to Color(0xFFF3F4F8),
+                            0.90f to Color(0xFFE2E4EC),
+                            1.0f to Color.White
+                        )
+                    )
+                )
+                .border(4.dp, Color.White, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = l7ImageFor(winKey),
+                contentDescription = winKey,
+                modifier = Modifier.size(if (winKey == "777") 86.dp else 80.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+}
+
+@Composable
 private fun L7WheelSection(
     wheelRotation: Float,
     countdown: Int,
@@ -277,7 +440,7 @@ private fun L7WheelSection(
             modifier = Modifier.size(frameSize),
             contentAlignment = Alignment.Center
         ) {
-            // 1. Rotating Blue/Pink 9-Slice Wheel + Radially Placed Fruits & 777
+            // 1. Rotating 9-Slice Wheel Background (Alternating Sky Blue / Royal Blue + Pink 777)
             Box(
                 modifier = Modifier
                     .offset(y = (-frameSize.value * 0.018f).dp)
@@ -290,33 +453,41 @@ private fun L7WheelSection(
                     val radius = size.minDimension / 2f
                     val center = Offset(size.width / 2f, size.height / 2f)
 
-                    // Draw each of the 9 glossy wedges
                     l7WheelSlices.forEachIndexed { idx, key ->
                         val startAngle = idx * sliceAngle - sliceAngle / 2f
-                        val isSeven = key == "777"
-                        val wedgeBrush = if (isSeven) {
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFFFF8CF7),
-                                    Color(0xFFEB2BE2),
-                                    Color(0xFFBD15CC),
-                                    Color(0xFF930CA8)
+                        val wedgeBrush = when (key) {
+                            "777" -> Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color(0xFFFF4CF8),
+                                    0.42f to Color(0xFFEA1BE3),
+                                    0.78f to Color(0xFFD10DC9),
+                                    1.0f to Color(0xFFAE08A8)
                                 ),
                                 center = center,
                                 radius = radius
                             )
-                        } else {
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFF0076EB),
-                                    Color(0xFF0A8CFF),
-                                    Color(0xFF1FA6FF),
-                                    Color(0xFF0055BF)
+                            "Peach" -> Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color(0xFF66D8FF),
+                                    0.40f to Color(0xFF42B9EF),
+                                    0.78f to Color(0xFF2D9EE0),
+                                    1.0f to Color(0xFF2084C9)
+                                ),
+                                center = center,
+                                radius = radius
+                            )
+                            else -> Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color(0xFF3E8EEB),
+                                    0.40f to Color(0xFF2A75D5),
+                                    0.78f to Color(0xFF1F62BF),
+                                    1.0f to Color(0xFF174DA4)
                                 ),
                                 center = center,
                                 radius = radius
                             )
                         }
+
                         drawArc(
                             brush = wedgeBrush,
                             startAngle = startAngle,
@@ -327,76 +498,226 @@ private fun L7WheelSection(
                         )
                     }
 
-                    // Inner glossy sky-blue highlight ring near outer edge (matching 2nd image)
-                    drawCircle(
-                        color = Color(0xFF66CEFF).copy(alpha = 0.24f),
-                        radius = radius * 0.88f,
-                        center = center,
-                        style = Stroke(width = radius * 0.14f)
-                    )
-                    // Outer dark shadow rim inside golden frame
-                    drawCircle(
-                        color = Color(0xFF002B73).copy(alpha = 0.55f),
-                        radius = radius * 0.97f,
-                        center = center,
-                        style = Stroke(width = radius * 0.06f)
-                    )
-
-                    // Jigsaw-style divider lines between slices (same subtle notch as 2nd image)
+                    // Clean subtle straight radial dividers between slices
                     l7WheelSlices.forEachIndexed { idx, _ ->
                         val boundaryDeg = idx * sliceAngle - sliceAngle / 2f
                         val rad = Math.toRadians(boundaryDeg.toDouble())
-                        val perpRad = rad + Math.PI / 2.0
                         val cosA = cos(rad).toFloat()
                         val sinA = sin(rad).toFloat()
-                        val cosP = cos(perpRad).toFloat()
-                        val sinP = sin(perpRad).toFloat()
-
-                        val r1 = radius * 0.22f
-                        val rMid1 = radius * 0.72f
-                        val rMid = radius * 0.785f
-                        val rMid2 = radius * 0.85f
-                        val r2 = radius * 0.99f
-                        val bump = radius * 0.055f
-
-                        val seamPath = Path().apply {
-                            moveTo(center.x + cosA * r1, center.y + sinA * r1)
-                            lineTo(center.x + cosA * rMid1, center.y + sinA * rMid1)
-                            cubicTo(
-                                center.x + cosA * (rMid1 + radius * 0.01f) + cosP * bump,
-                                center.y + sinA * (rMid1 + radius * 0.01f) + sinP * bump,
-                                center.x + cosA * (rMid2 - radius * 0.01f) + cosP * bump,
-                                center.y + sinA * (rMid2 - radius * 0.01f) + sinP * bump,
-                                center.x + cosA * rMid2,
-                                center.y + sinA * rMid2
-                            )
-                            lineTo(center.x + cosA * r2, center.y + sinA * r2)
-                        }
-
-                        drawPath(
-                            path = seamPath,
-                            color = Color(0xFF063782).copy(alpha = 0.85f),
-                            style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
-                        )
-                        drawPath(
-                            path = seamPath,
-                            color = Color(0xFF7BD4FF).copy(alpha = 0.28f),
-                            style = Stroke(width = 0.7.dp.toPx(), cap = StrokeCap.Round)
-                        )
-
-                        // Subtle inner puzzle dot highlight
-                        drawCircle(
-                            color = Color(0xFF0A4BA8).copy(alpha = 0.22f),
-                            radius = radius * 0.02f,
-                            center = Offset(
-                                center.x + cosA * rMid + cosP * (bump * 0.45f),
-                                center.y + sinA * rMid + sinP * (bump * 0.45f)
-                            )
+                        drawLine(
+                            color = Color(0xFF11408C).copy(alpha = 0.32f),
+                            start = Offset(center.x + cosA * radius * 0.24f, center.y + sinA * radius * 0.24f),
+                            end = Offset(center.x + cosA * radius, center.y + sinA * radius),
+                            strokeWidth = 1.dp.toPx()
                         )
                     }
-                }
 
-                // 9 Fruit & 777 Icons arranged radially on each wedge
+                    // Glossy outer bevel ring highlight inside golden frame
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colorStops = arrayOf(
+                                0.84f to Color.Transparent,
+                                0.90f to Color.White.copy(alpha = 0.16f),
+                                0.95f to Color(0xFF7BE0FF).copy(alpha = 0.22f),
+                                1.0f to Color(0xFF0B2F73).copy(alpha = 0.55f)
+                            ),
+                            center = center,
+                            radius = radius
+                        ),
+                        radius = radius,
+                        center = center
+                    )
+
+                    // Thin bright glossy inner track line near rim
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.18f),
+                        radius = radius * 0.915f,
+                        center = center,
+                        style = Stroke(width = 1.2.dp.toPx())
+                    )
+
+                    // Royal blue circular collar ring around center hub
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF164A9E),
+                                Color(0xFF2167C7),
+                                Color(0xFF1A52AA)
+                            ),
+                            center = center,
+                            radius = radius * 0.34f
+                        ),
+                        radius = radius * 0.33f,
+                        center = center
+                    )
+                    drawCircle(
+                        color = Color(0xFF0E3578).copy(alpha = 0.55f),
+                        radius = radius * 0.33f,
+                        center = center,
+                        style = Stroke(width = 1.4.dp.toPx())
+                    )
+                }
+            }
+
+            // 2. Real Glossy Shining Golden Highlight ONLY on Fruit Background Half Area (BEHIND Fruit/777 Icons!)
+            if (phase == L7Phase.RESULT) {
+                Canvas(
+                    modifier = Modifier
+                        .offset(y = (-frameSize.value * 0.018f).dp)
+                        .size(innerWheelSize)
+                        .clip(CircleShape)
+                ) {
+                    val radius = size.minDimension / 2f
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val startDeg = 270f - sliceAngle / 2f
+                    val innerR = radius * 0.43f
+                    val outerR = radius * 0.99f
+
+                    val outerRect = Rect(
+                        left = center.x - outerR,
+                        top = center.y - outerR,
+                        right = center.x + outerR,
+                        bottom = center.y + outerR
+                    )
+                    val innerRect = Rect(
+                        left = center.x - innerR,
+                        top = center.y - innerR,
+                        right = center.x + innerR,
+                        bottom = center.y + innerR
+                    )
+
+                    val goldHalfWedge = Path().apply {
+                        arcTo(
+                            rect = outerRect,
+                            startAngleDegrees = startDeg,
+                            sweepAngleDegrees = sliceAngle,
+                            forceMoveTo = true
+                        )
+                        arcTo(
+                            rect = innerRect,
+                            startAngleDegrees = startDeg + sliceAngle,
+                            sweepAngleDegrees = -sliceAngle,
+                            forceMoveTo = false
+                        )
+                        close()
+                    }
+
+                    clipPath(goldHalfWedge) {
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color(0xFFB86B00),
+                                    0.18f to Color(0xFFF3B017),
+                                    0.36f to Color(0xFFFFF5B8),
+                                    0.52f to Color(0xFFFFCF2E),
+                                    0.72f to Color(0xFFE08B00),
+                                    0.88f to Color(0xFFFFE570),
+                                    1.0f to Color(0xFFC47400)
+                                ),
+                                start = Offset(center.x - radius * 0.40f, center.y - outerR),
+                                end = Offset(center.x + radius * 0.40f, center.y - innerR)
+                            ),
+                            topLeft = Offset(center.x - outerR, center.y - outerR),
+                            size = Size(outerR * 2f, outerR)
+                        )
+
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFFFFFBE0).copy(alpha = 0.85f),
+                                    Color(0xFFFFDF59).copy(alpha = 0.55f),
+                                    Color.Transparent
+                                ),
+                                center = Offset(center.x, center.y - radius * 0.70f),
+                                radius = radius * 0.34f
+                            ),
+                            radius = radius * 0.34f,
+                            center = Offset(center.x, center.y - radius * 0.70f)
+                        )
+
+                        val gloss1 = Path().apply {
+                            moveTo(center.x - radius * 0.34f, center.y - outerR * 0.96f)
+                            lineTo(center.x - radius * 0.08f, center.y - outerR * 0.96f)
+                            lineTo(center.x - radius * 0.24f, center.y - innerR * 0.95f)
+                            lineTo(center.x - radius * 0.42f, center.y - innerR * 0.95f)
+                            close()
+                        }
+                        drawPath(
+                            path = gloss1,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.65f),
+                                    Color(0xFFFFF7CC).copy(alpha = 0.28f),
+                                    Color.Transparent
+                                ),
+                                startY = center.y - outerR,
+                                endY = center.y - innerR
+                            )
+                        )
+
+                        val gloss2 = Path().apply {
+                            moveTo(center.x + radius * 0.04f, center.y - outerR * 0.98f)
+                            lineTo(center.x + radius * 0.16f, center.y - outerR * 0.98f)
+                            lineTo(center.x - radius * 0.02f, center.y - innerR * 0.95f)
+                            lineTo(center.x - radius * 0.10f, center.y - innerR * 0.95f)
+                            close()
+                        }
+                        drawPath(
+                            path = gloss2,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.52f),
+                                    Color(0xFFFFF3B0).copy(alpha = 0.18f),
+                                    Color.Transparent
+                                ),
+                                startY = center.y - outerR,
+                                endY = center.y - innerR
+                            )
+                        )
+
+                        drawArc(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.72f),
+                                    Color.Transparent
+                                ),
+                                startY = center.y - outerR,
+                                endY = center.y - outerR * 0.84f
+                            ),
+                            startAngle = startDeg,
+                            sweepAngle = sliceAngle,
+                            useCenter = false,
+                            topLeft = Offset(center.x - outerR * 0.95f, center.y - outerR * 0.95f),
+                            size = Size(outerR * 1.90f, outerR * 1.90f),
+                            style = Stroke(width = radius * 0.06f)
+                        )
+                    }
+
+                    drawPath(
+                        path = goldHalfWedge,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFFFFF9CC),
+                                Color(0xFFFFD23F),
+                                Color(0xFFE08C00)
+                            ),
+                            startY = center.y - outerR,
+                            endY = center.y - innerR
+                        ),
+                        style = Stroke(width = 1.6.dp.toPx(), join = StrokeJoin.Round)
+                    )
+                }
+            }
+
+            // 3. Rotating Fruit & 777 PNG Icons Layer (ABOVE Golden Highlight so Fruits/777 stay crisp & NEVER golden)
+            Box(
+                modifier = Modifier
+                    .offset(y = (-frameSize.value * 0.018f).dp)
+                    .size(innerWheelSize)
+                    .clip(CircleShape)
+                    .graphicsLayer { rotationZ = wheelRotation },
+                contentAlignment = Alignment.Center
+            ) {
                 l7WheelSlices.forEachIndexed { idx, key ->
                     val deg = idx * sliceAngle
                     val rad = Math.toRadians(deg.toDouble())
@@ -415,36 +736,7 @@ private fun L7WheelSection(
                 }
             }
 
-            // 2. Golden Winner Wedge Highlight at Top V-Slot during RESULT phase (like 2nd image)
-            if (phase == L7Phase.RESULT) {
-                Canvas(
-                    modifier = Modifier
-                        .offset(y = (-frameSize.value * 0.018f).dp)
-                        .size(innerWheelSize)
-                        .clip(CircleShape)
-                ) {
-                    val radius = size.minDimension / 2f
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    drawArc(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFFFF7A26).copy(alpha = 0.65f),
-                                Color(0xFFFFCC33).copy(alpha = 0.58f),
-                                Color(0xFFFFF4A8).copy(alpha = 0.72f)
-                            ),
-                            center = center,
-                            radius = radius
-                        ),
-                        startAngle = 270f - sliceAngle / 2f,
-                        sweepAngle = sliceAngle,
-                        useCenter = true,
-                        topLeft = Offset.Zero,
-                        size = size
-                    )
-                }
-            }
-
-            // 3. Outer Wheel Frame Image (public/IMG_20261127_233303.png)
+            // 4. Outer Wheel Frame Image (public/IMG_20261127_233303.png)
             AsyncImage(
                 model = LUCKY777_WHEEL_FRAME,
                 contentDescription = "Wheel Frame",
@@ -452,7 +744,7 @@ private fun L7WheelSection(
                 contentScale = ContentScale.Fit
             )
 
-            // 4. Center Countdown Hub (Dark circle + Golden border + Red bold 20s countdown)
+            // 5. Center Countdown Hub (Dark circle + Golden border + Red bold 20s countdown)
             Box(
                 modifier = Modifier
                     .offset(y = (-frameSize.value * 0.018f).dp)
@@ -525,21 +817,18 @@ private fun L7LoadingPage(
             contentScale = ContentScale.Crop
         )
 
-        // Dim background overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.34f))
         )
 
-        // Top Title: Lucky 777
         L7TitleText(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 12.dp)
         )
 
-        // Center Game Logo
         AsyncImage(
             model = LUCKY777_LOGO,
             contentDescription = "Lucky 777 Logo",
@@ -550,7 +839,6 @@ private fun L7LoadingPage(
             contentScale = ContentScale.Fit
         )
 
-        // Bottom Golden-Bordered Glossy Blue Striped Loading Bar
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -739,70 +1027,6 @@ private fun L7GlassTopButton(
             )
         }
         content()
-    }
-}
-
-@Composable
-private fun L7GlassBackButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shape = RoundedCornerShape(10.dp)
-    Box(
-        modifier = modifier
-            .size(30.dp)
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.36f),
-                        Color(0xFF424652).copy(alpha = 0.38f),
-                        Color(0xFF14151A).copy(alpha = 0.85f),
-                        Color.White.copy(alpha = 0.18f)
-                    )
-                )
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.85f),
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.45f)
-                    )
-                ),
-                shape = shape
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawOval(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.58f),
-                        Color.White.copy(alpha = 0.10f),
-                        Color.Transparent
-                    ),
-                    startY = 0f,
-                    endY = size.height * 0.50f
-                ),
-                topLeft = Offset(size.width * 0.12f, size.height * 0.04f),
-                size = Size(size.width * 0.76f, size.height * 0.42f)
-            )
-        }
-        Canvas(Modifier.size(13.dp)) {
-            val chevron = Path().apply {
-                moveTo(8.5.dp.toPx(), 2.2.dp.toPx())
-                lineTo(3.8.dp.toPx(), size.height / 2f)
-                lineTo(8.5.dp.toPx(), size.height - 2.2.dp.toPx())
-            }
-            drawPath(
-                chevron,
-                Color.White,
-                style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-            )
-        }
     }
 }
 
@@ -1021,13 +1245,14 @@ private fun L7RulesPopupCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(sheetHeight)
-                .padding(horizontal = 10.dp, vertical = 14.dp),
+                .height(sheetHeight),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth(0.84f)
+                    .wrapContentHeight()
+                    .heightIn(max = sheetHeight * 0.62f)
                     .shadow(elevation = 10.dp, shape = cardShape, clip = false)
                     .clip(cardShape)
                     .background(
@@ -1048,17 +1273,15 @@ private fun L7RulesPopupCard(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(start = 22.dp, end = 18.dp, top = 14.dp, bottom = 30.dp)
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 14.dp, top = 11.dp, bottom = 22.dp)
                 ) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = "Rule",
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(top = 2.dp),
+                            modifier = Modifier.align(Alignment.Center),
                             color = Color.White,
-                            fontSize = 23.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Serif
                         )
@@ -1066,62 +1289,60 @@ private fun L7RulesPopupCard(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
-                                .offset(x = 4.dp, y = (-2).dp)
-                                .size(34.dp)
+                                .size(26.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF132E63))
-                                .border(1.4.dp, Color(0xFF5D7EB8), CircleShape)
+                                .border(1.2.dp, Color(0xFF5D7EB8), CircleShape)
                                 .clickable(onClick = onDismiss),
                             contentAlignment = Alignment.Center
                         ) {
-                            Canvas(Modifier.size(13.dp)) {
+                            Canvas(Modifier.size(10.dp)) {
                                 val pad = 1.dp.toPx()
                                 drawLine(
                                     color = Color.White,
                                     start = Offset(pad, pad),
                                     end = Offset(size.width - pad, size.height - pad),
-                                    strokeWidth = 2.8.dp.toPx(),
+                                    strokeWidth = 2.2.dp.toPx(),
                                     cap = StrokeCap.Round
                                 )
                                 drawLine(
                                     color = Color.White,
                                     start = Offset(size.width - pad, pad),
                                     end = Offset(pad, size.height - pad),
-                                    strokeWidth = 2.8.dp.toPx(),
+                                    strokeWidth = 2.2.dp.toPx(),
                                     cap = StrokeCap.Round
                                 )
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(22.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         rules.forEachIndexed { index, ruleText ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Text(
                                     text = "${index + 1}.",
                                     color = Color(0xFFF3F6FC),
-                                    fontSize = 15.5.sp,
-                                    lineHeight = 22.sp,
+                                    fontSize = 12.5.sp,
+                                    lineHeight = 17.sp,
                                     fontFamily = FontFamily.Serif
                                 )
                                 Text(
                                     text = ruleText,
                                     modifier = Modifier.weight(1f),
                                     color = Color(0xFFF3F6FC),
-                                    fontSize = 15.5.sp,
-                                    lineHeight = 22.sp,
+                                    fontSize = 12.5.sp,
+                                    lineHeight = 17.sp,
                                     fontFamily = FontFamily.Serif
                                 )
                             }
@@ -1133,9 +1354,9 @@ private fun L7RulesPopupCard(
                     text = "v1.0.14",
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(end = 10.dp, bottom = 8.dp),
+                        .padding(end = 9.dp, bottom = 5.dp),
                     color = Color(0xFFDCE6FA),
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
                     fontFamily = FontFamily.Serif
                 )
             }
@@ -1144,43 +1365,363 @@ private fun L7RulesPopupCard(
 }
 
 @Composable
-private fun L7FullHeightSheet(
-    title: String,
+private fun L7HistoryPopupCard(
+    history: List<L7Round>,
     sheetHeight: Dp,
-    onDismiss: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
+    onDismiss: () -> Unit
 ) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+    val cardShape = RoundedCornerShape(12.dp)
+    val recordShape = RoundedCornerShape(9.dp)
+    val recentRecords = history.takeLast(200).reversed()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            ),
+        contentAlignment = Alignment.BottomCenter
+    ) {
         Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-                .clickable { onDismiss() }
-        )
-        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(sheetHeight)
-                .background(Color.Black)
+                .height(sheetHeight),
+            contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .fillMaxWidth(0.88f)
+                    .height(sheetHeight * 0.72f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
             ) {
-                L7GlassBackButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.CenterStart)
-                )
-                Text(
-                    title,
-                    modifier = Modifier.align(Alignment.Center),
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 10.dp)
+                        .shadow(elevation = 12.dp, shape = cardShape, clip = false)
+                        .clip(cardShape)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF1D4BA8),
+                                    Color(0xFF184299),
+                                    Color(0xFF153B8B)
+                                )
+                            )
+                        )
+                        .border(1.2.dp, Color(0xFF3E70D4), cardShape)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        Canvas(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth(0.62f)
+                                .height(36.dp)
+                        ) {
+                            val w = size.width
+                            val h = size.height
+                            val tabPath = Path().apply {
+                                moveTo(0f, 0f)
+                                lineTo(w, 0f)
+                                cubicTo(w * 0.90f, h * 0.08f, w * 0.88f, h, w * 0.76f, h)
+                                lineTo(w * 0.24f, h)
+                                cubicTo(w * 0.12f, h, w * 0.10f, h * 0.08f, 0f, 0f)
+                                close()
+                            }
+                            drawPath(
+                                path = tabPath,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF3E76E0),
+                                        Color(0xFF2D62C7)
+                                    )
+                                )
+                            )
+                            drawPath(
+                                path = tabPath,
+                                color = Color(0xFF6B9CF5).copy(alpha = 0.55f),
+                                style = Stroke(width = 1.dp.toPx())
+                            )
+                        }
+
+                        Text(
+                            text = "Game records",
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 11.dp),
+                            color = Color(0xFFEAF2FF),
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 6.dp, end = 8.dp)
+                                .size(25.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF10285C))
+                                .border(1.1.dp, Color(0xFF4A77CC), CircleShape)
+                                .clickable(onClick = onDismiss),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(Modifier.size(9.5.dp)) {
+                                val pad = 0.8.dp.toPx()
+                                drawLine(
+                                    color = Color.White,
+                                    start = Offset(pad, pad),
+                                    end = Offset(size.width - pad, size.height - pad),
+                                    strokeWidth = 2.1.dp.toPx(),
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = Color.White,
+                                    start = Offset(size.width - pad, pad),
+                                    end = Offset(pad, size.height - pad),
+                                    strokeWidth = 2.1.dp.toPx(),
+                                    cap = StrokeCap.Round
+                                )
+                            }
+                        }
+                    }
+
+                    if (recentRecords.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No game records yet.",
+                                color = Color(0xFFAEC7F7),
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .padding(horizontal = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(top = 2.dp, bottom = 6.dp)
+                        ) {
+                            items(recentRecords, key = { "${it.round}_${it.time}" }) { r ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(recordShape)
+                                        .background(Color(0xFF2858BD))
+                                        .border(1.dp, Color(0xFF0C2254), recordShape)
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Round: ${r.round}",
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = l7FormatRecordTime(r.time),
+                                            color = Color(0xFFC9DCFF),
+                                            fontSize = 11.sp
+                                        )
+                                    }
+
+                                    HorizontalDivider(
+                                        thickness = 0.7.dp,
+                                        color = Color(0xFF4D80E3).copy(alpha = 0.55f)
+                                    )
+
+                                    Text(
+                                        text = "Featured Fruits:",
+                                        color = Color(0xFFBBD3FF),
+                                        fontSize = 11.sp
+                                    )
+
+                                    if (r.betsMap.isNotEmpty()) {
+                                        Row(
+                                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            r.betsMap.forEach { (fruitKey, amt) ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color(0xFF163885))
+                                                        .padding(horizontal = 5.dp, vertical = 2.5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    AsyncImage(
+                                                        model = l7ImageFor(fruitKey),
+                                                        contentDescription = fruitKey,
+                                                        modifier = Modifier.size(14.dp),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                    Text(
+                                                        text = amt.toString(),
+                                                        color = Color.White,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            text = if (r.myBet > 0L) r.myBet.toString() else "-",
+                                            color = Color(0xFFD6E5FF),
+                                            fontSize = 11.sp
+                                        )
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Winning Fruit:",
+                                            color = Color(0xFFBBD3FF),
+                                            fontSize = 11.sp
+                                        )
+                                        AsyncImage(
+                                            model = l7ImageFor(r.winner),
+                                            contentDescription = r.winner,
+                                            modifier = Modifier.size(16.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Text(
+                                            text = "Win coins:",
+                                            color = Color(0xFFBBD3FF),
+                                            fontSize = 11.sp
+                                        )
+                                        AsyncImage(
+                                            model = LUCKY777_COIN,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(13.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Text(
+                                            text = l7FormatComma(r.winAmount),
+                                            color = if (r.winAmount > 0L) l7Gold else Color.White,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "Coin Balance:",
+                                        color = Color(0xFFBBD3FF),
+                                        fontSize = 11.sp
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = LUCKY777_COIN,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(13.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Text(
+                                            text = "${l7FormatComma(r.balanceBefore)} -> ${l7FormatComma(r.balanceAfter)}",
+                                            color = Color.White,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "Show up to last 7 days of game records, maximum 200 records.",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        color = Color(0xFFA6C3F7),
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = (-1).dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        text = "LUCKY",
+                        color = Color(0xFFFFDE3B),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                        style = TextStyle(
+                            shadow = Shadow(
+                                color = Color(0xFF5A1E00),
+                                offset = Offset(0f, 2f),
+                                blurRadius = 3f
+                            )
+                        )
+                    )
+                    Text(
+                        text = "77",
+                        color = Color(0xFFFF362E),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        fontStyle = FontStyle.Italic,
+                        style = TextStyle(
+                            shadow = Shadow(
+                                color = Color(0xFFFFE066),
+                                offset = Offset(0f, 1.5f),
+                                blurRadius = 3f
+                            )
+                        )
+                    )
+                    Text(
+                        text = "PRO",
+                        color = Color(0xFFFFDE3B),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                        style = TextStyle(
+                            shadow = Shadow(
+                                color = Color(0xFF5A1E00),
+                                offset = Offset(0f, 2f),
+                                blurRadius = 3f
+                            )
+                        )
+                    )
+                }
             }
-            content()
         }
     }
 }
@@ -1203,8 +1744,8 @@ fun Lucky777(
     var wheelRotation by remember { mutableFloatStateOf(l7TargetAngleForSlice(2)) }
 
     var chipIndex by remember { mutableIntStateOf(1) }
-    var bets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
-    var lastBets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var bets by remember { mutableStateOf>(emptyMap()) }
+    var lastBets by remember { mutableStateOf>(emptyMap()) }
     var history by remember { mutableStateOf<List<L7Round>>(emptyList()) }
 
     var muted by remember { mutableStateOf(false) }
@@ -1219,6 +1760,10 @@ fun Lucky777(
     var loading by remember { mutableStateOf(true) }
     var loadingProgress by remember { mutableFloatStateOf(0f) }
 
+    val todayWin by remember(history) {
+        derivedStateOf { history.sumOf { it.winAmount } }
+    }
+
     LaunchedEffect(Unit) {
         runCatching {
             balance = dao.getUserData()?.balance ?: 82927L
@@ -1227,16 +1772,30 @@ fun Lucky777(
                     .getString("history", "[]")
             )
             history = (0 until arr.length()).mapNotNull { i ->
-                arr.optJSONObject(i)?.let {
+                arr.optJSONObject(i)?.let { obj ->
+                    val betsObj = obj.optJSONObject("betsMap")
+                    val loadedBets = buildMap<String, Long> {
+                        if (betsObj != null) {
+                            val keys = betsObj.keys()
+                            while (keys.hasNext()) {
+                                val k = keys.next()
+                                val v = betsObj.optLong(k, 0L)
+                                if (v > 0L) put(k, v)
+                            }
+                        }
+                    }
                     L7Round(
-                        round = it.optInt("round"),
-                        winner = it.optString("winner"),
-                        time = it.optLong("time"),
-                        myBet = it.optLong("myBet", 0L),
-                        winAmount = it.optLong("winAmount", 0L)
+                        round = obj.optInt("round"),
+                        winner = obj.optString("winner"),
+                        time = obj.optLong("time"),
+                        myBet = obj.optLong("myBet", 0L),
+                        winAmount = obj.optLong("winAmount", 0L),
+                        betsMap = loadedBets,
+                        balanceBefore = obj.optLong("balanceBefore", 0L),
+                        balanceAfter = obj.optLong("balanceAfter", 0L)
                     )
                 }
-            }.filter { it.time >= l7Reset() }.sortedBy { it.round }.takeLast(50)
+            }.filter { it.time >= l7Reset() }.sortedBy { it.round }.takeLast(200)
         }
         for (step in 1..50) {
             loadingProgress = step / 50f
@@ -1253,6 +1812,7 @@ fun Lucky777(
         balance = next
         val c = Calendar.getInstance()
         val date = String.format(
+            Locale.US,
             "%04d.%02d.%02d %02d:%02d",
             c.get(Calendar.YEAR),
             c.get(Calendar.MONTH) + 1,
@@ -1273,7 +1833,9 @@ fun Lucky777(
 
     fun persistHistory() {
         val arr = JSONArray()
-        history.takeLast(50).forEach {
+        history.takeLast(200).forEach {
+            val betsObj = JSONObject()
+            it.betsMap.forEach { (k, v) -> betsObj.put(k, v) }
             arr.put(
                 JSONObject()
                     .put("round", it.round)
@@ -1281,6 +1843,9 @@ fun Lucky777(
                     .put("time", it.time)
                     .put("myBet", it.myBet)
                     .put("winAmount", it.winAmount)
+                    .put("betsMap", betsObj)
+                    .put("balanceBefore", it.balanceBefore)
+                    .put("balanceAfter", it.balanceAfter)
             )
         }
         context.getSharedPreferences("lucky777_native", Context.MODE_PRIVATE)
@@ -1346,9 +1911,21 @@ fun Lucky777(
         if (phase == L7Phase.RESULT && processedRound != round) {
             processedRound = round
             val winnerKey = l7WheelSlices[l7OutcomeSlice(round)]
-            betAmount = bets.values.sum()
-            winAmount = (bets[winnerKey] ?: 0L) * l7MultiplierFor(winnerKey)
-            history = (history + L7Round(round, winnerKey, System.currentTimeMillis(), betAmount, winAmount)).takeLast(50)
+            val roundBetsSnapshot = bets.toMap()
+            betAmount = roundBetsSnapshot.values.sum()
+            winAmount = (roundBetsSnapshot[winnerKey] ?: 0L) * l7MultiplierFor(winnerKey)
+            val balBefore = balance
+            val balAfter = balance + winAmount
+            history = (history + L7Round(
+                round = round,
+                winner = winnerKey,
+                time = System.currentTimeMillis(),
+                myBet = betAmount,
+                winAmount = winAmount,
+                betsMap = roundBetsSnapshot,
+                balanceBefore = balBefore,
+                balanceAfter = balAfter
+            )).takeLast(200)
             persistHistory()
             delay(1000)
             if (winAmount > 0L) {
@@ -1425,7 +2002,7 @@ fun Lucky777(
                     .fillMaxSize()
                     .padding(top = 8.dp, bottom = 8.dp)
             ) {
-                // Top Bar (Same to same buttons & layout as previous game)
+                // Top Bar
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
@@ -1542,129 +2119,218 @@ fun Lucky777(
                         .padding(vertical = 2.dp)
                 )
 
-                // History Strip (Black/60 pill patti)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(26.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.60f))
-                        .border(0.8.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Unified TODAY'S WIN + Results Bar + 3 Betting Cards Block (Matching 2nd Image)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (history.isEmpty()) {
-                        Text(
-                            "History",
-                            color = Color.White.copy(alpha = 0.55f),
-                            fontSize = 10.sp,
-                            fontStyle = FontStyle.Italic
-                        )
-                    } else {
-                        val recentStrip = history.takeLast(12)
-                        recentStrip.forEachIndexed { idx, rec ->
-                            val isNewest = idx == recentStrip.lastIndex
-                            Box(
-                                modifier = Modifier.size(21.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = l7ImageFor(rec.winner),
-                                    contentDescription = rec.winner,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-                                if (isNewest) {
-                                    L7HistoryNewPill(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .offset(x = 3.dp, y = (-2).dp)
+                    // 1. TODAY'S WIN Pill
+                    val todayPillShape = RoundedCornerShape(50)
+                    Row(
+                        modifier = Modifier
+                            .height(23.dp)
+                            .clip(todayPillShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF1C2959).copy(alpha = 0.90f),
+                                        Color(0xFF0A0F29).copy(alpha = 0.95f)
                                     )
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFFCFA54E),
+                                        Color(0xFFFFE599),
+                                        Color(0xFFCFA54E)
+                                    )
+                                ),
+                                shape = todayPillShape
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(18.dp)
+                    ) {
+                        Text(
+                            text = "TODAY'S WIN",
+                            color = Color(0xFFF3F6FF),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Serif
+                        )
+                        Text(
+                            text = l7FormatComma(todayWin),
+                            color = Color(0xFFFFC933),
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Black,
+                            style = TextStyle(
+                                shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(0f, 1f), 2f)
+                            )
+                        )
+                    }
+
+                    Spacer(Modifier.height(3.dp))
+
+                    // 2. Connected Results Bar (Directly attached on top of the 3-Card Image)
+                    val resultsTabShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp)
+                            .height(29.dp)
+                            .clip(resultsTabShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF10173A).copy(alpha = 0.92f),
+                                        Color(0xFF070A1F).copy(alpha = 0.96f)
+                                    )
+                                )
+                            )
+                            .drawBehind {
+                                val strokePx = 1.1.dp.toPx()
+                                val r = 12.dp.toPx()
+                                val borderPath = Path().apply {
+                                    moveTo(strokePx / 2f, size.height)
+                                    lineTo(strokePx / 2f, r)
+                                    quadraticTo(strokePx / 2f, strokePx / 2f, r, strokePx / 2f)
+                                    lineTo(size.width - r, strokePx / 2f)
+                                    quadraticTo(size.width - strokePx / 2f, strokePx / 2f, size.width - strokePx / 2f, r)
+                                    lineTo(size.width - strokePx / 2f, size.height)
+                                }
+                                drawPath(
+                                    path = borderPath,
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFFC99D44),
+                                            Color(0xFFFFE79E),
+                                            Color(0xFFC99D44)
+                                        )
+                                    ),
+                                    style = Stroke(width = strokePx)
+                                )
+                            }
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Results:",
+                            color = Color(0xFFDCE6FF),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (history.isEmpty()) {
+                                Text(
+                                    text = "-",
+                                    color = Color.White.copy(alpha = 0.50f),
+                                    fontSize = 11.sp
+                                )
+                            } else {
+                                // Newest winning fruit first (leftmost) with exact existing NEW pill tag
+                                val recentStrip = history.takeLast(12).reversed()
+                                recentStrip.forEachIndexed { idx, rec ->
+                                    val isNewest = idx == 0
+                                    Box(
+                                        modifier = Modifier.size(22.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = l7ImageFor(rec.winner),
+                                            contentDescription = rec.winner,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        if (isNewest) {
+                                            L7HistoryNewPill(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .offset(x = 3.dp, y = (-2).dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(6.dp))
-
-                // 3-Card Betting Panel (Single 3-card image + Fruits/777 + x2/x8 images)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .height(74.dp)
-                ) {
-                    AsyncImage(
-                        model = LUCKY777_CARDS_BG,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.FillBounds
-                    )
-
-                    Row(
+                    // 3. 3-Card Betting Panel (Same PNG, full height, seamlessly joined with Results bar, NO golden border)
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                            .height(106.dp)
                     ) {
-                        l7BetItems.forEach { item ->
-                            val myBetVal = bets[item.key] ?: 0L
-                            val isWinner = phase == L7Phase.RESULT && l7WheelSlices[winnerSlice] == item.key
-                            val betText = "${l7Format(myBetVal)}/${l7Format(myBetVal)}"
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .then(
-                                        if (isWinner) {
-                                            Modifier.border(1.8.dp, l7Gold, RoundedCornerShape(8.dp))
-                                        } else {
-                                            Modifier
-                                        }
-                                    )
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) { placeBet(item.key) }
-                                    .padding(horizontal = 4.dp, vertical = 3.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = betText,
-                                    color = if (myBetVal > 0L) l7Gold else Color(0xFFFFE599),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    style = TextStyle(
-                                        shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(0f, 1f), 2f)
-                                    )
-                                )
-                                Row(
+                        AsyncImage(
+                            model = LUCKY777_CARDS_BG,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.FillBounds
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            l7BetItems.forEach { item ->
+                                val myBetVal = bets[item.key] ?: 0L
+                                val betText = "${l7Format(myBetVal)}/${l7Format(myBetVal)}"
+                                Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) { placeBet(item.key) }
+                                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    AsyncImage(
-                                        model = item.image,
-                                        contentDescription = item.key,
-                                        modifier = Modifier.size(if (item.key == "777") 42.dp else 36.dp),
-                                        contentScale = ContentScale.Fit
+                                    Text(
+                                        text = betText,
+                                        color = if (myBetVal > 0L) l7Gold else Color(0xFFFFE599),
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(0f, 1f), 2f)
+                                        )
                                     )
-                                    Spacer(Modifier.width(3.dp))
-                                    AsyncImage(
-                                        model = item.multImage,
-                                        contentDescription = "x${item.multiplier}",
-                                        modifier = Modifier.height(26.dp),
-                                        contentScale = ContentScale.Fit
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .weight(1f),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = item.image,
+                                            contentDescription = item.key,
+                                            modifier = Modifier.size(if (item.key == "777") 48.dp else 44.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Spacer(Modifier.width(3.dp))
+                                        AsyncImage(
+                                            model = item.multImage,
+                                            contentDescription = "x${item.multiplier}",
+                                            modifier = Modifier.height(30.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1677,7 +2343,6 @@ fun Lucky777(
                         .fillMaxWidth()
                         .height(88.dp)
                 ) {
-                    // Bottom-Left Decor Image (from previous game)
                     AsyncImage(
                         model = LUCKY777_BOTTOM_LEFT_DECOR,
                         contentDescription = null,
@@ -1689,7 +2354,6 @@ fun Lucky777(
                         alignment = Alignment.BottomStart
                     )
 
-                    // Bottom Balance Bar
                     L7BottomBalanceBar(
                         coinResId = LUCKY777_COIN,
                         balance = balance,
@@ -1698,7 +2362,6 @@ fun Lucky777(
                             .padding(start = 8.dp, bottom = 2.dp)
                     )
 
-                    // Bottom Repeat + 5 Chips Row (no card behind chips)
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -1757,83 +2420,16 @@ fun Lucky777(
             }
         }
 
-        // History Sheet (same layout as previous app)
+        // Compact History Popup Card
         if (historyOpen) {
-            L7FullHeightSheet(
-                title = "History",
+            L7HistoryPopupCard(
+                history = history,
                 sheetHeight = h,
                 onDismiss = { historyOpen = false }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF151515))
-                        .padding(horizontal = 14.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Time", Modifier.weight(1.35f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text("Result", Modifier.weight(0.90f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-                    Text("My Bet", Modifier.weight(0.95f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-                    Text("Win Amount", Modifier.weight(1.10f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
-                }
-                val recentTwenty = history.takeLast(20).reversed()
-                if (recentTwenty.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("No History Yet", color = Color.White.copy(alpha = 0.45f), fontSize = 13.sp)
-                    }
-                } else {
-                    LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-                        items(recentTwenty, key = { it.round }) { r ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 9.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    l7FormatTime(r.time),
-                                    Modifier.weight(1.35f),
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Box(Modifier.weight(0.90f), contentAlignment = Alignment.Center) {
-                                    AsyncImage(
-                                        model = l7ImageFor(r.winner),
-                                        contentDescription = r.winner,
-                                        modifier = Modifier.size(30.dp),
-                                        contentScale = ContentScale.Fit
-                                    )
-                                }
-                                Text(
-                                    if (r.myBet > 0L) l7Format(r.myBet) else "0",
-                                    Modifier.weight(0.95f),
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    if (r.winAmount > 0L) l7Format(r.winAmount) else "0",
-                                    Modifier.weight(1.10f),
-                                    color = if (r.winAmount > 0L) l7Gold else Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.End
-                                )
-                            }
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                thickness = 0.7.dp,
-                                color = Color.White.copy(alpha = 0.08f)
-                            )
-                        }
-                    }
-                }
-            }
+            )
         }
 
-        // Rules Card Popup
+        // Compact Rules Card Popup
         if (rulesOpen) {
             L7RulesPopupCard(
                 sheetHeight = h,
@@ -1841,7 +2437,7 @@ fun Lucky777(
             )
         }
 
-        // Winner Page (Exact same layout & podium frames as previous app)
+        // Winner Page (Matching 1st Image: Top-Center Glowing Fruit Badge + Centered Prizes/Your Bet + Bigger Middle 1st Frame 12dp Lower)
         if (winnerOpen) {
             val winnerSheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
             val winKey = l7WheelSlices[winnerSlice.coerceIn(0, l7WheelSlices.lastIndex)]
@@ -1852,203 +2448,208 @@ fun Lucky777(
                         .background(Color.Black.copy(alpha = 0.45f))
                         .clickable { winnerOpen = false }
                 )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = h * 0.86f)
-                        .clip(winnerSheetShape)
-                        .background(Color(0xFF060608))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        )
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter
                 ) {
-                    // Top Section: Countdown + Winning Icon + Prizes & Your Bet
-                    Box(Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "${winnerTimer}s",
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 2.dp, end = 2.dp),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp, start = 4.dp, end = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(Modifier.size(82.dp), contentAlignment = Alignment.Center) {
-                                AsyncImage(
-                                    model = l7ImageFor(winKey),
-                                    contentDescription = winKey,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
-
-                            Spacer(Modifier.width(24.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Prizes",
-                                        modifier = Modifier.weight(1f),
-                                        color = Color.White,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Row(
-                                        modifier = Modifier.weight(0.85f),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = LUCKY777_COIN,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                        Text(
-                                            text = "$winAmount",
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Your Bet",
-                                        modifier = Modifier.weight(1f),
-                                        color = Color.White,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Row(
-                                        modifier = Modifier.weight(0.85f),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = LUCKY777_COIN,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                        Text(
-                                            text = "$betAmount",
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Top Winner Heading Artwork
-                    AsyncImage(
-                        model = LUCKY777_WINNER_HEADING,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth(0.94f)
-                            .height(36.dp),
-                        contentScale = ContentScale.Fit
-                    )
-
-                    Spacer(Modifier.height(14.dp))
-
-                    // Podium: 2nd | 1st | 3rd
-                    val frameItems = listOf(
-                        Triple("2nd", LUCKY777_FRAME_2ND, 0),
-                        Triple("1st", LUCKY777_FRAME_1ST, 1),
-                        Triple("3rd", LUCKY777_FRAME_3RD, 2)
-                    )
-                    Row(
+                    // Black Rounded Winner Sheet
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.Bottom
+                            .padding(top = 64.dp)
+                            .heightIn(max = h * 0.88f)
+                            .clip(winnerSheetShape)
+                            .background(Color(0xFF060608))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {}
+                            )
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        frameItems.forEachIndexed { index, item ->
-                            val isFirst = index == 1
-                            val frameSize = if (isFirst) 84.dp else 76.dp
-                            val avatarSize = if (isFirst) 58.dp else 52.dp
-                            val showMe = isFirst && winAmount > 0L
-
-                            Column(
+                        // Top-right Countdown Timer
+                        Box(Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "${winnerTimer}s",
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .padding(bottom = if (isFirst) 12.dp else 0.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 2.dp, end = 2.dp),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        // Space reserved for overlapping glowing Winner Fruit badge
+                        Spacer(Modifier.height(74.dp))
+
+                        // Centered Prizes & Your Bet rows (Matching 1st Image)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier.size(frameSize),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    L7WinnerAvatarPlaceholder(
-                                        modifier = Modifier
-                                            .size(avatarSize)
-                                            .offset(y = 2.dp)
-                                    )
-                                    AsyncImage(
-                                        model = item.second,
-                                        contentDescription = item.first,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit
-                                    )
-                                }
-                                Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = if (showMe) "You" else "-",
+                                    text = "Prizes",
+                                    modifier = Modifier.width(82.dp),
                                     color = Color.White,
-                                    fontSize = 13.sp,
+                                    fontSize = 15.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    maxLines = 1
+                                    textAlign = TextAlign.End
                                 )
-                                Spacer(Modifier.height(4.dp))
                                 Row(
+                                    modifier = Modifier.width(88.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     AsyncImage(
                                         model = LUCKY777_COIN,
                                         contentDescription = null,
-                                        modifier = Modifier.size(15.dp),
+                                        modifier = Modifier.size(19.dp),
                                         contentScale = ContentScale.Fit
                                     )
                                     Text(
-                                        text = if (showMe) l7Format(winAmount) else "-",
+                                        text = "$winAmount",
+                                        color = Color.White,
+                                        fontSize = 15.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "Your Bet",
+                                    modifier = Modifier.width(82.dp),
+                                    color = Color.White,
+                                    fontSize = 15.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.End
+                                )
+                                Row(
+                                    modifier = Modifier.width(88.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = LUCKY777_COIN,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(19.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                    Text(
+                                        text = "$betAmount",
+                                        color = Color.White,
+                                        fontSize = 15.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Top Winner Heading Artwork
+                        AsyncImage(
+                            model = LUCKY777_WINNER_HEADING,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth(0.94f)
+                                .height(34.dp),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // Podium: 2nd | 1st (Bigger + 12dp lower) | 3rd
+                        val frameItems = listOf(
+                            Triple("2nd", LUCKY777_FRAME_2ND, 0),
+                            Triple("1st", LUCKY777_FRAME_1ST, 1),
+                            Triple("3rd", LUCKY777_FRAME_3RD, 2)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            frameItems.forEachIndexed { index, item ->
+                                val isFirst = index == 1
+                                val frameSize = if (isFirst) 98.dp else 74.dp
+                                val avatarSize = if (isFirst) 68.dp else 50.dp
+                                val showMe = isFirst && winAmount > 0L
+
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .offset(y = if (isFirst) 12.dp else 0.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(frameSize),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        L7WinnerAvatarPlaceholder(
+                                            modifier = Modifier
+                                                .size(avatarSize)
+                                                .offset(y = 2.dp)
+                                        )
+                                        AsyncImage(
+                                            model = item.second,
+                                            contentDescription = item.first,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = if (showMe) "You" else "-",
                                         color = Color.White,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1
                                     )
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = LUCKY777_COIN,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(15.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Text(
+                                            text = if (showMe) l7Format(winAmount) else "-",
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+
+                    // Protruding Glowing Winner Fruit Badge centered at Top of Sheet (+12dp down for clean fit)
+                    L7WinnerFruitBadge(
+                        winKey = winKey,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = 12.dp)
+                    )
                 }
             }
         }
