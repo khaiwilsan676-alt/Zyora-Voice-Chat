@@ -68,7 +68,7 @@ fun RoomInfo(
     var tab by remember { mutableStateOf(0) }
     
     var showShareSheet by remember { mutableStateOf(false) }
-    LaunchedEffect(openShareRequest) { if (openShareRequest) showShareSheet = true }
+    LaunchedEffect(openShareRequest) { showShareSheet = openShareRequest }
     var showDangerMenu by remember { mutableStateOf(false) }
     var showRoomReport by remember { mutableStateOf(false) }
     var roomFans by remember(currentUserId, roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
@@ -502,7 +502,7 @@ fun RoomInfo(
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.50f)
+                        .fillMaxHeight(0.60f)
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .background(Color.Black)
                 ) {
