@@ -75,19 +75,6 @@ private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
 private const val LUCKY_MAX_RECIPIENT_FLIGHTS = 15
 private const val LUCKY_MAX_ACTIVE_FLIGHTS = 45
 
-// Notification patti aur Combo button ka × count sync rakhne ke liye
-private object LuckyComboSyncState {
-    var displayMultiplier by mutableIntStateOf(1)
-    var pendingComboClicks by mutableIntStateOf(0)
-    var activeGiftKey by mutableStateOf("")
-
-    fun reset() {
-        displayMultiplier = 1
-        pendingComboClicks = 0
-        activeGiftKey = ""
-    }
-}
-
 private fun luckyNoticeGiftKey(notice: LuckyNotice): String =
     "${notice.senderId}|${notice.giftImage.trim()}|${notice.recipientMode.name}"
 
@@ -151,6 +138,17 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     var comboGeneration by mutableIntStateOf(0)
     var comboPending by mutableStateOf(false)
     var lastComboPayload: JSONObject? by mutableStateOf(null)
+    var displayMultiplier by mutableIntStateOf(1)
+    var pendingComboClicks by mutableIntStateOf(0)
+    var activeGiftKey by mutableStateOf("")
+
+    fun resetComboSyncState() {
+        displayMultiplier = 1
+        pendingComboClicks = 0
+        activeGiftKey = ""
+    }
+    fun registerComboTap() { pendingComboClicks++ }
+    fun clearPendingComboTaps() { pendingComboClicks = 0 }
 
     fun recordOrigin(value: Offset) { origin = value }
     fun recordRootSize(value: IntSize) { rootSize = value }
@@ -235,9 +233,9 @@ class LuckyAnimationController internal constructor(val roomId: String) {
 
         // Patti hatne ke baad ya naya gift aane par × bilkul shuru se (×1) reset hoke start hoga
         if (wasHiddenOrExiting || !sameGiftChain) {
-            LuckyComboSyncState.reset()
-            LuckyComboSyncState.activeGiftKey = newGiftKey
-            LuckyComboSyncState.displayMultiplier = 1
+            resetComboSyncState()
+            activeGiftKey = newGiftKey
+            displayMultiplier = 1
             notice = normalized.copy(
                 multiplier = 1,
                 isExiting = false,
@@ -248,37 +246,37 @@ class LuckyAnimationController internal constructor(val roomId: String) {
 
         val activeCurrent = current!!
         val mergedMultiplier = if (showComboButton) {
-            if (LuckyComboSyncState.pendingComboClicks > 0) {
-                LuckyComboSyncState.pendingComboClicks =
-                    (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
+            if (pendingComboClicks > 0) {
+                pendingComboClicks =
+                    (pendingComboClicks - 1).coerceAtLeast(0)
                 maxOf(
                     normalized.multiplier,
                     activeCurrent.multiplier + 1,
-                    LuckyComboSyncState.displayMultiplier + 1,
+                    displayMultiplier + 1,
                 )
             } else {
                 maxOf(
                     normalized.multiplier,
                     activeCurrent.multiplier,
-                    LuckyComboSyncState.displayMultiplier,
+                    displayMultiplier,
                 )
             }
         } else if (normalized.id != activeCurrent.id) {
             if (normalized.multiplier > activeCurrent.multiplier) {
                 normalized.multiplier
             } else {
-                maxOf(activeCurrent.multiplier, LuckyComboSyncState.displayMultiplier) + 1
+                maxOf(activeCurrent.multiplier, displayMultiplier) + 1
             }
         } else {
             maxOf(
                 normalized.multiplier,
                 activeCurrent.multiplier,
-                LuckyComboSyncState.displayMultiplier,
+                displayMultiplier,
             )
         }
 
-        LuckyComboSyncState.activeGiftKey = newGiftKey
-        LuckyComboSyncState.displayMultiplier = mergedMultiplier
+        activeGiftKey = newGiftKey
+        displayMultiplier = mergedMultiplier
         notice = normalized.copy(
             multiplier = mergedMultiplier,
             isExiting = if (showComboButton) false else normalized.isExiting,
@@ -295,7 +293,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
 
     internal fun clearNotice() {
         notice = null
-        LuckyComboSyncState.reset()
+        resetComboSyncState()
     }
 
     fun renewNotice() {
@@ -323,18 +321,18 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun failCombo() { comboPending = false }
 
     fun optimisticCombo() {
-        if (LuckyComboSyncState.pendingComboClicks > 0) {
-            LuckyComboSyncState.pendingComboClicks =
-                (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
+        if (pendingComboClicks > 0) {
+            pendingComboClicks =
+                (pendingComboClicks - 1).coerceAtLeast(0)
         }
         val current = notice
         val nextMultiplier = maxOf(
             current?.multiplier ?: 1,
-            LuckyComboSyncState.displayMultiplier,
+            displayMultiplier,
         ) + 1
-        LuckyComboSyncState.displayMultiplier = nextMultiplier
+        displayMultiplier = nextMultiplier
         if (current != null) {
-            LuckyComboSyncState.activeGiftKey = luckyNoticeGiftKey(current)
+            activeGiftKey = luckyNoticeGiftKey(current)
             // Purana win amount copy nahi hoga -> sirf actual win pe hi reward badge aayega
             notice = current.copy(
                 multiplier = nextMultiplier,
@@ -357,14 +355,14 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         comboTimeLeft = 0
         comboPending = false
         lastComboPayload = null
-        LuckyComboSyncState.pendingComboClicks = 0
+        pendingComboClicks = 0
         // Combo button hatne ke saath hi Notification patti bhi exit hogi (100% connected)
         val current = notice
         if (current != null && !current.isExiting) {
             notice = current.copy(isExiting = true)
             noticeGeneration++
         } else if (current == null) {
-            LuckyComboSyncState.reset()
+            resetComboSyncState()
         }
     }
 }
@@ -461,6 +459,7 @@ private data class LuckyRewardPopupState(
 @Composable
 fun LuckyAnimationNotificationSlider(
     notice: LuckyNotice?,
+    controller: LuckyAnimationController,
     floatingWins: List<Pair<String, Long>> = emptyList(),
     targetAvatarOffset: Offset? = null,
 ) {
@@ -494,7 +493,7 @@ fun LuckyAnimationNotificationSlider(
             lastRewardedNoticeId = null
             lastRewardedWinAmount = 0L
             activeReward = null
-            LuckyComboSyncState.reset()
+            controller.resetComboSyncState()
             return@LaunchedEffect
         }
 
@@ -512,21 +511,21 @@ fun LuckyAnimationNotificationSlider(
             notice.totalWinAmount != lastRewardedWinAmount
 
         if (stateChanged) {
-            val previousMultiplier = LuckyComboSyncState.displayMultiplier
+            val previousMultiplier = controller.displayMultiplier
             val syncedMultiplier = if (freshStart) {
                 resetOnNextActive = false
-                LuckyComboSyncState.pendingComboClicks = 0
+                controller.pendingComboClicks = 0
                 1
-            } else if (LuckyComboSyncState.pendingComboClicks > 0) {
-                LuckyComboSyncState.pendingComboClicks =
-                    (LuckyComboSyncState.pendingComboClicks - 1).coerceAtLeast(0)
+            } else if (controller.pendingComboClicks > 0) {
+                controller.pendingComboClicks =
+                    (controller.pendingComboClicks - 1).coerceAtLeast(0)
                 maxOf(notice.multiplier, previousMultiplier + 1)
             } else {
                 maxOf(notice.multiplier, previousMultiplier).coerceAtLeast(1)
             }
 
-            LuckyComboSyncState.activeGiftKey = currentGiftKey
-            LuckyComboSyncState.displayMultiplier = syncedMultiplier
+            controller.activeGiftKey = currentGiftKey
+            controller.displayMultiplier = syncedMultiplier
 
             if (!freshStart && syncedMultiplier > previousMultiplier) {
                 launch {
@@ -602,8 +601,8 @@ fun LuckyAnimationNotificationSlider(
                     else -> notice.senderName
                 }
                 val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
-                val shownMultiplier = if (LuckyComboSyncState.activeGiftKey == luckyNoticeGiftKey(notice)) {
-                    maxOf(notice.multiplier, LuckyComboSyncState.displayMultiplier).coerceAtLeast(1)
+                val shownMultiplier = if (controller.activeGiftKey == luckyNoticeGiftKey(notice)) {
+                    maxOf(notice.multiplier, controller.displayMultiplier).coerceAtLeast(1)
                 } else {
                     notice.multiplier.coerceAtLeast(1)
                 }
@@ -888,6 +887,7 @@ fun LuckyAnimationComboButton(
     progress: Float, // Smooth timer progress (0f to 1f)
     onClick: () -> Unit,
     comboCount: Int? = null,
+    enabled: Boolean = true,
 ) {
     if (!visible) return
 
@@ -928,10 +928,10 @@ fun LuckyAnimationComboButton(
                     )
                 )
                 .clickable(
+                    enabled = enabled,
                     interactionSource = comboInteraction,
                     indication = null,
                 ) {
-                    LuckyComboSyncState.pendingComboClicks += 1
                     onClick()
                 },
         ) {
