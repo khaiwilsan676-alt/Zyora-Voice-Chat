@@ -386,7 +386,10 @@ fun GiftPicker(
                     "senderImage" to currentUserImage,
                     "recipientName" to (firstRecipientToSend?.name ?: "User"),
                     "recipientImage" to (firstRecipientToSend?.image ?: "/default-avatar.png"),
-                    "multiplier" to multiplierToSend,
+                    // Quantity controls the charged/sent gift count. Lucky's
+                    // notification counter is a separate value and starts at ×1.
+                    "quantity" to multiplierToSend,
+                    "multiplier" to if (isLuckyToSend) 1 else multiplierToSend,
                     "luckyGift" to isLuckyToSend,
                     "luckyImage" to resolvedGiftImage,
                     "transferId" to uniqueTransferId,
