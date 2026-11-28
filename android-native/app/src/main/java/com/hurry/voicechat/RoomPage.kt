@@ -2165,7 +2165,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     } else {
                                         Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
-                                    Spacer(Modifier.width(4.dp))
                                     Row(
                                         Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
                                         verticalAlignment = Alignment.CenterVertically,
