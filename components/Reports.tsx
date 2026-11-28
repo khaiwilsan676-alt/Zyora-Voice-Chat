@@ -299,6 +299,21 @@ export default function Reports() {
                   <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">{value}</div>
                 </div>
               ))}
+              {(selectedReport.reportedPhoto || selectedReport.reportedPostImages?.length > 0 || selectedReport.reportedPostText) && (
+                <div>
+                  <div className="mb-2 text-xs font-bold text-slate-400">Discover Post</div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedReport.reportedPhoto && (
+                      <img src={selectedReport.reportedPhoto} alt={selectedReport.reportedName || 'Reported user'} className="h-14 w-14 rounded-full object-cover" />
+                    )}
+                    {(Array.isArray(selectedReport.reportedPostImages) ? selectedReport.reportedPostImages : []).slice(0, 4).map((image: string, index: number) => (
+                      <img key={selectedReport.id + '-post-' + index} src={image} alt={'Reported Discover post ' + (index + 1)} className="h-24 w-24 rounded-lg border border-slate-200 object-cover" />
+                    ))}
+                  </div>
+                  {selectedReport.reportedName && <div className="mt-2 text-sm font-semibold text-slate-800">{selectedReport.reportedName}</div>}
+                  {selectedReport.reportedPostText && <div className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-800">{selectedReport.reportedPostText}</div>}
+                </div>
+              )}
               <div>
                 <div className="mb-1 text-xs font-bold text-slate-400">Description</div>
                 <div className="min-h-24 whitespace-pre-wrap break-words rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-800">
