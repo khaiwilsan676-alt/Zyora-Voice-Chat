@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
     private suspend fun checkForHurryUpdate() {
         withContext(Dispatchers.IO) {
             runCatching {
-                val api = URL("https://api.github.com/repos/khaiwilsan676-alt/Hurry-Voice-Chat/releases/latest")
+                val api = URL("https://api.github.com/repos/khaiwilsan676-alt/Zyora-Voice-Chat/releases/latest")
                 val connection = (api.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     connectTimeout = 8000
@@ -189,7 +189,7 @@ class MainActivity : ComponentActivity() {
 
                 val assets = JSONObject(json).optJSONArray("assets") ?: return@runCatching
                 val asset = (0 until assets.length()).map { assets.getJSONObject(it) }
-                    .firstOrNull { it.optString("name") == "hurry-native.apk" }
+                    .firstOrNull { it.optString("name") == "app-debug.apk" }
                     ?: return@runCatching
                 val downloadUrl = asset.optString("browser_download_url")
                 if (downloadUrl.isBlank()) return@runCatching
