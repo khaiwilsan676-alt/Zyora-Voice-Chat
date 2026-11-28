@@ -1054,7 +1054,10 @@ fun RoomPage(
     // settle wallet transfers one at a time so each server acknowledgement has
     // its own matching transfer ID and cannot overwrite another pending tap.
     LaunchedEffect(roomId, luckyComboPending, showLuckyComboButton, queuedLuckyComboTransfers.size, roomSocketRef.value) {
-        if (showLuckyComboButton && !luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
+        // Never flush a queued tap after the five-second combo window has ended.
+        // The expiry effect clears the queue; this guard also closes the recomposition race.
+        if (showLuckyComboButton && luckyComboTimeLeft > 0 &&
+            !luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
             val socket = roomSocketRef.value
             if (socket?.connected() == true) {
                 val transfer = queuedLuckyComboTransfers.removeAt(0)
@@ -1615,8 +1618,13 @@ fun RoomPage(
                 }
             }
             mainHandler.post {
+                // Treat a different gift image/recipient mode as a new Lucky Gift,
+                // not as a replay of the previous sender combo. Otherwise the old
+                // notification image can survive even though a new gift was selected.
                 val isSameSenderCombo = (isComboReplay || (senderId == accountId && luckyComboPending)) &&
-                        luckyGiftNotice?.senderId == senderId
+                        luckyGiftNotice?.senderId == senderId &&
+                        luckyGiftNotice?.giftImage == giftImage &&
+                        luckyGiftNotice?.recipientMode == recipientMode
                 val activeNoticeId = if (isSameSenderCombo) luckyGiftNotice?.id ?: noticeId else noticeId
                 if (isSameSenderCombo) {
                     // A combo changes only the multiplier text; keep the same banner,
