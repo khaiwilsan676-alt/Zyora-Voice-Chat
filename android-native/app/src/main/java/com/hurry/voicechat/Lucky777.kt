@@ -1398,7 +1398,7 @@ private fun L7WheelSection(
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val outerR = radius
                     val leftExtraDeg = Math.toDegrees((2.dp.toPx() / outerR).toDouble()).toFloat()
-                    val rightExtraDeg = Math.toDegrees((3.dp.toPx() / outerR).toDouble()).toFloat()
+                    val rightExtraDeg = Math.toDegrees((4.dp.toPx() / outerR).toDouble()).toFloat()
                     val startDeg = 270f - sliceAngle / 2f - leftExtraDeg
                     val sweepDeg = sliceAngle + leftExtraDeg + rightExtraDeg
 
@@ -2957,7 +2957,7 @@ fun Lucky777(
                     L7ResultsBar(
                         history = history,
                         modifier = Modifier
-                            .offset(y = 17.dp)
+                            .offset(y = 24.dp)
                             .zIndex(1f)
                     )
 
