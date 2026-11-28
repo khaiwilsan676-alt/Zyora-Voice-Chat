@@ -135,6 +135,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     var noticeGeneration by mutableIntStateOf(0)
     var showComboButton by mutableStateOf(false)
     var comboTimeLeft by mutableIntStateOf(5)
+    var comboExpiresAtMs by mutableLongStateOf(0L)
     var comboGeneration by mutableIntStateOf(0)
     var comboPending by mutableStateOf(false)
     var lastComboPayload: JSONObject? by mutableStateOf(null)
@@ -339,6 +340,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         comboPending = false
         showComboButton = true
         comboTimeLeft = 5
+        comboExpiresAtMs = System.currentTimeMillis() + 5_000L
         comboGeneration++
         val current = notice
         if (current != null && current.isExiting) {
@@ -374,6 +376,7 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         }
         if (showComboButton) {
             comboTimeLeft = 5
+            comboExpiresAtMs = System.currentTimeMillis() + 5_000L
             comboGeneration++
         }
     }
@@ -383,7 +386,9 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun hideCombo() {
         showComboButton = false
         comboTimeLeft = 0
-        comboPending = false
+        // Keep the in-flight transfer lock until its matching server acknowledgement.
+        // Expiring the visible button must not make that acknowledgement look stale.
+        comboExpiresAtMs = 0L
         lastComboPayload = null
         pendingComboClicks = 0
         // Combo button hatne ke saath hi Notification patti bhi exit hogi (100% connected)
