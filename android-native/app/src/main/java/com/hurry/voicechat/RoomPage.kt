@@ -357,7 +357,6 @@ fun RoomPage(
     // This keeps non-critical member/admin lookups off the room join critical path.
     var showInfo by remember { mutableStateOf(false) }
     var showRoomShareRequest by remember { mutableStateOf(false) }
-    var showRoomOnlineUsers by remember { mutableStateOf(false) }
     var ownerVipId by remember(roomOwnerAccountId) { mutableStateOf("") }
     var ownerVipBadge by remember(roomOwnerAccountId) { mutableStateOf(false) }
     LaunchedEffect(roomOwnerAccountId, showInfo) {
@@ -2115,7 +2114,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
                                         Row(
-                                            Modifier.clickable { showRoomOnlineUsers = true },
+                                            Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                                         ) {
@@ -3125,18 +3124,6 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
 
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
-        if (showRoomOnlineUsers) ActiveUsers(
-            isOpen = true,
-            onClose = { showRoomOnlineUsers = false },
-            roomUsers = activeRoomUsers,
-            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
-            roomAdminIds = roomAdminIds,
-            onOpenProfile = { user ->
-                selectedChatProfile = NativeRoomMessage("active-profile-" + user.accountId, "", user.name, user.image, user.accountId)
-                showRoomOnlineUsers = false
-            },
-            onCopyUserId = { id -> clipboard.setText(AnnotatedString(id)); copiedId = id }
-        )
         RoomInfo(
             isOpen=showInfo,
             openShareRequest=showRoomShareRequest,
