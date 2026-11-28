@@ -2631,6 +2631,7 @@ fun Lucky777(
     var countdown by remember { mutableIntStateOf(20) }
     var winnerSlice by remember { mutableIntStateOf(2) }
     var wheelRotation by remember { mutableFloatStateOf(l7TargetAngleForSlice(2)) }
+    var winnerOpen by remember { mutableStateOf(false) }
 
     var chipIndex by remember { mutableIntStateOf(1) }
     var bets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
@@ -2698,7 +2699,6 @@ fun Lucky777(
 
     var historyOpen by remember { mutableStateOf(false) }
     var rulesOpen by remember { mutableStateOf(false) }
-    var winnerOpen by remember { mutableStateOf(false) }
     var popupWinKey by remember { mutableStateOf("Peach") }
     var winAmount by remember { mutableLongStateOf(0L) }
     var betAmount by remember { mutableLongStateOf(0L) }
