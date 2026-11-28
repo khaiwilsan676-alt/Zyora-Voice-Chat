@@ -28,19 +28,15 @@ import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 private const val ZYORA_NOTIFICATION_SOCKET_URL = "https://zyora-server.onrender.com"
-private const val ZYORA_GIFT_NOTIFICATION_VIDEO = "gemini_generated_video_9da434d9~2.mp4"
-private const val ZYORA_GAME_NOTIFICATION_VIDEO = "gemini_generated_video_87dc00f7~2.mp4"
 private const val ZYORA_NOTIFICATION_PUBLIC = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
 data class RoomBroadcastNotice(
     val id: String,
-    val video: String,
     val avatar: String,
     val name: String,
     val detail: String,
     val giftImage: String,
-    val giftName: String,
-    val useImageBanner: Boolean = false
+    val giftName: String
 )
 
 /** Single app-wide controller for Gift and Game broadcast notifications. */
@@ -78,13 +74,11 @@ fun NotificationController() {
             addNotice(
                 RoomBroadcastNotice(
                     id = payload.optString("id"),
-                    video = payload.optString("video").ifBlank { ZYORA_GIFT_NOTIFICATION_VIDEO },
                     avatar = payload.optString("senderImage").ifBlank { ZYORA_NOTIFICATION_PUBLIC + "default-avatar.png" },
                     name = payload.optString("senderName").ifBlank { "User" },
                     detail = "Sended to " + payload.optString("recipientName").ifBlank { "User" },
                     giftImage = giftImage.ifBlank { ZYORA_NOTIFICATION_PUBLIC + "IMG_20261127_152115.png" },
-                    giftName = payload.optString("giftName").ifBlank { "Gift" },
-                    useImageBanner = false
+                    giftName = payload.optString("giftName").ifBlank { "Gift" }
                 )
             )
         }
@@ -99,13 +93,11 @@ fun NotificationController() {
             addNotice(
                 RoomBroadcastNotice(
                     id = id,
-                    video = payload.optString("video").ifBlank { ZYORA_GAME_NOTIFICATION_VIDEO },
                     avatar = payload.optString("avatar").ifBlank { ZYORA_NOTIFICATION_PUBLIC + "default-avatar.png" },
                     name = payload.optString("name").ifBlank { "User" },
                     detail = "Win " + amount.toString() + " • " + if (dragonBattle) "Dragon Battle" else "Wild Party",
                     giftImage = ZYORA_NOTIFICATION_PUBLIC + if (dragonBattle) "IMG_20261121_020906.png" else "file_000000009d808211b8ffb7c2183b4ef5.png",
-                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party",
-                    useImageBanner = false
+                    giftName = if (dragonBattle) "Dragon Battle" else "Wild Party"
                 )
             )
         }
@@ -148,21 +140,12 @@ fun NotificationController() {
                 .padding(top = 6.dp)
         ) {
             activeNotice?.let { notice ->
-                Box(Modifier.fillMaxWidth().height(124.dp)) {
-                    if (notice.useImageBanner) {
-                        AsyncImage(
-                            model = notice.giftImage,
-                            contentDescription = notice.giftName,
-                            contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFF352319))
-                        )
-                    }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(124.dp)
+                        .background(Color(0xFF352319))
+                ) {
                     val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
                     Row(
                         Modifier
@@ -181,9 +164,7 @@ fun NotificationController() {
                             Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     notice.name,
                                     color = Color.White,
@@ -217,17 +198,15 @@ fun NotificationController() {
                                 lineHeight = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                        if (notice.giftImage.isNotBlank()) {
-                            AsyncImage(
-                                model = notice.giftImage,
-                                contentDescription = notice.giftName,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
+                        AsyncImage(
+                            model = notice.giftImage,
+                            contentDescription = notice.giftName,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(48.dp)
+                        )
                     }
                 }
             }
