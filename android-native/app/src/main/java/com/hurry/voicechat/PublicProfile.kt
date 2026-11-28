@@ -613,7 +613,8 @@ fun PublicProfileScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = if (isOtherUser) 100.dp else 40.dp)
+            // Keep the final gift row and its × count clear of the fixed Follow/Chat bar.
+            contentPadding = PaddingValues(bottom = if (isOtherUser) 160.dp else 40.dp)
         ) {
             // 1. Cover & Header Section
             item {
