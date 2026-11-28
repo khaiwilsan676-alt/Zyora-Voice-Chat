@@ -797,6 +797,7 @@ fun RoomProfile(
                             gemshineOffsetY = 4.dp,
                             ninjaNeoSizeAdjustment = (-2).dp,
                             gemshineSizeAdjustment = 5.dp,
+                            loveBeatSizeAdjustment = 5.dp,
                             fallbackUserIds = listOf(user.uid.orEmpty(), user.id.orEmpty())
                         )
                     }
