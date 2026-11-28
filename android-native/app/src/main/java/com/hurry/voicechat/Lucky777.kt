@@ -948,7 +948,10 @@ private fun L7WinnerPopupCard(
     }
 
     val topFrames = listOf(LUCKY777_TOP_1, LUCKY777_TOP_2, LUCKY777_TOP_3)
-    val topRows = topWinners.take(3)
+    val actualTopRows = topWinners.take(3)
+    val topRows = actualTopRows + List((3 - actualTopRows.size).coerceAtLeast(0)) {
+        L7RoundWinner(name = "Player", avatar = "", win = 0L)
+    }
 
     Box(
         modifier = Modifier
@@ -3027,7 +3030,7 @@ fun Lucky777(
                         todayWin = todayWin,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .offset(y = 15.dp)
+                            .offset(y = 21.dp)
                     )
                 }
 
