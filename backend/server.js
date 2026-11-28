@@ -3669,6 +3669,20 @@ io.on("connection", (socket) => {
       for (const recipientId of validRecipients) {
         await applyCoinTransferDelta(recipientId, diamondCredit, eventId,
           "coinTransferDiamondCredits", "diamonds", 1);
+      }
+      if (luckyReturnAmount > 0) {
+        await applyCoinTransferDelta(sender, luckyReturnAmount, eventId,
+          "coinTransferReturnCredits", "coins", 1);
+      }
+
+      // Publish the confirmed transfer immediately after durable wallet deltas.
+      // Recipient profile lookups and received-gift history are non-critical UI
+      // bookkeeping; keep them off the latency-sensitive Combo acknowledgement.
+      io.to("room:" + room).emit("coin_transfer_received", transferPayload);
+
+      void (async () => {
+        try {
+          for (const recipientId of validRecipients) {
         const recipientProfile = await db.collection("users").findOne({
           $or: [
             { uid: recipientId }, { id: recipientId }, { appLongId: recipientId },
@@ -3713,12 +3727,11 @@ io.on("connection", (socket) => {
             { upsert: true }
           );
         }
-      }
-      if (luckyReturnAmount > 0) {
-        await applyCoinTransferDelta(sender, luckyReturnAmount, eventId,
-          "coinTransferReturnCredits", "coins", 1);
-      }
-      io.to("room:" + room).emit("coin_transfer_received", transferPayload);
+          }
+        } catch (historyError) {
+          console.error("received_gifts history update failed:", historyError.message);
+        }
+      })();
       const normalizedGiftName = String(giftName || "").trim().toLowerCase();
       const normalizedGiftType = String(giftType || "").trim().toLowerCase();
       if (normalizedGiftType.includes("luxury") ||
