@@ -130,7 +130,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   };
 
   return (
-    <section className="w-full max-w-5xl space-y-4">
+    <section className="w-full max-w-none space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="relative w-full max-w-xs">
         <input
           value={userQuery}
@@ -221,7 +221,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
         {status && <p className="text-xs font-semibold text-slate-600">{status}</p>}
       </div>
 
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full min-w-[760px] border-collapse text-left">
           <thead>
             <tr className="border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">

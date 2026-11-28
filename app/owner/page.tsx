@@ -1932,8 +1932,8 @@ export default function StaffPanel() {
       <main className="flex-1 flex flex-col h-full bg-[#f5f6f8] overflow-hidden md:pl-[260px]">
 
         {activeTab === 'manage_users' && !selectedManageUser && (
-          <div className="flex flex-col h-full bg-white">
-            <div className="px-8 py-6 pb-4 border-b border-gray-100">
+          <div className="flex flex-col h-full bg-[#f5f6f8]">
+            <div className="px-6 py-5 border-b border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-bold text-slate-800">Users</h2>
                 <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">Total Users: {users.length.toLocaleString()}</span>
@@ -1977,14 +1977,14 @@ export default function StaffPanel() {
               </div>
             </div>
 
-            <div className="p-8 flex-1 overflow-y-auto">
+            <div className="p-5 md:p-6 flex-1 overflow-y-auto">
 
               {loadingUsers ? (
                 <div className="py-12 text-center text-slate-400 font-medium text-sm">
                   Loading real user database...
                 </div>
               ) : (
-                <div className="w-full overflow-x-auto">
+                <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                   <table className="w-full text-left border-collapse min-w-[920px]">
                     <thead>
                       <tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
@@ -2150,8 +2150,8 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'host_apps' && (
-          <div className="flex flex-col h-full bg-white">
-            <div className="px-8 py-6 pb-4 border-b border-gray-100">
+          <div className="flex flex-col h-full bg-[#f5f6f8]">
+            <div className="px-6 py-5 border-b border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-bold text-slate-800">App Staff</h2>
                 <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">Total App Staff: {filteredAppStaff.length.toLocaleString()}</span>
@@ -2161,9 +2161,9 @@ export default function StaffPanel() {
                 <input type="text" value={searchQuery} onChange={handleSearchQueryChange} placeholder="Search by ID or name..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900" />
               </div>
             </div>
-            <div className="p-8 flex-1 overflow-y-auto">
+            <div className="p-5 md:p-6 flex-1 overflow-y-auto">
               {loadingUsers ? <div className="py-12 text-center text-slate-400 font-medium text-sm">Loading real user database...</div> : (
-                <div className="w-full overflow-x-auto">
+                <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                   <table className="w-full text-left border-collapse min-w-[620px]">
                     <thead><tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide"><th className="py-3 pl-4 pr-2 w-14">S.No</th><th className="py-3 px-2">Staff</th><th className="py-3 px-2">App ID</th><th className="py-3 px-2">Tags</th></tr></thead>
                     <tbody className="divide-y divide-slate-100">
@@ -2272,7 +2272,7 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'themes' && (
-          <div className="p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
+          <div className="p-5 md:p-6 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
               <h2 className="text-2xl font-bold text-slate-800">All Store Themes</h2>
               <span className="text-xs font-bold bg-indigo-50 text-[#197477] px-3 py-1 rounded-full">
@@ -2352,21 +2352,21 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'special_ids' && (
-          <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
+          <div className="p-5 md:p-6 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Special ID / Tags</h2>
             <SpecialIdsPanel users={users} ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
         )}
 
         {activeTab === 'gift_catalog' && (
-          <div className="p-8 w-full h-full overflow-y-auto">
+          <div className="p-5 md:p-6 w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Assets</h2>
             <OwnerAssetsPanel ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
         )}
 
         {activeTab === 'tickets' && (
-          <div className="flex flex-col h-full bg-white overflow-hidden">
+          <div className="flex flex-col h-full bg-[#f5f6f8] overflow-hidden">
             {!selectedPair ? (
               <>
                 <div className="px-6 py-4 border-b border-slate-200 shrink-0">
@@ -2745,7 +2745,7 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'wallet' && (
-          <div className="h-full w-full overflow-y-auto bg-[#f4f6fb] p-4 md:p-7">
+          <div className="h-full w-full overflow-y-auto bg-[#f5f6f8] p-4 md:p-6">
             <div className="mx-auto max-w-6xl space-y-6">
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">Master Wallet</h1>
@@ -2910,7 +2910,7 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'feedback' && (
-          <div className="flex flex-col h-full bg-white overflow-hidden">
+          <div className="flex flex-col h-full bg-[#f5f6f8] overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 shrink-0">
               <h2 className="text-xl font-black text-slate-800">User Feedback</h2>
             </div>
