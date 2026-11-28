@@ -494,7 +494,6 @@ fun RoomPage(
     var luckyComboGeneration by luckyAnimation::comboGeneration
     var luckyComboPending by luckyAnimation::comboPending
     var luckyComboClicksPending by remember(roomId) { mutableIntStateOf(0) }
-    val queuedLuckyComboTransfers = remember(roomId) { mutableStateListOf<JSONObject>() }
     var lastLuckyComboPayload by luckyAnimation::lastComboPayload
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     val seenRoomGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
@@ -1050,31 +1049,10 @@ fun RoomPage(
     // button should dismiss the chat composer.
     val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
 
-    // Keep the Combo button responsive: animate every tap immediately, then
-    // settle wallet transfers one at a time so each server acknowledgement has
-    // its own matching transfer ID and cannot overwrite another pending tap.
-    LaunchedEffect(roomId, luckyComboPending, showLuckyComboButton, queuedLuckyComboTransfers.size, roomSocketRef.value) {
-        if (showLuckyComboButton && !luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
-            val socket = roomSocketRef.value
-            if (socket?.connected() == true) {
-                val transfer = queuedLuckyComboTransfers.removeAt(0)
-                pendingLuckyGiftTransferId = transfer.optString("transferId")
-                luckyComboPending = true
-                socket.emit("coin_transfer", transfer)
-            } else {
-                queuedLuckyComboTransfers.clear()
-                luckyComboClicksPending = 0
-                luckyAnimation.clearPendingComboTaps()
-                roomToastText = "Connection unavailable. Please try again."
-            }
-        }
-    }
-
     // Once the five-second combo window closes, discard taps that have not
     // reached the server. An already-emitted transfer cannot be recalled.
     LaunchedEffect(roomId, showLuckyComboButton) {
         if (!showLuckyComboButton) {
-            queuedLuckyComboTransfers.clear()
             luckyComboClicksPending = 0
             luckyAnimation.clearPendingComboTaps()
         }
@@ -1484,7 +1462,6 @@ fun RoomPage(
                     luckyComboPending = false
                     pendingLuckyGiftTransferId = ""
                     if (failedTransferId.startsWith("combo-")) {
-                        queuedLuckyComboTransfers.clear()
                         luckyComboClicksPending = 0
                         luckyAnimation.clearPendingComboTaps()
                     } else {
@@ -1520,7 +1497,7 @@ fun RoomPage(
                 // A sender-side combo response must match the exact in-flight tap.
                 // This blocks late/duplicate success events from reopening a stale combo banner.
                 if (payload.optBoolean("comboReplay", false) && senderId == accountId &&
-                    (!luckyComboPending || pendingLuckyGiftTransferId.isBlank() ||
+                    (pendingLuckyGiftTransferId.isBlank() ||
                      transferId != pendingLuckyGiftTransferId)) return@Listener
             }
             val senderName = payload.optString("senderName", "User")
@@ -1615,8 +1592,13 @@ fun RoomPage(
                 }
             }
             mainHandler.post {
+                // Treat a different gift image/recipient mode as a new Lucky Gift,
+                // not as a replay of the previous sender combo. Otherwise the old
+                // notification image can survive even though a new gift was selected.
                 val isSameSenderCombo = (isComboReplay || (senderId == accountId && luckyComboPending)) &&
-                        luckyGiftNotice?.senderId == senderId
+                        luckyGiftNotice?.senderId == senderId &&
+                        luckyGiftNotice?.giftImage == giftImage &&
+                        luckyGiftNotice?.recipientMode == recipientMode
                 val activeNoticeId = if (isSameSenderCombo) luckyGiftNotice?.id ?: noticeId else noticeId
                 if (isSameSenderCombo) {
                     // A combo changes only the multiplier text; keep the same banner,
@@ -1663,6 +1645,7 @@ fun RoomPage(
                     if (showLuckyComboButton) {
                         lastLuckyComboPayload = JSONObject(payload.toString())
                         luckyComboTimeLeft = 5
+                        luckyAnimation.comboExpiresAtMs = System.currentTimeMillis() + 5_000L
                         luckyComboGeneration++
                     }
                 }
@@ -2114,40 +2097,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Row(
-                                                Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                            ) {
-                                                Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
-                                                Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                                            }
-                                            Spacer(Modifier.width(4.dp))
-                                            val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
-                                            if (ownerVipBadge && ownerVipId.isNotBlank()) {
-                                                AsyncImage(
-                                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                                    contentDescription = "VIP ID",
-                                                    contentScale = ContentScale.Fit,
-                                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                                )
-                                                Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                            } else if (roomOwnerAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005")) {
-                                                AsyncImage(
-                                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
-                                                    contentDescription = "Purple ID Badge",
-                                                    contentScale = ContentScale.Fit,
-                                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                                )
-                                                Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                            } else {
-                                                Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
-                                            }
-                                        }
-                                    }
+                                    CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
                                     if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
                                         if (!followed) {
                                             AsyncImage(
@@ -2194,8 +2144,37 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         }
                                     }
                                 }
-                                        else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.offset(y = (-3).dp)) {
+                                    Row(
+                                        Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
+                                        Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                                     }
+                                    Spacer(Modifier.width(4.dp))
+                                    if (ownerVipBadge && ownerVipId.isNotBlank()) {
+                                        AsyncImage(
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                            contentDescription = "VIP ID",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                        )
+                                        Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    } else if (roomOwnerAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005")) {
+                                        AsyncImage(
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                            contentDescription = "Purple ID Badge",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                        )
+                                        Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    } else {
+                                        Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    }
+                                }
                                 }
                             }
                         }
@@ -3270,29 +3249,37 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyAnimationComboButton(
                     visible = true,
-                    enabled = true,
+                    // Never queue a second send while the previous transfer is pending.
+                    // One completed transfer must be followed by one deliberate tap.
+                    enabled = !luckyComboPending && lastLuckyComboPayload != null,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
+                        if (luckyComboPending) return@LuckyAnimationComboButton
                         val previousGift = lastLuckyComboPayload
                         val socket = roomSocketRef.value
-                        if (previousGift != null) {
+                        if (previousGift != null && !luckyComboPending) {
                             if (socket?.connected() != true) {
                                 roomToastText = "Connection unavailable. Please try again."
                             } else {
                                 luckyAnimation.registerComboTap()
                                 val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
-                                val nextMultiplier = (luckyGiftNotice?.multiplier ?: previousGift.optInt("multiplier", 1)) + 1
                                 val comboTransfer = JSONObject(previousGift.toString())
                                     .put("transferId", nextTransferId)
                                     .put("eventId", nextTransferId)
                                     .put("comboReplay", true)
-                                    .put("multiplier", nextMultiplier)
+                                    // Repeat the selected quantity (for example 999),
+                                    // but keep the notification strip at ×1.
+                                    .put("quantity", previousGift.optInt("quantity", 1).coerceAtLeast(1))
+                                    .put("multiplier", 1)
                                     .put("timestamp", System.currentTimeMillis())
                                 // Show the tap instantly; the queued transfer is settled
                                 // after the previous server acknowledgement to protect wallet state.
+                                // Authorize exactly this tap and send it immediately.
+                                // Do not defer or replay queued combo transfers later.
+                                pendingLuckyGiftTransferId = nextTransferId
+                                luckyComboPending = true
                                 luckyComboClicksPending += 1
                                 luckyAnimation.optimisticCombo()
-                                queuedLuckyComboTransfers.add(comboTransfer)
                                 val comboRecipientsJson = previousGift.optJSONArray("recipientIds") ?: JSONArray()
                                 val comboRecipients = (0 until comboRecipientsJson.length())
                                     .map { comboRecipientsJson.optString(it) }
@@ -3300,6 +3287,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 val comboImage = previousGift.optString("giftImage")
                                     .ifBlank { previousGift.optString("luckyImage") }
                                 luckyAnimation.launchToRecipients(nextTransferId, comboImage, comboRecipients)
+                                socket.emit("coin_transfer", comboTransfer)
                             }
                         }
                     },
@@ -4233,6 +4221,26 @@ private fun RoomSeatInviteDialog(
                 drawPath(topHighlight,shine,style=Stroke(width=size.minDimension*7.5f/512f,cap=StrokeCap.Round))
                 val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
+            }
+            if (isSpeaking) {
+                // Restore the original white speaking pulse around the avatar.
+                Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }.align(Alignment.Center)) {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val maxRadius = size.minDimension * 0.42f
+                    val phases = listOf(
+                        waveProgress,
+                        (waveProgress + 1f / 3f) % 1f,
+                        (waveProgress + 2f / 3f) % 1f
+                    )
+                    phases.forEach { phase ->
+                        val fade = if (phase < 0.82f) 1f else ((1f - phase) / 0.18f).coerceIn(0f, 1f)
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.50f * fade),
+                            radius = maxRadius * phase,
+                            center = center
+                        )
+                    }
+                }
             }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
                 if (seat.occupied) NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.requiredSize(seatSize * 1.0f))
