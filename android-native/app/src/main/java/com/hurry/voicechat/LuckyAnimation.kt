@@ -151,14 +151,31 @@ class LuckyAnimationController internal constructor(val roomId: String) {
     fun clearPendingComboTaps() { pendingComboClicks = 0 }
 
     fun recordOrigin(value: Offset) { origin = value }
-    fun recordRootSize(value: IntSize) { rootSize = value }
+    fun recordRootSize(value: IntSize) {
+        rootSize = value
+        if (value != IntSize.Zero && pendingFlightRequests.isNotEmpty()) {
+            val waiting = pendingFlightRequests.values.toList()
+            pendingFlightRequests.clear()
+            waiting.forEach { request ->
+                launchToRecipients(request.id, request.image, request.recipientIds, request.popupAtCenter)
+            }
+        }
+    }
     fun recordSeatCenter(id: String, center: Offset) { seatCenters[id] = center }
 
     fun finishFlight(id: String) {
         flights.removeAll { it.id == id }
     }
 
+    private data class PendingFlightRequest(
+        val id: String,
+        val image: String,
+        val recipientIds: List<String>,
+        val popupAtCenter: Boolean,
+    )
+
     private val launchedFlightIds = linkedSetOf<String>()
+    private val pendingFlightRequests = linkedMapOf<String, PendingFlightRequest>()
 
     fun launchToRecipients(
         id: String,
@@ -167,8 +184,21 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         popupAtCenter: Boolean = true
     ) {
         val cleanImage = image.trim()
-        if (id.isBlank() || cleanImage.isBlank() || id in launchedFlightIds) return
-        if (rootSize == IntSize.Zero) return
+        if (id.isBlank() || cleanImage.isBlank() || id in launchedFlightIds || id in pendingFlightRequests) return
+        if (rootSize == IntSize.Zero) {
+            // A fast send can arrive before Compose reports the room bounds.
+            // Keep the event briefly instead of silently dropping its gift animation.
+            pendingFlightRequests[id] = PendingFlightRequest(
+                id = id,
+                image = cleanImage,
+                recipientIds = recipientIds.toList(),
+                popupAtCenter = popupAtCenter,
+            )
+            while (pendingFlightRequests.size > 20) {
+                pendingFlightRequests.remove(pendingFlightRequests.keys.first())
+            }
+            return
+        }
 
         // Jitne recipients select hain (1 se max 15 tak) sabke liye alag image fly hogi
         val targets = recipientIds
