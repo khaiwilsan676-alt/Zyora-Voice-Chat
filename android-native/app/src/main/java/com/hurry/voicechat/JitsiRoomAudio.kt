@@ -422,8 +422,9 @@ fun JitsiRoomAudio(
                 val current = if (isVoicePacket) voicePlaybackThread else musicPlaybackThread
                 if (current?.isAlive == true) return
                 val worker = thread(name = if (isVoicePacket) "ZyoraRoomVoicePlayback" else "ZyoraRoomMusicPlayback", isDaemon = true) {
-                    // Start playback as soon as the first complete frame arrives.
-                    // A fixed startup sleep added avoidable latency to every room voice session.
+                    // Prime voice with two 20 ms frames once, absorbing initial
+                    // Socket.IO scheduling jitter without adding recurring latency.
+                    var voicePlaybackPrimed = false
                     while (alive.get()) {
                         val packet = if (isVoicePacket) {
                             if (!latestPlaybackVoiceEnabled) {
@@ -450,10 +451,13 @@ fun JitsiRoomAudio(
                                 try { Thread.sleep(5) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Power-normalize concurrent speakers (1/sqrt(N)): unlike averaging,
-                            // this keeps each voice intelligible with 2-5 active speakers. Clamp only
-                            // the final PCM sample to avoid overflow distortion.
-                            val gain = 1.0 / kotlin.math.sqrt(activeSpeakers.toDouble())
+                            // Keep the intelligibility gain for multiple speakers,
+                            // but scale the entire mixed frame before PCM conversion.
+                            // Per-sample clipping creates harsh crackle on overlapping peaks.
+                            val baseGain = 1.0 / kotlin.math.sqrt(activeSpeakers.toDouble())
+                            val peak = mixed.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1L).toDouble()
+                            val peakGuard = minOf(1.0, 32700.0 / (peak * baseGain))
+                            val gain = baseGain * peakGuard
                             ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
                                 mixed.forEachIndexed { index, sum ->
                                     val sample = (sum * gain).toInt()
@@ -484,6 +488,18 @@ fun JitsiRoomAudio(
                                     if (!alive.get()) break
                                 }
                             }
+                        }
+                        if (isVoicePacket && !voicePlaybackPrimed) {
+                            val deadline = System.nanoTime() + 60_000_000L
+                            while (alive.get() && latestPlaybackVoiceEnabled &&
+                                voiceSpeakerQueues.values.sumOf { it.size } < 2 &&
+                                System.nanoTime() < deadline
+                            ) {
+                                try { Thread.sleep(3) } catch (_: InterruptedException) {
+                                    if (!alive.get()) break
+                                }
+                            }
+                            voicePlaybackPrimed = true
                         }
                         val track = synchronized(playerLock) { if (isVoicePacket) voicePlayer else musicPlayer } ?: continue
                         var offset = 0
