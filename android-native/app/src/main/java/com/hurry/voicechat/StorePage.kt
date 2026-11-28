@@ -91,6 +91,7 @@ private val CardGrey = Color(0xFF242424) // Halka grey for cards
 private const val StoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private const val ZyoraStoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 internal val nativeAvatarFrameRefreshVersions = mutableStateMapOf<String, Long>()
+internal val nativeVoiceWaveRefreshVersions = mutableStateMapOf<String, Long>()
 
 private const val NativeStoreCachePrefs = "zyora_store_inventory_cache"
 private fun readNativeStoreInventoryCache(context: android.content.Context, userId: String): JSONArray {
@@ -651,6 +652,55 @@ fun EmeraldVoiceWaveEffect(
 }
 
 @Composable
+internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier = Modifier) {
+    val appContext = LocalContext.current.applicationContext
+    var equipped by remember(userId) {
+        mutableStateOf(readNativeStoreInventoryCache(appContext, userId).let { cached ->
+            (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+                .any { it.optString("tab") == "Voice" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+        })
+    }
+    val refreshVersion = nativeVoiceWaveRefreshVersions[userId] ?: 0L
+    LaunchedEffect(userId, refreshVersion) {
+        if (userId.isBlank()) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val connection = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    useCaches = false
+                    setRequestProperty("Cache-Control", "no-cache, no-store")
+                    setRequestProperty("Pragma", "no-cache")
+                }
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    connection.disconnect()
+                    error("Voice inventory unavailable")
+                }
+                val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                connection.disconnect()
+                val items = json.optJSONArray("items") ?: JSONArray()
+                writeNativeStoreInventoryCache(appContext, userId, items)
+                (0 until items.length()).mapNotNull { items.optJSONObject(it) }
+                    .any { it.optString("tab") == "Voice" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+            }.onSuccess { equipped = it }
+        }
+    }
+    LaunchedEffect(userId, equipped) {
+        if (!equipped) return@LaunchedEffect
+        val cached = readNativeStoreInventoryCache(appContext, userId)
+        val voice = (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+            .firstOrNull { it.optString("tab") == "Voice" && it.optBoolean("equipped") }
+            ?: return@LaunchedEffect
+        val remaining = (voice.optLong("expiresAt") - System.currentTimeMillis()).coerceAtLeast(0L)
+        if (remaining > 0L) delay(remaining)
+        equipped = false
+    }
+    if (equipped) EmeraldVoiceWaveEffect(animated = true, modifier = modifier)
+}
+
+@Composable
 fun NativeAvatarFrameOverlay(
     userId: String,
     modifier: Modifier = Modifier,
@@ -1017,6 +1067,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     val authPrefs = remember { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val walletCachePrefs = remember { appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
     val storeInventoryCache = remember { appContext.getSharedPreferences(NativeStoreCachePrefs, android.content.Context.MODE_PRIVATE) }
+    val previewAvatar = remember(userId) { authPrefs.getString("image", "").orEmpty().trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" } ?: ZYORA_DEFAULT_AVATAR_URL }
     val storeUserId = remember(userId) { authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
     val storeInventoryUserId = remember(userId) { userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
@@ -1239,7 +1290,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                         StoreAssetBase + tab.icon
                     }
                     Box(
-                        Modifier.weight(1f).height(80.dp).clip(RoundedCornerShape(6.dp))
+                        Modifier.weight(1f).height(90.dp).clip(RoundedCornerShape(6.dp))
                             .background(if (active) Color.Transparent else Color(0x33FFFFFF))
                             .clickable { activeTab = tab.id },
                         contentAlignment = Alignment.Center
@@ -1462,6 +1513,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         } }
                                                         result.onSuccess {
                                                             if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeInventoryUserId] = (nativeAvatarFrameRefreshVersions[storeInventoryUserId] ?: 0L) + 1L
+                                                            if (item.tab == "Voice") nativeVoiceWaveRefreshVersions[storeInventoryUserId] = (nativeVoiceWaveRefreshVersions[storeInventoryUserId] ?: 0L) + 1L
                                                         }.onFailure {
                                                             equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                             equippedIds.addAll(previousTabEquipped)
@@ -1681,9 +1733,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             }
 
                             Box(Modifier.align(Alignment.TopCenter).offset(y = frameOffsetY).size(frameSize), contentAlignment = Alignment.Center) {
-                                Box(Modifier.size(80.dp).clip(CircleShape).background(Color.Gray), contentAlignment = Alignment.Center) {
-                                    Text("U", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                                }
+                                AsyncImage(model = previewAvatar, contentDescription = "Your profile avatar", modifier = Modifier.size(80.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
                                     StoreVideoPreview(
@@ -1748,12 +1798,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     animated = true,
                                     modifier = Modifier.fillMaxSize()
                                 )
-                                Box(
-                                    Modifier.size(76.dp).clip(CircleShape).background(Color.Gray),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("U", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                                }
+                                AsyncImage(model = previewAvatar, contentDescription = "Your profile avatar", modifier = Modifier.size(76.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                             }
                         }
                     }
