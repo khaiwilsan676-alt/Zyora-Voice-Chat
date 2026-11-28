@@ -472,6 +472,19 @@ fun JitsiRoomAudio(
                             catch (_: InterruptedException) { if (!alive.get()) break else null } ?: continue
                         }
                         if (!latestPlaybackVoiceEnabled) continue
+                        // Music arrives over Socket.IO in 20 ms packets. A short
+                        // music-only prebuffer absorbs normal network scheduling jitter
+                        // before AudioTrack starts consuming the stream; voice latency is untouched.
+                        if (!isVoicePacket && musicPlaybackQueue.size < 3) {
+                            val deadline = System.nanoTime() + 80_000_000L
+                            while (alive.get() && latestPlaybackVoiceEnabled &&
+                                musicPlaybackQueue.size < 3 && System.nanoTime() < deadline
+                            ) {
+                                try { Thread.sleep(4) } catch (_: InterruptedException) {
+                                    if (!alive.get()) break
+                                }
+                            }
+                        }
                         val track = synchronized(playerLock) { if (isVoicePacket) voicePlayer else musicPlayer } ?: continue
                         var offset = 0
                         var failed = false
@@ -730,7 +743,7 @@ fun JitsiRoomAudio(
 
 }
 
-/** Decode selected music to 16 kHz mono PCM with a restrained bass lift and peak guard.
+/** Decode selected music to clean 16 kHz mono PCM.
  * Voice capture and voice packet logic remain unchanged.
  */
 private fun relayDecodedMusic(
@@ -769,8 +782,7 @@ private fun relayDecodedMusic(
         val packet = ByteArray(ROOM_MUSIC_FRAME_BYTES)
         var packetSize = 0
         var resamplePosition = 0.0
-        var bassLowPass = 0.0
-        var nextFrameAt = System.nanoTime()
+                var nextFrameAt = System.nanoTime()
 
         while (running.get() && !outputDone) {
             if (!inputDone) {
@@ -803,8 +815,9 @@ private fun relayDecodedMusic(
                     val sourceFrames = info.size / (channels * 2)
                     val step = sampleRate.coerceAtLeast(1).toDouble() / ROOM_MUSIC_SAMPLE_RATE.toDouble()
                     while (resamplePosition < sourceFrames && running.get()) {
-                        // Downmix stereo to mono at 16 kHz. A gentle low-frequency lift
-                        // adds kick/bass weight; clamping prevents boosted peaks clipping.
+                        // Downmix stereo to mono at 16 kHz without bass enhancement.
+                        // Boosting low frequencies here can hard-clip sustained guitar/bass
+                        // transients and create the crackling distortion heard by listeners.
                         val intervalEnd = minOf(resamplePosition + step, sourceFrames.toDouble())
                         var cursor = resamplePosition
                         var monoSum = 0.0
@@ -821,11 +834,10 @@ private fun relayDecodedMusic(
                             cursor = nextBoundary
                         }
                         val mono = if (totalWeight > 0.0) monoSum / totalWeight else 0.0
-                        bassLowPass += (mono - bassLowPass) * 0.07
-                        val enhanced = (mono + bassLowPass * 0.38)
-                            .toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                        packet[packetSize++] = (enhanced and 0xFF).toByte()
-                        packet[packetSize++] = ((enhanced shr 8) and 0xFF).toByte()
+                        val cleanSample = mono.toInt()
+                            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                        packet[packetSize++] = (cleanSample and 0xFF).toByte()
+                        packet[packetSize++] = ((cleanSample shr 8) and 0xFF).toByte()
                         resamplePosition += step
                         if (packetSize == packet.size) {
                             if (socket.connected() && running.get()) {
