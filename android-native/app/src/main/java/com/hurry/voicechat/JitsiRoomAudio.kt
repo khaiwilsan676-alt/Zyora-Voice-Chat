@@ -436,8 +436,22 @@ fun JitsiRoomAudio(
                             // real-time playback cadence and avoid adding an extra wait.
                             val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
                             var activeSpeakers = 0
-                            voiceSpeakerQueues.values.forEach { speakerQueue ->
-                                val frame = speakerQueue.poll() ?: return@forEach
+                            val speakerQueues = voiceSpeakerQueues.values.toList()
+                            // Drain packets already ready from every speaker first. If the
+                            // network is briefly late, wait one frame interval for the next
+                            // packet instead of spinning or starving AudioTrack.
+                            val readyFrames = ArrayList<ByteArray>(speakerQueues.size)
+                            speakerQueues.forEach { speakerQueue ->
+                                speakerQueue.poll()?.let { readyFrames.add(it) }
+                            }
+                            if (readyFrames.isEmpty() && speakerQueues.isNotEmpty()) {
+                                try {
+                                    speakerQueues.first().poll(20, TimeUnit.MILLISECONDS)?.let { readyFrames.add(it) }
+                                } catch (_: InterruptedException) {
+                                    if (!alive.get()) break
+                                }
+                            }
+                            readyFrames.forEach { frame ->
                                 if (frame.size != ROOM_VOICE_FRAME_BYTES) return@forEach
                                 activeSpeakers++
                                 var i = 0
@@ -447,16 +461,14 @@ fun JitsiRoomAudio(
                                     i += 2
                                 }
                             }
-                            if (activeSpeakers == 0) {
-                                try { Thread.sleep(5) } catch (_: InterruptedException) { if (!alive.get()) break }
-                                continue
-                            }
+                            // Always write one 20 ms frame, including digital silence
+                            // during a short packet gap, so AudioTrack does not underrun.
                             // Keep the intelligibility gain for multiple speakers,
                             // but scale the entire mixed frame before PCM conversion.
                             // Per-sample clipping creates harsh crackle on overlapping peaks.
-                            val baseGain = 1.0 / kotlin.math.sqrt(activeSpeakers.toDouble())
+                            val baseGain = if (activeSpeakers == 0) 0.0 else 1.0 / kotlin.math.sqrt(activeSpeakers.toDouble())
                             val peak = mixed.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1L).toDouble()
-                            val peakGuard = minOf(1.0, 32700.0 / (peak * baseGain))
+                            val peakGuard = minOf(1.0, 32700.0 / (peak * baseGain.coerceAtLeast(0.000001)))
                             val gain = baseGain * peakGuard
                             ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
                                 mixed.forEachIndexed { index, sum ->
