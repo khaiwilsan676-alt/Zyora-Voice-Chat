@@ -337,7 +337,8 @@ class LuckyAnimationController internal constructor(val roomId: String) {
 
     fun confirmCombo(payload: JSONObject) {
         lastComboPayload = JSONObject(payload.toString())
-        comboPending = false
+        // The initial Lucky Gift transfer is still in flight. Keep the same
+        // lock until its exact transferId is acknowledged by the server.
         showComboButton = true
         comboTimeLeft = 5
         comboExpiresAtMs = System.currentTimeMillis() + 5_000L
