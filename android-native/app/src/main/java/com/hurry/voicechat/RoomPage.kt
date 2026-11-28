@@ -2126,7 +2126,77 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                 Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                                             }
                                             Spacer(Modifier.width(4.dp))
-            
+                                            val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
+                                            if (ownerVipBadge && ownerVipId.isNotBlank()) {
+                                                AsyncImage(
+                                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                                    contentDescription = "VIP ID",
+                                                    contentScale = ContentScale.Fit,
+                                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                                )
+                                                Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                            } else if (roomOwnerAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005")) {
+                                                AsyncImage(
+                                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                                    contentDescription = "Purple ID Badge",
+                                                    contentScale = ContentScale.Fit,
+                                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                                )
+                                                Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                            } else {
+                                                Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                            }
+                                        }
+                                    }
+                                    if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
+                                        if (!followed) {
+                                            AsyncImage(
+                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_003419.png",
+                                                contentDescription = "Follow room",
+                                                modifier = Modifier.size(26.dp).clickable {
+                                            val next = !followed
+                                            followed = next
+                                            onFollowToggle(roomId, next)
+                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                                runCatching {
+                                                    val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
+                                                    val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                                                    val url = if (next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
+                                                    val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                                                        requestMethod = if (next) "POST" else "DELETE"
+                                                        connectTimeout = 8000
+                                                        readTimeout = 8000
+                                                        if (next) {
+                                                            doOutput = true
+                                                            setRequestProperty("Content-Type", "application/json")
+                                                        }
+                                                    }
+                                                    if (next) {
+                                                        val payload = JSONObject()
+                                                            .put("userId", accountId)
+                                                            .put("roomId", roomId)
+                                                            .put("roomName", roomName)
+                                                            .put("roomImage", roomImage)
+                                                            .put("roomCountry", roomOwner.country)
+                                                            .put("followerName", roomDisplayName)
+                                                            .put("followerImage", roomDisplayImage)
+                                                            .put("followerCountry", cachedCurrentProfile?.optString("country").orEmpty().ifBlank { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getString("country", "").orEmpty() })
+                                                        conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                                    }
+                                                    conn.responseCode
+                                                    conn.disconnect()
+                                                }
+                                            }
+                                        
+                                                },
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+                                    }
+                                }
+                                        else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    }
+                                }
                             }
                         }
                         Spacer(Modifier.weight(1f))
