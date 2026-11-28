@@ -2071,16 +2071,41 @@ fun RoomPage(
             else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
-        // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
-        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 90.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Keep the cup pill at the left; pin the compact music/online pill to the far right.
+        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 90.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically) {
             Row(modifier = Modifier.height(22.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.20f)).clickable { showRoomCupOnline = false; showRoomCup = true }.padding(horizontal = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(Icons.Default.EmojiEvents, contentDescription = "Top Cup", tint = Color(0xFFFFD54F), modifier = Modifier.size(15.dp))
                 RoomDailyCupTotal(roomId)
             }
-            if (musicControllerVisible && miniMusicTrack != null) {
-                Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(20.dp),contentScale = ContentScale.Fit)
-                    Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 60.dp).basicMarquee(iterations = Int.MAX_VALUE))
+        }
+        if (musicControllerVisible && miniMusicTrack != null) {
+            val musicPillUser = activeRoomUsers.firstOrNull { it.accountId.isNotBlank() }
+            Row(
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 90.dp, end = 4.dp)
+                    .height(30.dp).widthIn(max = 142.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.32f))
+                    .clickable { showRoomCup = true; showRoomCupOnline = true }
+                    .padding(start = 4.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                AsyncImage(
+                    model = musicPillUser?.image?.takeIf { it.isNotBlank() }
+                        ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
+                    contentDescription = "Room user",
+                    modifier = Modifier.size(19.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Column(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(miniMusicTrack?.name.orEmpty(), color = Color.White, fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 102.dp))
+                    Text(activeRoomUsers.count { it.accountId.isNotBlank() }.toString(),
+                        color = Color.White.copy(alpha = 0.82f), fontSize = 8.sp, maxLines = 1)
                 }
             }
         }
@@ -2168,14 +2193,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, maxLines = 1, softWrap = false)
                                     }
                                     Spacer(Modifier.width(8.dp))
-                                    Row(
-                                        Modifier.height(18.dp).wrapContentWidth(unbounded = true).clickable { showRoomCup = true; showRoomCupOnline = true },
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                    ) {
-                                        Image(painterResource(R.drawable.ic_hurry_people), contentDescription = "Active users", modifier = Modifier.size(12.dp))
-                                        Text(backendRoomUsers.size.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
-                                    }
                                 }
                             }
                         }
