@@ -321,7 +321,8 @@ fun RoomInfo(
         }
     }
 
-    if (isOpen) {
+    // A share request is a standalone overlay: never render the Room Info panel behind it.
+    if (isOpen && !openShareRequest) {
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
         Column(
