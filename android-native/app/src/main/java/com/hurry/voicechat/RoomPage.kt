@@ -1053,8 +1053,8 @@ fun RoomPage(
     // Keep the Combo button responsive: animate every tap immediately, then
     // settle wallet transfers one at a time so each server acknowledgement has
     // its own matching transfer ID and cannot overwrite another pending tap.
-    LaunchedEffect(roomId, luckyComboPending, queuedLuckyComboTransfers.size, roomSocketRef.value) {
-        if (!luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
+    LaunchedEffect(roomId, luckyComboPending, showLuckyComboButton, queuedLuckyComboTransfers.size, roomSocketRef.value) {
+        if (showLuckyComboButton && !luckyComboPending && queuedLuckyComboTransfers.isNotEmpty()) {
             val socket = roomSocketRef.value
             if (socket?.connected() == true) {
                 val transfer = queuedLuckyComboTransfers.removeAt(0)
@@ -3327,6 +3327,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 if (transfer["luckyGift"] == true) {
                     val transferId = transfer["transferId"]?.toString().orEmpty()
                     pendingLuckyGiftTransferId = transferId
+                    // Open the sender's combo window immediately; do not wait for the server echo.
+                    // The acknowledgement still remains authoritative for wallet/win amounts.
+                    if (transfer["comboReplay"] != true && transferId.isNotBlank()) {
+                        luckyAnimation.confirmCombo(JSONObject(transfer))
+                    }
                     // Render immediately on tap; win coins remain server-confirmed only.
                     if (transfer["comboReplay"] != true && transferId.isNotBlank()) {
                         val recipients = (transfer["recipientIds"] as? List<*>)
