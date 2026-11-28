@@ -61,8 +61,8 @@ import kotlin.random.Random
 
 private const val LUCKY777_BASE =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
-private const val LUCKY777_GAME_MUSIC = "${LUCKY777_BASE}VID_20261128_054730_977_bsl.mp4"
-private const val LUCKY777_WINNER_SOUND = "${LUCKY777_BASE}VID_20261128_053403_720_bsl.mp4"
+private const val LUCKY777_GAME_MUSIC = "${LUCKY777_BASE}VID_20261128_053403_720_bsl.mp4"
+private const val LUCKY777_WINNER_SOUND = "${LUCKY777_BASE}VID_20261128_054730_977_bsl.mp4"
 private const val LUCKY777_BACKGROUND =
     "${LUCKY777_BASE}file_000000001d488211b1d4b391060d3c39.png"
 private const val LUCKY777_LOGO =
