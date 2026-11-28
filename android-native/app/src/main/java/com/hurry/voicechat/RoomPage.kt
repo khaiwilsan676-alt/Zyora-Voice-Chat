@@ -3300,9 +3300,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("timestamp", System.currentTimeMillis())
                                 // Show the tap instantly; the queued transfer is settled
                                 // after the previous server acknowledgement to protect wallet state.
+                                // Authorize exactly this tap and send it immediately.
+                                // Do not defer or replay queued combo transfers later.
+                                pendingLuckyGiftTransferId = nextTransferId
+                                luckyComboPending = true
                                 luckyComboClicksPending += 1
                                 luckyAnimation.optimisticCombo()
-                                queuedLuckyComboTransfers.add(comboTransfer)
                                 val comboRecipientsJson = previousGift.optJSONArray("recipientIds") ?: JSONArray()
                                 val comboRecipients = (0 until comboRecipientsJson.length())
                                     .map { comboRecipientsJson.optString(it) }
@@ -3310,6 +3313,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 val comboImage = previousGift.optString("giftImage")
                                     .ifBlank { previousGift.optString("luckyImage") }
                                 luckyAnimation.launchToRecipients(nextTransferId, comboImage, comboRecipients)
+                                socket.emit("coin_transfer", comboTransfer)
                             }
                         }
                     },
