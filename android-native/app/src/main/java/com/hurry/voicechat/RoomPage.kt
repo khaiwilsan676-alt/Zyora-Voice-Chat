@@ -473,6 +473,11 @@ fun RoomPage(
         }
     }
     
+    fun saveLastRoomSeat(seatNumber: Int) {
+        appContext.getSharedPreferences("room_settings", Context.MODE_PRIVATE)
+            .edit().putInt("lastSeat_$roomId", seatNumber).apply()
+    }
+
     val luckyAnimation = rememberLuckyAnimationController(roomId)
     LuckyAnimationControllerEffects(luckyAnimation)
     var luckyGiftOrigin by luckyAnimation::origin
@@ -502,6 +507,7 @@ fun RoomPage(
     var luckyBagClaimError by remember { mutableStateOf<String?>(null) }
     var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
     // Hold Lucky Gift chat rows until the combo window closes; ordinary gifts remain immediate.
+    val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     var pendingLuckyChatMessages by remember(roomId) { mutableStateOf<List<NativeRoomMessage>>(emptyList()) }
     var luckyComboWindowWasVisible by remember(roomId) { mutableStateOf(false) }
     LaunchedEffect(showLuckyComboButton, pendingLuckyChatMessages) {
@@ -1066,7 +1072,6 @@ fun RoomPage(
         }
     }
 
-    val messages=remember{mutableStateListOf<NativeRoomMessage>()}
             val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
             LaunchedEffect(messages.size, kickNotices.size, imeVisible) { kotlinx.coroutines.delay(50); val lastVisibleIndex = chatListState.layoutInfo.totalItemsCount - 1; if (lastVisibleIndex >= 0) chatListState.animateScrollToItem(lastVisibleIndex, scrollOffset = 0) }
     val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
