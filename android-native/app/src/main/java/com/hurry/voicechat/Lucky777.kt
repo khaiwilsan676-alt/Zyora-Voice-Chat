@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.media.MediaPlayer
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -60,6 +61,8 @@ import kotlin.random.Random
 
 private const val LUCKY777_BASE =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
+private const val LUCKY777_GAME_MUSIC = "${LUCKY777_BASE}VID_20261128_054730_977_bsl.mp4"
+private const val LUCKY777_WINNER_SOUND = "${LUCKY777_BASE}VID_20261128_053403_720_bsl.mp4"
 private const val LUCKY777_BACKGROUND =
     "${LUCKY777_BASE}file_000000001d488211b1d4b391060d3c39.png"
 private const val LUCKY777_LOGO =
@@ -2635,6 +2638,64 @@ fun Lucky777(
     var history by remember { mutableStateOf<List<L7Round>>(emptyList()) }
 
     var muted by remember { mutableStateOf(false) }
+
+    // Audio-only playback: MediaPlayer reads the MP4 audio track; no video view is created.
+    val gameMusicPlayer = remember { MediaPlayer() }
+    val winnerSoundPlayer = remember { MediaPlayer() }
+    var gameMusicReady by remember { mutableStateOf(false) }
+    var winnerSoundReady by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        try {
+            gameMusicPlayer.setDataSource(LUCKY777_GAME_MUSIC)
+            gameMusicPlayer.isLooping = true
+            gameMusicPlayer.setVolume(1f, 1f)
+            gameMusicPlayer.setOnPreparedListener {
+                gameMusicReady = true
+                if (!muted) it.start()
+            }
+            gameMusicPlayer.setOnErrorListener { _, _, _ -> true }
+            gameMusicPlayer.prepareAsync()
+        } catch (_: Exception) { }
+        onDispose {
+            try { gameMusicPlayer.stop() } catch (_: Exception) { }
+            try { gameMusicPlayer.release() } catch (_: Exception) { }
+            try { winnerSoundPlayer.stop() } catch (_: Exception) { }
+            try { winnerSoundPlayer.release() } catch (_: Exception) { }
+        }
+    }
+
+    LaunchedEffect(muted, gameMusicReady, winnerOpen) {
+        val volume = if (muted) 0f else 1f
+        try {
+            gameMusicPlayer.setVolume(volume, volume)
+            winnerSoundPlayer.setVolume(volume, volume)
+            if (muted || winnerOpen) {
+                if (gameMusicPlayer.isPlaying) gameMusicPlayer.pause()
+            } else if (gameMusicReady && !gameMusicPlayer.isPlaying) {
+                gameMusicPlayer.start()
+            }
+        } catch (_: Exception) { }
+    }
+
+    LaunchedEffect(winnerOpen, muted) {
+        if (winnerOpen) {
+            try {
+                winnerSoundPlayer.reset()
+                winnerSoundPlayer.setDataSource(LUCKY777_WINNER_SOUND)
+                winnerSoundPlayer.isLooping = false
+                winnerSoundPlayer.setVolume(if (muted) 0f else 1f, if (muted) 0f else 1f)
+                winnerSoundPlayer.setOnPreparedListener { player ->
+                    if (!muted && winnerOpen) player.start()
+                }
+                winnerSoundPlayer.setOnErrorListener { _, _, _ -> true }
+                winnerSoundPlayer.prepareAsync()
+            } catch (_: Exception) { }
+        } else {
+            try { if (winnerSoundPlayer.isPlaying) winnerSoundPlayer.pause() } catch (_: Exception) { }
+        }
+    }
+
     var historyOpen by remember { mutableStateOf(false) }
     var rulesOpen by remember { mutableStateOf(false) }
     var winnerOpen by remember { mutableStateOf(false) }
