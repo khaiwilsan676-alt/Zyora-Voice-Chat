@@ -1042,6 +1042,13 @@ fun RoomSettingPage(
                             }
                         }
 
+                        Text(
+                            "Admin ${admins.distinct().size}/5",
+                            modifier = Modifier.padding(start = 16.dp, top = 0.dp, bottom = 0.dp),
+                            color = gray400,
+                            fontSize = 12.sp
+                        )
+
                         // Grey Search Input
                         Box(
                             Modifier.fillMaxWidth()
