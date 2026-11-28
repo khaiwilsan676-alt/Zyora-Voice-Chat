@@ -1449,6 +1449,8 @@ fun RoomPage(
                     showLuckyComboButton = false
                     lastLuckyComboPayload = null
                     luckyComboTimeLeft = 0
+                    luckyAnimation.clearNotice()
+                    pendingLuckyChatMessages = emptyList()
                 }
                 val balance = payload.optLong("balance", -1L)
                 if (balance >= 0L) roomWalletBalance = balance
@@ -3264,6 +3266,24 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     val recipientIds = (0 until recipientJson.length()).map { recipientJson.optString(it) }
                     val image = optimisticPayload.optString("giftImage").ifBlank { optimisticPayload.optString("luckyImage") }
                     val resolvedImage = if (image.startsWith("http", true)) image else "https://zyora-voice-chat.vercel.app/" + image.trimStart('/')
+                    // Render the Lucky banner on the Send tap; do not wait for the socket echo.
+                    val optimisticRecipientMode = when (optimisticPayload.optString("recipientMode").lowercase()) {
+                        "mic" -> RecipientMode.MIC
+                        "room" -> RecipientMode.ROOM
+                        else -> RecipientMode.SINGLE
+                    }
+                    luckyGiftNotice = LuckyNotice(
+                        id = pendingLuckyGiftTransferId,
+                        senderId = accountId,
+                        senderName = roomDisplayName,
+                        recipientName = optimisticPayload.optString("recipientName", "User").ifBlank { "User" },
+                        senderImage = roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                        giftImage = resolvedImage,
+                        multiplier = optimisticPayload.optInt("multiplier", 1).coerceAtLeast(1),
+                        totalWinAmount = 0L,
+                        maxWinTimes = 0,
+                        recipientMode = optimisticRecipientMode
+                    )
                     luckyAnimation.launchToRecipients(pendingLuckyGiftTransferId, resolvedImage, recipientIds)
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
