@@ -2110,13 +2110,34 @@ fun RoomPage(
                     modifier = Modifier.size(17.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
+                val trackWave = rememberInfiniteTransition(label = "online_user_track_wave")
+                val waveOne by trackWave.animateFloat(
+                    initialValue = 0.25f, targetValue = 0.95f,
+                    animationSpec = infiniteRepeatable(tween(360), RepeatMode.Reverse), label = "wave_one"
+                )
+                val waveTwo by trackWave.animateFloat(
+                    initialValue = 0.90f, targetValue = 0.30f,
+                    animationSpec = infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "wave_two"
+                )
+                val waveThree by trackWave.animateFloat(
+                    initialValue = 0.40f, targetValue = 1.0f,
+                    animationSpec = infiniteRepeatable(tween(390), RepeatMode.Reverse), label = "wave_three"
+                )
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = "Music track",
-                        tint = Color(0xFF42A5F5),
-                        modifier = Modifier.size(11.dp)
-                    )
+                    Canvas(modifier = Modifier.size(width = 12.dp, height = 10.dp)) {
+                        val barX = listOf(1.5f, size.width / 2f, size.width - 1.5f)
+                        val barHeights = listOf(waveOne, waveTwo, waveThree)
+                        barX.forEachIndexed { index, x ->
+                            val barHeight = size.height * barHeights[index]
+                            drawLine(
+                                color = Color(0xFF42A5F5),
+                                start = Offset(x, size.height - barHeight),
+                                end = Offset(x, size.height),
+                                strokeWidth = 2.2f,
+                                cap = StrokeCap.Round
+                            )
+                        }
+                    }
                     Text(
                         activeRoomUsers.count { it.accountId.isNotBlank() }.toString(),
                         color = Color.White, fontSize = 8.sp, lineHeight = 8.sp,
