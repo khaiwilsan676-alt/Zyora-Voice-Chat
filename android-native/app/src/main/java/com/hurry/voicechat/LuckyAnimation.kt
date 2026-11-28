@@ -67,13 +67,13 @@ private const val LUCKY_COIN_ICON_URL =
 // ============================================================
 // LUCKY GIFT ANIMATION CONTROLS — keep all Lucky motion tuning here
 // ============================================================
-private const val LUCKY_SEAT_POPUP_DURATION_MS = 85
-private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 210
+private const val LUCKY_SEAT_POPUP_DURATION_MS = 50
+private const val LUCKY_SEAT_FLIGHT_DURATION_MS = 170
 private const val LUCKY_SEAT_FLIGHT_ARC_DP = 42f
-private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 58
+private const val LUCKY_SEAT_FLIGHT_IMAGE_SIZE_DP = 50
 private const val LUCKY_COMBO_PULSE_DURATION_MS = 900
 private const val LUCKY_MAX_RECIPIENT_FLIGHTS = 15
-private const val LUCKY_MAX_ACTIVE_FLIGHTS = 45
+private const val LUCKY_MAX_ACTIVE_FLIGHTS = 24
 
 private fun luckyNoticeGiftKey(notice: LuckyNotice): String =
     "${notice.senderId}|${notice.giftImage.trim()}|${notice.recipientMode.name}"
@@ -389,6 +389,9 @@ class LuckyAnimationController internal constructor(val roomId: String) {
         comboExpiresAtMs = 0L
         lastComboPayload = null
         pendingComboClicks = 0
+        // Discard geometry-waiting flights when the combo window stops. A late
+        // root-size callback must never replay gift images after the user has stopped.
+        pendingFlightRequests.clear()
         // Combo button hatne ke saath hi Notification patti bhi exit hogi (100% connected)
         val current = notice
         if (current != null && !current.isExiting) {
