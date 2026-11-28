@@ -705,8 +705,6 @@ internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier =
     }
     if (equipped) {
         EmeraldVoiceWaveEffect(animated = true, modifier = modifier)
-    } else {
-        DefaultWhiteVoiceWaveEffect(modifier = modifier)
     }
 }
 
