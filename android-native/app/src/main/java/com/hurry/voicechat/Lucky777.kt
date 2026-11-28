@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -100,6 +103,8 @@ private data class L7Item(
 )
 
 private data class L7Chip(val label: String, val value: Long, val image: String)
+
+private data class L7RoundWinner(val name: String, val avatar: String, val win: Long)
 
 private data class L7Round(
     val round: Int,
@@ -175,8 +180,9 @@ private fun l7TargetAngleForSlice(sliceIndex: Int): Float {
 }
 
 private fun l7Format(v: Long): String = when {
+    v >= 1_000_000_000L -> "${"%.1f".format(Locale.US, v / 1_000_000_000.0).removeSuffix(".0")}B"
     v >= 1_000_000L -> "${"%.1f".format(Locale.US, v / 1_000_000.0).removeSuffix(".0")}M"
-    v >= 1000L -> "${"%.0f".format(Locale.US, v / 1000.0)}K"
+    v >= 1000L -> "${"%.1f".format(Locale.US, v / 1000.0).removeSuffix(".0")}K"
     else -> v.toString()
 }
 
@@ -917,6 +923,7 @@ private fun L7WinnerPopupCard(
     betAmount: Long,
     winAmount: Long,
     sheetHeight: Dp,
+    topWinners: List<L7RoundWinner>,
     onDismiss: () -> Unit
 ) {
     val headerShape = RoundedCornerShape(14.dp)
@@ -940,11 +947,8 @@ private fun L7WinnerPopupCard(
         else -> "You did not win in this round"
     }
 
-    val topRows = listOf(
-        Triple(LUCKY777_TOP_1, if (winAmount > 0L) "You" else "-", if (winAmount > 0L) l7Format(winAmount) else "-"),
-        Triple(LUCKY777_TOP_2, "-", "-"),
-        Triple(LUCKY777_TOP_3, "-", "-")
-    )
+    val topFrames = listOf(LUCKY777_TOP_1, LUCKY777_TOP_2, LUCKY777_TOP_3)
+    val topRows = topWinners.take(3)
 
     Box(
         modifier = Modifier
@@ -1013,7 +1017,7 @@ private fun L7WinnerPopupCard(
                         ) {
                             // Top 1 / 2 / 3 Crown PNG
                             AsyncImage(
-                                model = row.first,
+                                model = topFrames[idx],
                                 contentDescription = "Top ${idx + 1}",
                                 modifier = Modifier.size(34.dp),
                                 contentScale = ContentScale.Fit
@@ -1022,17 +1026,26 @@ private fun L7WinnerPopupCard(
                             Spacer(Modifier.width(12.dp))
 
                             // Player Avatar Circle
-                            L7WinnerAvatarPlaceholder(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
-                            )
+                            if (row.avatar.isNotBlank()) {
+                                AsyncImage(
+                                    model = row.avatar,
+                                    contentDescription = "Winner avatar",
+                                    modifier = Modifier.size(36.dp).clip(CircleShape)
+                                        .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                L7WinnerAvatarPlaceholder(
+                                    modifier = Modifier.size(36.dp)
+                                        .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                                )
+                            }
 
                             Spacer(Modifier.width(12.dp))
 
                             // Player Name
                             Text(
-                                text = row.second,
+                                text = row.name,
                                 modifier = Modifier.weight(1f),
                                 color = Color(0xFFE3EEFF),
                                 fontSize = 14.sp,
@@ -1053,7 +1066,7 @@ private fun L7WinnerPopupCard(
                                     contentScale = ContentScale.Fit
                                 )
                                 Text(
-                                    text = row.third,
+                                    text = l7Format(row.win),
                                     color = if (idx == 0 && winAmount > 0L) l7Gold else Color(0xFFE3EEFF),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -1939,7 +1952,7 @@ private fun L7BottomBalanceBar(
             horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
-                balance.toString(),
+                l7Format(balance),
                 color = goldColor,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Black,
@@ -2545,6 +2558,66 @@ fun Lucky777(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val dao = remember { WalletDatabase.get(context).walletDao() }
+    val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val luckyUserId = remember(authPrefs) {
+        authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("accountId", "").orEmpty()
+    }
+    val luckyAccountId = remember(authPrefs) { authPrefs.getString("accountId", "").orEmpty() }
+    var globalRoundWinners by remember { mutableStateOf<List<L7RoundWinner>>(emptyList()) }
+    var winnerDataRound by remember { mutableIntStateOf(-1) }
+    val luckySocket = remember(luckyUserId, luckyAccountId) {
+        runCatching {
+            IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+                transports = arrayOf("websocket")
+                reconnection = true
+                reconnectionAttempts = Int.MAX_VALUE
+                reconnectionDelay = 1000
+                reconnectionDelayMax = 5000
+            })
+        }.getOrNull()
+    }
+
+    DisposableEffect(luckySocket, luckyUserId, luckyAccountId) {
+        val register = {
+            if (luckyUserId.isNotBlank()) luckySocket?.emit(
+                "register", JSONObject().put("userId", luckyUserId).put("accountId", luckyAccountId)
+            )
+        }
+        val onWinners = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optInt("round", -1) != winnerDataRound) return@Listener
+            val rows = payload.optJSONArray("winners") ?: JSONArray()
+            globalRoundWinners = (0 until rows.length()).mapNotNull { index ->
+                val item = rows.optJSONObject(index) ?: return@mapNotNull null
+                L7RoundWinner(
+                    item.optString("name", "User").ifBlank { "User" },
+                    item.optString("avatar", ""),
+                    item.optLong("win", 0L).coerceAtLeast(0L)
+                )
+            }.sortedByDescending { it.win }.take(3)
+        }
+        val requestWinners = {
+            val now = System.currentTimeMillis()
+            val currentRound = ((now - l7Reset(now)).coerceAtLeast(0L) / 33_000L).toInt() + 1
+            if (winnerDataRound != currentRound) {
+                winnerDataRound = currentRound
+                globalRoundWinners = emptyList()
+            }
+            luckySocket?.emit("lucky777_top_winners_request", JSONObject().put("round", currentRound))
+        }
+        val onConnect = Emitter.Listener { register(); requestWinners() }
+        luckySocket?.on(Socket.EVENT_CONNECT, onConnect)
+        luckySocket?.on("lucky777_top_winners_v2", onWinners)
+        luckySocket?.connect()
+        if (luckySocket?.connected() == true) { register(); requestWinners() }
+        onDispose {
+            luckySocket?.off(Socket.EVENT_CONNECT, onConnect)
+            luckySocket?.off("lucky777_top_winners_v2", onWinners)
+            luckySocket?.disconnect()
+            luckySocket?.close()
+        }
+    }
 
     var balance by remember { mutableLongStateOf(82927L) }
     var phase by remember { mutableStateOf(L7Phase.BETTING) }
@@ -2740,11 +2813,22 @@ fun Lucky777(
                 delay(1000)
                 if (settledWinAmount > 0L) {
                     walletChange(settledWinAmount, "Won in Lucky 777")
+                    val winnerName = authPrefs.getString("name", authPrefs.getString("displayName", "User")).orEmpty().ifBlank { "User" }
+                    val winnerAvatar = sequenceOf("image", "photo", "avatar").map { authPrefs.getString(it, "").orEmpty() }
+                        .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
+                    luckySocket?.emit("lucky777_winner_update", JSONObject()
+                        .put("round", settledRound).put("userId", luckyUserId).put("accountId", luckyAccountId)
+                        .put("name", winnerName).put("avatar", winnerAvatar).put("win", settledWinAmount))
                 }
                 popupWinKey = winnerKey
                 betAmount = settledBetAmount
                 winAmount = settledWinAmount
                 winnerTimer = 6
+                if (winnerDataRound != settledRound) {
+                    winnerDataRound = settledRound
+                    globalRoundWinners = emptyList()
+                }
+                luckySocket?.emit("lucky777_top_winners_request", JSONObject().put("round", settledRound))
                 winnerOpen = true
             }
         }
@@ -3153,6 +3237,7 @@ fun Lucky777(
                 betAmount = betAmount,
                 winAmount = winAmount,
                 sheetHeight = h,
+                topWinners = globalRoundWinners,
                 onDismiss = { winnerOpen = false }
             )
         }
