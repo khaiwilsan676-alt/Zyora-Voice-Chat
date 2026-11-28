@@ -481,6 +481,7 @@ data class LuckyNotice(
     val totalWinAmount: Long,
     val maxWinTimes: Int,
     val recipientMode: RecipientMode,
+    val winEventId: String = "",
     val isExiting: Boolean = false,
 )
 
@@ -505,6 +506,7 @@ fun LuckyAnimationNotificationSlider(
 
     // Sirf genuine win pe hi reward badge trigger hoga (har tap pe nahi)
     var lastRewardedNoticeId by remember { mutableStateOf<String?>(null) }
+    var lastRewardedWinEventId by remember { mutableStateOf("") }
     var lastRewardedWinAmount by remember { mutableLongStateOf(0L) }
 
     // Reward badge state (3 sec ke liye, naya reward aate hi purana hat ke naya upar se aayega)
@@ -515,6 +517,7 @@ fun LuckyAnimationNotificationSlider(
         notice?.id,
         notice?.multiplier,
         notice?.totalWinAmount,
+        notice?.winEventId,
         notice?.giftImage,
         notice?.isExiting,
     ) {
@@ -524,6 +527,7 @@ fun LuckyAnimationNotificationSlider(
             lastAnimatedMultiplier = 0
             lastGiftKey = ""
             lastRewardedNoticeId = null
+            lastRewardedWinEventId = ""
             lastRewardedWinAmount = 0L
             activeReward = null
             controller.resetComboSyncState()
@@ -576,12 +580,14 @@ fun LuckyAnimationNotificationSlider(
                 lastRewardedWinAmount = 0L
             }
             // Win image & coins value only for a positive server-confirmed result.
-            val isGenuineNewWin = notice.totalWinAmount > 0L && (
-                notice.id != lastRewardedNoticeId ||
-                    notice.totalWinAmount != lastRewardedWinAmount
-            )
+            val currentWinEventId = notice.winEventId.ifBlank {
+                "${notice.id}:${notice.totalWinAmount}"
+            }
+            val isGenuineNewWin = notice.totalWinAmount > 0L &&
+                currentWinEventId != lastRewardedWinEventId
             if (isGenuineNewWin) {
                 lastRewardedNoticeId = notice.id
+                lastRewardedWinEventId = currentWinEventId
                 lastRewardedWinAmount = notice.totalWinAmount
                 activeReward = LuckyRewardPopupState(
                     id = "${notice.id}_${notice.totalWinAmount}",
