@@ -957,7 +957,7 @@ private fun FamilyFramePreviewAvatar(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val avatar = remember {
         val prefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
-        sequenceOf("image", "avatar", "photo", "photoURL", "photoUrl", "profileImage", "profileImageUrl")
+        sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
             .map { prefs.getString(it, "").orEmpty().trim() }
             .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
             .orEmpty()
@@ -1017,7 +1017,7 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
                                 FamilyFramePreviewAvatar(Modifier.size(avatarSize))
                                 FamilyBlackKeyVideo(
                                     url = familyAsset(item.thumbnail),
-                                    modifier = Modifier.fillMaxSize().padding(8.dp)
+                                    modifier = Modifier.fillMaxSize().padding(16.dp)
                                 )
                             }
                         }
