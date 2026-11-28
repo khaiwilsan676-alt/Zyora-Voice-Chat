@@ -1615,6 +1615,7 @@ fun RoomPage(
                         // otherwise a genuine win during combo is silently missed.
                         totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
                         maxWinTimes = payload.optInt("luckyReturnPercent", 0),
+                        winEventId = transferId,
                         isExiting = false
                     )
                 } else {
@@ -1628,7 +1629,8 @@ fun RoomPage(
                         multiplier = multiplier,
                         totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
                         maxWinTimes = payload.optInt("luckyReturnPercent", 0),
-                        recipientMode = recipientMode
+                        recipientMode = recipientMode,
+                        winEventId = transferId
                     )
                 }
                 if (senderId == accountId) {
