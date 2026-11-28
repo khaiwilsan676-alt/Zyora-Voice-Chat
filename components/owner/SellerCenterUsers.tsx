@@ -139,11 +139,14 @@ export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps
 
   return (
     <div className="flex flex-col h-full bg-[#f5f6f8]">
-      <div className="border-b border-slate-200 bg-white px-6 py-5">
-        <div><p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#168184]">ECONOMY CENTER</p><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Seller Center</h2><p className="mt-1 text-xs text-slate-500">Manage seller access and open individual seller wallets.</p></div>
+      <div className="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between shadow-sm">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Seller Center</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Users with Seller Center active</p>
+        </div>
       </div>
       <div className="p-5 md:p-6 flex-1 overflow-y-auto">
-        <div className="relative mb-6 w-full max-w-[420px]">
+        <div className="relative w-full max-w-3xl mb-6">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
