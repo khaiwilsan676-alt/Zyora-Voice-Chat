@@ -2091,7 +2091,7 @@ fun RoomPage(
                 }
             }
         }
-        if (musicControllerVisible && miniMusicTrack != null) {
+        run {
             val onlinePillUser = activeRoomUsers.firstOrNull { it.accountId.isNotBlank() }
             Row(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 90.dp, end = 0.dp)
@@ -2124,8 +2124,8 @@ fun RoomPage(
                     animationSpec = infiniteRepeatable(tween(390), RepeatMode.Reverse), label = "wave_three"
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Canvas(modifier = Modifier.size(width = 12.dp, height = 10.dp)) {
-                        val barX = listOf(1.5f, size.width / 2f, size.width - 1.5f)
+                    Canvas(modifier = Modifier.size(width = 8.dp, height = 10.dp)) {
+                        val barX = listOf(1f, size.width / 2f, size.width - 1f)
                         val barHeights = listOf(waveOne, waveTwo, waveThree)
                         barX.forEachIndexed { index, x ->
                             val barHeight = size.height * barHeights[index]
@@ -2133,7 +2133,7 @@ fun RoomPage(
                                 color = Color(0xFF42A5F5),
                                 start = Offset(x, size.height - barHeight),
                                 end = Offset(x, size.height),
-                                strokeWidth = 2.2f,
+                                strokeWidth = 2.0f,
                                 cap = StrokeCap.Round
                             )
                         }
@@ -4290,26 +4290,6 @@ private fun RoomSeatInviteDialog(
                 drawPath(topHighlight,shine,style=Stroke(width=size.minDimension*7.5f/512f,cap=StrokeCap.Round))
                 val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
-            }
-            if (isSpeaking) {
-                // Restore the original white speaking pulse around the avatar.
-                Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }.align(Alignment.Center)) {
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    val maxRadius = size.minDimension * 0.42f
-                    val phases = listOf(
-                        waveProgress,
-                        (waveProgress + 1f / 3f) % 1f,
-                        (waveProgress + 2f / 3f) % 1f
-                    )
-                    phases.forEach { phase ->
-                        val fade = if (phase < 0.82f) 1f else ((1f - phase) / 0.18f).coerceIn(0f, 1f)
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.50f * fade),
-                            radius = maxRadius * phase,
-                            center = center
-                        )
-                    }
-                }
             }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
                 if (seat.occupied) NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.requiredSize(seatSize * 1.50f))
