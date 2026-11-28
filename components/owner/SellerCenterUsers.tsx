@@ -138,14 +138,14 @@ export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps
   const filteredUsers = users;
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="px-8 py-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="flex flex-col h-full bg-[#f5f6f8]">
+      <div className="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Seller Center</h2>
           <p className="text-xs text-slate-400 mt-0.5">Users with Seller Center active</p>
         </div>
       </div>
-      <div className="p-8 flex-1 overflow-y-auto">
+      <div className="p-5 md:p-6 flex-1 overflow-y-auto">
         <div className="relative w-full max-w-3xl mb-6">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
@@ -160,7 +160,7 @@ export default function SellerCenterUsers({ onOpenUser }: SellerCenterUsersProps
         {loading ? (
           <div className="py-12 text-center text-slate-400 font-medium text-sm">Searching users...</div>
         ) : (
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left border-collapse min-w-[680px]">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
