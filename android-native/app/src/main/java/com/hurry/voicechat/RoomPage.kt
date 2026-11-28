@@ -2179,8 +2179,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         }
                                         else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
-                                }
-                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.offset(y=(-3).dp)) {
+                                    }
                                     Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(14.dp))
                                     Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=10.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                 }
@@ -2189,7 +2188,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         Spacer(Modifier.weight(1f))
                         // Right aligned Top Icons
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-pill                            val isRoomOwner = accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }
+                            val isRoomOwner = accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }
                             if (isRoomOwner) {
                                 Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable { showSettings = true },contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
                             }
