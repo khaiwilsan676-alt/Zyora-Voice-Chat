@@ -2175,7 +2175,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
                                 }
-                                }
                             }
                         }
                         Spacer(Modifier.weight(1f))
