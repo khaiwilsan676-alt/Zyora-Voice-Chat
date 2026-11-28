@@ -481,34 +481,37 @@ const WILD_DETAILS: Record<number, { name: string; emoji: string; img: string; m
 const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsSidebarOpen }: any) => {
   const hasActiveChild = items.some((item: any) => item.id === activeItem);
   const [isExpanded, setIsExpanded] = useState(hasActiveChild);
+  useEffect(() => {
+    if (hasActiveChild) setIsExpanded(true);
+  }, [hasActiveChild]);
 
   return (
-    <div className="mb-2">
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-3 px-6 py-2 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors"
+    <div className="mb-2 px-3">
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((value: boolean) => !value)}
+        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[11px] font-extrabold uppercase tracking-[0.12em] transition-colors ${hasActiveChild ? 'text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
       >
-        <span className="text-[16px] drop-shadow-md">{icon}</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.07] text-[15px]">{icon}</span>
         <span>{title}</span>
-        <ChevronDown className={`w-4 h-4 ml-auto opacity-70 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-      </div>
-
+        <ChevronDown className={`ml-auto h-3.5 w-3.5 opacity-60 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
       {isExpanded && (
-        <div className="flex flex-col mt-1">
+        <div className="mt-1 flex flex-col gap-1 pl-3">
           {items.map((item: any) => (
             <button
               key={item.id}
-              onClick={() => {
-                setActiveItem(item.id);
-              }}
-              className={`flex items-center gap-3 px-6 py-2.5 pl-[52px] text-[13px] font-bold transition-colors w-full text-left
-                ${activeItem === item.id
-                  ? 'text-white bg-[#197477]/25 border-l-[3px] border-[#42b8ae]'
-                  : 'text-gray-300 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'}
-              `}
+              type="button"
+              aria-current={activeItem === item.id ? 'page' : undefined}
+              onClick={() => setActiveItem(item.id)}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[12px] font-semibold transition-all ${activeItem === item.id
+                ? 'border border-[#37aaa4]/20 bg-[#248f8b]/20 text-white shadow-[inset_3px_0_0_#43c3b9]'
+                : 'border border-transparent text-slate-300 hover:bg-white/[0.06] hover:text-white'}`}
             >
-              <span className="text-[14px] drop-shadow-sm">{item.icon}</span>
-              {item.label}
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[13px]">{item.icon}</span>
+              <span className="truncate">{item.label}</span>
+              {activeItem === item.id && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#63d5ca]" />}
             </button>
           ))}
         </div>
@@ -1867,17 +1870,22 @@ export default function StaffPanel() {
 
       <aside className="zyora-owner-sidebar fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] translate-x-0">
 
-        <div className="p-6 pb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-white text-[19px] font-extrabold tracking-wide drop-shadow-md">Zyora App</h1>
-            <p className="text-[10px] text-gray-300 font-bold tracking-widest mt-0.5">ADMINISTRATION</p>
+        <div className="border-b border-white/10 px-5 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2db6ae] to-[#176f78] text-lg font-black text-white shadow-lg shadow-black/20">Z</div>
+            <div className="min-w-0">
+              <h1 className="truncate text-[18px] font-extrabold tracking-tight text-white">Zyora App</h1>
+              <p className="mt-0.5 text-[9px] font-bold tracking-[0.2em] text-slate-400">CONTROL PANEL</p>
+            </div>
           </div>
         </div>
 
         <nav className="flex-1 mt-2 space-y-1 pb-6">
-          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors" onClick={() => setActiveTab('dashboard')}>
-            <span className="text-[16px] drop-shadow-md">🏠</span>
-            <span>Dashboard</span>
+          <div className="px-3">
+            <button type="button" aria-current={activeTab === 'dashboard' ? 'page' : undefined} className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-[13px] font-bold transition-colors ${activeTab === 'dashboard' ? 'border border-[#37aaa4]/20 bg-[#248f8b]/20 text-white shadow-[inset_3px_0_0_#43c3b9]' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'}`} onClick={() => setActiveTab('dashboard')}>
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.07] text-[15px]">⌂</span><span>Dashboard</span>
+              {activeTab === 'dashboard' && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#63d5ca]" />}
+            </button>
           </div>
 
           <SidebarCategory
