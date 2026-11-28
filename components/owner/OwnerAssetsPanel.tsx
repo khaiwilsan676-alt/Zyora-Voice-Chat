@@ -168,7 +168,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   };
 
   return (
-    <section className="w-full max-w-none pt-2">
+    <section className="w-full max-w-none rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="space-y-4">
         <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="h-12 w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" inputMode="numeric" />
         {user && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
@@ -205,7 +205,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
       </div>
 
-      <div className="mt-8 w-full overflow-x-auto">
+      <div className="mt-8 w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full min-w-[920px] border-collapse text-left">
           <thead><tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide"><th className="py-3 pl-4 pr-2">User</th><th className="py-3 px-2">ID</th><th className="py-3 px-2">Assets Type</th><th className="py-3 px-2">Assets</th><th className="py-3 pr-4">Days</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
