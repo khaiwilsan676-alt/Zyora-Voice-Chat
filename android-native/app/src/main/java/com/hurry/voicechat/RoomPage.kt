@@ -1068,6 +1068,16 @@ fun RoomPage(
         }
     }
 
+    // Once the five-second combo window closes, discard taps that have not
+    // reached the server. An already-emitted transfer cannot be recalled.
+    LaunchedEffect(roomId, showLuckyComboButton) {
+        if (!showLuckyComboButton) {
+            queuedLuckyComboTransfers.clear()
+            luckyComboClicksPending = 0
+            luckyAnimation.clearPendingComboTaps()
+        }
+    }
+
     LaunchedEffect(showChat, roomSocketRef.value) {
         roomSocketRef.value?.takeIf { it.connected() }?.emit(
             "room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", showChat)
@@ -1632,13 +1642,17 @@ fun RoomPage(
                 }
                 if (senderId == accountId) {
                     if (isComboReplay) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
-                    // Only a server-confirmed transfer may start/renew the combo window.
-                    lastLuckyComboPayload = JSONObject(payload.toString())
                     pendingLuckyGiftTransferId = ""
                     luckyComboPending = false
-                    showLuckyComboButton = true
-                    luckyComboTimeLeft = 5
-                    luckyComboGeneration++
+                    // A late acknowledgement for a combo tap that was already
+                    // allowed to expire must not reopen the button or restart a
+                    // fresh five-second sending window.
+                    if (!isComboReplay || showLuckyComboButton) {
+                        lastLuckyComboPayload = JSONObject(payload.toString())
+                        showLuckyComboButton = true
+                        luckyComboTimeLeft = 5
+                        luckyComboGeneration++
+                    }
                 }
                 if (giftImage.isNotBlank()) {
                     // LuckyGiftFlightOverlay is the sole Lucky image renderer.
