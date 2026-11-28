@@ -4316,6 +4316,7 @@ private fun RoomSeatInviteDialog(
                 else if(seat.occupied) {
                     FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.requiredSize(seatSize + 1.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                     NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.requiredSize(seatSize + 3.dp).offset(y = 4.dp), gemshineOffsetY = 4.dp, ninjaNeoSizeAdjustment = (-2).dp, gemshineSizeAdjustment = 5.dp, loveBeatSizeAdjustment = 5.dp)
+                    NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.requiredSize(seatSize * 1.50f))
                 } else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
             
