@@ -232,6 +232,10 @@ fun DiscoverPage(
     var selectedTab by remember { mutableStateOf("Discover") }
     var showCreatePost by remember { mutableStateOf(false) }
     var activeCommentPostId by remember { mutableStateOf<String?>(null) }
+    var actionPost by remember { mutableStateOf<DiscoverPostItem?>(null) }
+    var showDiscoverDangerMenu by remember { mutableStateOf(false) }
+    var showDiscoverReport by remember { mutableStateOf(false) }
+    var isDiscoverUserBlocked by remember(actionPost?.authorId) { mutableStateOf(false) }
 
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val currentUserId = remember {
@@ -394,7 +398,7 @@ fun DiscoverPage(
                         onOpenComments = {
                             activeCommentPostId = post.id
                         },
-                        onMoreClick = {}
+                        onMoreClick = { actionPost = post; showDiscoverDangerMenu = true }
                     )
                 }
             }
@@ -448,6 +452,50 @@ fun DiscoverPage(
                         })
                     }
                     showCreatePost = false
+                }
+            )
+        }
+
+        val selectedActionPost = actionPost
+        LaunchedEffect(selectedActionPost?.authorId, currentUserId) {
+            val targetId = selectedActionPost?.authorId.orEmpty()
+            if (targetId.isNotBlank() && targetId != currentUserId) {
+                val state = withContext(Dispatchers.IO) { fetchZyoraUserBlockState(currentUserId, targetId) }
+                isDiscoverUserBlocked = state.first
+            } else {
+                isDiscoverUserBlocked = false
+            }
+        }
+        if (showDiscoverDangerMenu && selectedActionPost != null) {
+            UserDangerActionMenu(
+                expanded = true,
+                isBlocked = isDiscoverUserBlocked,
+                onDismiss = { showDiscoverDangerMenu = false },
+                onBlockedChange = { shouldBlock ->
+                    val targetId = selectedActionPost.authorId
+                    if (targetId.isNotBlank() && targetId != currentUserId) {
+                        scope.launch {
+                            val success = withContext(Dispatchers.IO) {
+                                updateZyoraUserBlock(context, currentUserId, targetId, shouldBlock)
+                            }
+                            if (success) isDiscoverUserBlocked = shouldBlock
+                        }
+                    }
+                },
+                onReport = { showDiscoverReport = true }
+            )
+        }
+        if (showDiscoverReport && selectedActionPost != null) {
+            UserReport(
+                targetName = selectedActionPost.authorName,
+                targetImage = selectedActionPost.authorAvatar,
+                targetId = selectedActionPost.authorId,
+                contextPostId = selectedActionPost.id,
+                contextPostText = selectedActionPost.text,
+                contextPostImages = selectedActionPost.images,
+                onDismiss = {
+                    showDiscoverReport = false
+                    actionPost = null
                 }
             )
         }
