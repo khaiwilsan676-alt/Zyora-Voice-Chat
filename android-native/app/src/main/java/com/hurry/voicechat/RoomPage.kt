@@ -4239,8 +4239,28 @@ private fun RoomSeatInviteDialog(
                 val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
             }
+            if (isSpeaking) {
+                // Restore the original white speaking pulse around the avatar.
+                Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }.align(Alignment.Center)) {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val maxRadius = size.minDimension * 0.42f
+                    val phases = listOf(
+                        waveProgress,
+                        (waveProgress + 1f / 3f) % 1f,
+                        (waveProgress + 2f / 3f) % 1f
+                    )
+                    phases.forEach { phase ->
+                        val fade = if (phase < 0.82f) 1f else ((1f - phase) / 0.18f).coerceIn(0f, 1f)
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.50f * fade),
+                            radius = maxRadius * phase,
+                            center = center
+                        )
+                    }
+                }
+            }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
-                if (seat.occupied) NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.requiredSize(seatSize * 1.0f))
+                if (seat.occupied) NativeEquippedVoiceWaveOverlay(userId = seat.accountId, modifier = Modifier.requiredSize(seatSize * 1.8f))
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
                 else if(seat.occupied) {
                     FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.requiredSize(seatSize + 1.dp).clip(CircleShape),contentScale=ContentScale.Crop)
