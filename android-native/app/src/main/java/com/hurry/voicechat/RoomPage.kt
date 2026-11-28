@@ -2145,8 +2145,2154 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     }
                                 }
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.offset(y = (-3).dp)) {
-                                    Spacer(Modifier.width(4.dp))
+package com.hurry.voicechat
+
+import android.content.Intent
+import android.net.Uri
+import android.media.MediaMetadataRetriever
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlin.math.sin
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.asImageBitmap
+import android.os.Handler
+import android.os.Looper
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
+import org.json.JSONArray
+import org.json.JSONObject
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.basicMarquee
+import coil3.compose.AsyncImage
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+
+// Copy only after a deliberate two-second hold; release/cancel before then does nothing.
+internal fun Modifier.twoSecondLongPress(onLongPress: () -> Unit): Modifier = pointerInput(onLongPress) {
+    detectTapGestures(
+        onPress = {
+            val released = withTimeoutOrNull(1_000L) { tryAwaitRelease() }
+            if (released == null) onLongPress()
+        }
+    )
+}
+
+// Room Admin Tag image kept in code for future use
+const val ROOM_ADMIN_TAG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_154649.png"
+
+// Optimized Shader-like CPU logic to prevent room hanging
+@Composable
+fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
+    var bitmap by remember(url) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    LaunchedEffect(url) {
+        bitmap = withContext(Dispatchers.IO) {
+            runCatching {
+                val connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 7_000
+                    readTimeout = 9_000
+                    useCaches = true
+                }
+                val source = try {
+                    connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+                } finally {
+                    connection.disconnect()
+                } ?: return@runCatching null
+                val result = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                val width = result.width
+                val height = result.height
+                val pixels = IntArray(width * height)
+                result.getPixels(pixels, 0, width, 0, 0, width, height)
+                for (i in pixels.indices) {
+                    val color = pixels[i]
+                    val r = (color shr 16) and 0xFF
+                    val g = (color shr 8) and 0xFF
+                    val b = color and 0xFF
+                    if (g > 90 && g > r * 1.1 && g > b * 1.1) pixels[i] = android.graphics.Color.TRANSPARENT
+                }
+                result.setPixels(pixels, 0, width, 0, 0, width, height)
+                result
+            }.getOrNull()
+        }
+    }
+    bitmap?.let { Image(bitmap = it.asImageBitmap(), contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit) }
+}
+
+@Composable
+fun SystemBellIcon(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val scaleX = size.width / 512f
+        val scaleY = size.height / 512f
+        drawCircle(color = Color(0xFF1685FF), radius = 65f * scaleX, center = Offset(256f * scaleX, 256f * scaleY))
+        val bellPath = Path().apply {
+            moveTo(256f * scaleX, 229f * scaleY)
+            cubicTo(246f * scaleX, 229f * scaleY, 241f * scaleX, 238f * scaleY, 241f * scaleX, 249f * scaleY)
+            lineTo(241f * scaleX, 258f * scaleY)
+            cubicTo(241f * scaleX, 267f * scaleY, 237f * scaleX, 273f * scaleY, 232f * scaleX, 279f * scaleY)
+            quadraticBezierTo(230f * scaleX, 282f * scaleY, 235f * scaleX, 282f * scaleY)
+            lineTo(277f * scaleX, 282f * scaleY)
+            quadraticBezierTo(282f * scaleX, 282f * scaleY, 280f * scaleX, 279f * scaleY)
+            cubicTo(275f * scaleX, 273f * scaleY, 271f * scaleX, 267f * scaleY, 271f * scaleX, 258f * scaleY)
+            lineTo(271f * scaleX, 249f * scaleY)
+            cubicTo(271f * scaleX, 238f * scaleY, 266f * scaleX, 229f * scaleY, 256f * scaleX, 229f * scaleY)
+            close()
+        }
+        drawPath(bellPath, color = Color.White)
+        drawOval(color = Color.White, topLeft = Offset((256f - 5f) * scaleX, (288f - 3.5f) * scaleY), size = androidx.compose.ui.geometry.Size(10f * scaleX, 7f * scaleY))
+    }
+}
+
+@Composable
+private fun ThickBar(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    height: Dp = 6.dp,
+    activeColor: Color = Color(0xFF3B82F6),
+    inactiveColor: Color = Color.White.copy(alpha = 0.15f),
+    onProgressChange: ((Float) -> Unit)? = null
+) {
+    var barWidth by remember { mutableIntStateOf(0) }
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2))
+            .background(inactiveColor)
+            .onSizeChanged { barWidth = it.width }
+            .then(
+                if (onProgressChange != null) {
+                    Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset ->
+                                if (barWidth > 0) onProgressChange((offset.x / barWidth).coerceIn(0f, 1f))
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, _ ->
+                                if (barWidth > 0) onProgressChange((change.position.x / barWidth).coerceIn(0f, 1f))
+                            }
+                        }
+                } else Modifier
+            )
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(height / 2))
+                .background(activeColor)
+        )
+    }
+}
+
+data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
+data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
+data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L,val gifScale:Float=0.8f)
+data class NativeMention(val accountId: String, val name: String)
+data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="",val giftName:String="",val giftMultiplier:Int=1)
+data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="",val vehicleItemId:String="")
+data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String,val timestamp:Long=System.currentTimeMillis())
+
+@Composable
+fun RoomPage(
+    roomOwner: RoomPageOwner,
+    currentUser: RoomPageCurrentUser,
+    onClose:()->Unit={},
+    onOpenPublicProfile:(RoomProfileUser)->Unit={},
+    onBack:()->Unit=onClose,
+    onKeepRoom:(String,String,String)->Unit={_,_,_->},
+    onFollowToggle:(String,Boolean)->Unit={_,_->},
+    onRoomSupport:()->Unit={},
+    onJoinRoom:(String)->Unit={},
+    onKickNotice:(JSONObject)->Unit={},
+    isCovered: Boolean = false
+) {
+    val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
+    val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
+    val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002")
+    val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
+    val clipboard = LocalClipboardManager.current
+    val appContext = LocalContext.current
+    // Keep only the last selected room song across process/app restarts.
+    // The room session itself is deliberately not restored.
+    val lastMusicPrefs = remember { appContext.getSharedPreferences("zyora_last_room_music", android.content.Context.MODE_PRIVATE) }
+    val lastMusicKey = "last_track_$accountId"
+    // Seat occupancy is live room-session state only; never persist or restore it locally.
+    val savedRoomTrack = remember(accountId) {
+        runCatching {
+            val saved = lastMusicPrefs.getString(lastMusicKey, null) ?: return@runCatching null
+            val json = JSONObject(saved)
+            NativeMusicTrack(
+                id = json.optString("id"),
+                name = json.optString("name"),
+                url = json.optString("url"),
+                duration = json.optLong("duration", 0L)
+            ).takeIf { it.url.isNotBlank() && it.name.isNotBlank() }
+        }.getOrNull()
+    }
+    fun persistLastRoomTrack(track: NativeMusicTrack?) {
+        if (track == null) {
+            lastMusicPrefs.edit().remove(lastMusicKey).apply()
+        } else {
+            lastMusicPrefs.edit().putString(lastMusicKey, JSONObject()
+                .put("id", track.id)
+                .put("name", track.name)
+                .put("url", track.url)
+                .put("duration", track.duration)
+                .toString()).apply()
+        }
+    }
+    var roomWalletBalance by remember(accountId) { mutableLongStateOf(0L) }
+    // Use exactly the same wallet identity priority as CoinsNativePage.
+    // The wallet page keys MongoDB balances by Firebase UID first, then accountId.
+    // Using accountId here created a separate zero-balance wallet, so Lucky Bag
+    // incorrectly rejected sends even while Mine > Wallet showed sufficient coins.
+    val canonicalWalletUserId = appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+        .getString("uid", null)?.takeIf { it.isNotBlank() }
+        ?: accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
+    var roomWalletEventAt by remember(canonicalWalletUserId) { mutableLongStateOf(0L) }
+
+    LaunchedEffect(canonicalWalletUserId) {
+        if (canonicalWalletUserId.isBlank() || canonicalWalletUserId == "guest") return@LaunchedEffect
+        val serverBalance = withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(canonicalWalletUserId, "UTF-8")
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/" + encoded).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+                try {
+                    if (conn.responseCode !in 200..299) error("Wallet unavailable")
+                    JSONObject(conn.inputStream.bufferedReader().use { it.readText() }).optLong("balance", 0L).coerceAtLeast(0L)
+                } finally { conn.disconnect() }
+            }.getOrNull()
+        }
+        if (serverBalance != null) {
+            roomWalletBalance = (serverBalance + NativeWalletPending.delta(appContext, canonicalWalletUserId)).coerceAtLeast(0L)
+            appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE).edit()
+                .putLong("balance_$canonicalWalletUserId", roomWalletBalance).apply()
+        }
+    }
+    val currentProfileKeys = listOf(currentUser.uid, currentUser.id, currentUser.accountId, accountId).filter { it.isNotBlank() }.distinct()
+    var cachedCurrentProfile by remember(currentProfileKeys) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(currentProfileKeys) {
+        val cached = withContext(Dispatchers.IO) {
+            val profileDb = NativeIndexDatabase(appContext)
+            currentProfileKeys.firstNotNullOfOrNull { key ->
+                runCatching { profileDb.loadProfile(key) }.getOrNull()
+            }
+        }
+        // Render the local snapshot immediately, then reconcile it with the canonical
+        // MongoDB profile. Never let a placeholder "User" cache mask a real profile name.
+        cachedCurrentProfile = cached
+        val remote = runCatching {
+            ProfilePersistence.load(
+                TargetUser(
+                    id = currentUser.id.ifBlank { accountId },
+                    uid = currentUser.uid.ifBlank { currentUser.id.ifBlank { accountId } },
+                    accountId = accountId,
+                    displayAccountNumber = accountId
+                )
+            )
+        }.getOrNull()
+        if (remote != null) {
+            val remoteName = sequenceOf("name", "displayName", "userName", "nickname")
+                .map { remote.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
+            val remoteImage = sequenceOf("image", "avatar", "profileImageUrl", "dp", "photoURL")
+                .map { remote.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+            val merged = JSONObject(cached?.toString() ?: "{}")
+            if (remoteName != null) merged.put("name", remoteName)
+            if (remoteImage != null) merged.put("image", remoteImage)
+            if (remoteName != null || remoteImage != null) {
+                withContext(Dispatchers.IO) {
+                    val profileDb = NativeIndexDatabase(appContext)
+                    currentProfileKeys.forEach { key -> profileDb.saveProfile(key, merged) }
+                }
+                cachedCurrentProfile = merged
+            }
+        }
+    }
+    val roomDisplayName = cachedCurrentProfile?.let { profile ->
+        val nested = profile.optJSONObject("profile") ?: profile.optJSONObject("userData") ?: profile.optJSONObject("user") ?: JSONObject()
+        sequenceOf("name", "displayName", "userName", "username", "nickname", "fullName", "profileName")
+            .flatMap { key -> sequenceOf(profile.optString(key, "").trim(), nested.optString(key, "").trim()) }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && !it.equals("User", ignoreCase = true) }
+    } ?: currentUser.name.trim().takeIf { it.isNotBlank() && !it.equals("User", ignoreCase = true) } ?: "User"
+    val roomDisplayImage = cachedCurrentProfile?.let { profile ->
+        val nested = profile.optJSONObject("profile") ?: profile.optJSONObject("userData") ?: profile.optJSONObject("user") ?: JSONObject()
+        sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture", "profilePic", "profilePicture", "avatar_url")
+            .flatMap { key -> sequenceOf(profile.optString(key, "").trim(), nested.optString(key, "").trim()) }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
+    } ?: currentUser.image.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
+        ?: ZYORA_DEFAULT_AVATAR_URL
+    var copiedId by remember { mutableStateOf("") }
+    // Room-info-only data is loaded when the sheet is opened, not during room entry.
+    // This keeps non-critical member/admin lookups off the room join critical path.
+    var showInfo by remember { mutableStateOf(false) }
+    var showRoomShareRequest by remember { mutableStateOf(false) }
+    var ownerVipId by remember(roomOwnerAccountId) { mutableStateOf("") }
+    var ownerVipBadge by remember(roomOwnerAccountId) { mutableStateOf(false) }
+    LaunchedEffect(roomOwnerAccountId, showInfo) {
+        if (roomOwnerAccountId.isBlank()) return@LaunchedEffect
+        val profiles = withContext(Dispatchers.IO) {
+            val remote = runCatching {
+                ProfilePersistence.load(TargetUser(
+                    id = roomOwner.id.ifBlank { roomOwnerAccountId },
+                    uid = roomOwner.uid.ifBlank { roomOwnerAccountId },
+                    accountId = roomOwnerAccountId, name = roomOwner.name, image = roomOwner.image
+                ))
+            }.getOrNull()
+            val cached = sequenceOf(roomOwnerAccountId, roomOwner.uid, roomOwner.id)
+                .filter { it.isNotBlank() }
+                .mapNotNull { key -> runCatching { NativeIndexDatabase(appContext).loadProfile(key) }.getOrNull() }
+                .firstOrNull { it.has("vipId") }
+            remote to cached
+        }
+        val remote = profiles.first
+        val cached = profiles.second
+        val candidate = sequenceOf(remote?.optString("vipId", "").orEmpty(), cached?.optString("vipId", "").orEmpty())
+            .map { it.trim() }.firstOrNull { it.matches(Regex("\\d{1,20}")) }.orEmpty()
+        val expiry = remote?.optLong("vipIdExpiresAt", cached?.optLong("vipIdExpiresAt", 0L) ?: 0L)
+            ?: cached?.optLong("vipIdExpiresAt", 0L) ?: 0L
+        val badge = (remote?.optBoolean("vipIdBadge", false) == true) ||
+            remote?.optString("vipIdBadge", "").equals("true", true) ||
+            (cached?.optBoolean("vipIdBadge", false) == true) ||
+            cached?.optString("vipIdBadge", "").equals("true", true)
+        val active = candidate.isNotBlank() && (expiry == 0L || expiry > System.currentTimeMillis()) && badge
+        ownerVipId = if (active) candidate else ""
+        ownerVipBadge = active
+    }
+    var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
+    var roomImage by remember{mutableStateOf(roomOwner.image)}
+    var announcement by remember{mutableStateOf("")}
+    // Chat visibility is transient; the Room Settings announcement remains persisted.
+    var showRoomSettingsAnnouncementInChat by remember(roomId) { mutableStateOf(false) }
+    var roomAdminIds by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
+    // Some seat snapshots identify the signed-in user by UID while admin lists use accountId.
+    val currentUserSeatIds = setOf(accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
+    val seatAdminIds = remember(roomAdminIds, currentUserSeatIds) {
+        if (roomAdminIds.any { it in currentUserSeatIds }) roomAdminIds + currentUserSeatIds else roomAdminIds
+    }
+    var locked by remember(roomId) { mutableStateOf(false) }
+    var publicMsgOff by remember(roomId) { mutableStateOf(false) }
+    var roomPassword by remember(roomId) { mutableStateOf("") }
+    var roomAdminUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
+    var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
+    var purchasedRoomThemeImage by remember(roomId) { mutableStateOf("") }
+    var purchasedRoomThemeExpiresAt by remember(roomId) { mutableLongStateOf(0L) }
+    var roomCustomThemeUrl by remember(roomId) {
+        mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty())
+    }
+
+    // Built-in themes must never be checked against the paid Store inventory.
+    // Previously every ID except Forest Night, Moon Light and Custom was treated
+    // as a purchased theme. That made Lantern Tree / Northern Light / Sword Ruins
+    // look "unowned" and silently overwrite the saved choice with Forest Night.
+    val builtInRoomThemeIds = remember {
+        setOf(
+            "forest-night", "mood-light", "lantern-tree", "northern-light",
+            "sword-ruins", "cornfield-portal", "deer-moonlight",
+            "moon-light-new", "dark-night-flower", "custom"
+        )
+    }
+
+    LaunchedEffect(roomId, roomTheme) {
+        purchasedRoomThemeImage = ""
+        purchasedRoomThemeExpiresAt = 0L
+        if (roomTheme.isNotBlank() && roomTheme !in builtInRoomThemeIds) {
+            val selectedThemeId = roomTheme
+            // Distinguish a confirmed missing/expired purchase from a network or
+            // server error. A temporary inventory failure must not erase a theme.
+            val inventoryLookup = withContext(Dispatchers.IO) {
+                runCatching {
+                    val encoded = java.net.URLEncoder.encode(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "UTF-8")
+                    val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        useCaches = false
+                        setRequestProperty("Cache-Control", "no-cache, no-store")
+                        setRequestProperty("Pragma", "no-cache")
+                    }
+                    try {
+                        if (conn.responseCode !in 200..299) error("Theme inventory unavailable")
+                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val items = root.optJSONArray("items") ?: JSONArray()
+                        (0 until items.length()).map { items.getJSONObject(it) }
+                            .firstOrNull { it.optString("itemId") == selectedThemeId && it.optString("tab") == "Theme" && it.optLong("expiresAt") > System.currentTimeMillis() }
+                            ?.let { it.optString("image", "") to it.optLong("expiresAt") }
+                    } finally { conn.disconnect() }
+                }
+            }
+            if (inventoryLookup.isSuccess) {
+                val purchased = inventoryLookup.getOrNull()
+                if (purchased == null || purchased.first.isBlank()) {
+                    if (roomTheme == selectedThemeId) {
+                        roomTheme = "forest-night"
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("theme_$roomId", "forest-night").apply()
+                    }
+                } else {
+                    purchasedRoomThemeImage = purchased.first
+                    purchasedRoomThemeExpiresAt = purchased.second
+                    delay((purchased.second - System.currentTimeMillis()).coerceAtLeast(0L))
+                    if (roomTheme == selectedThemeId && purchasedRoomThemeExpiresAt == purchased.second) {
+                        roomTheme = "forest-night"
+                        purchasedRoomThemeImage = ""
+                        purchasedRoomThemeExpiresAt = 0L
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("theme_$roomId", "forest-night").apply()
+                    }
+                }
+            }
+        }
+    }
+    
+    fun saveLastRoomSeat(seatNumber: Int) {
+        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+            .edit().putInt("lastSeat_$roomId", seatNumber).apply()
+    }
+
+    val luckyAnimation = rememberLuckyAnimationController(roomId)
+    LuckyAnimationControllerEffects(luckyAnimation)
+    var luckyGiftOrigin by luckyAnimation::origin
+    val luckySeatCenters = luckyAnimation.seatCenters
+    var roomRootSize by luckyAnimation::rootSize
+    val luckyGiftFlights = luckyAnimation.flights
+    var luckyGiftNotice by luckyAnimation::notice
+    var luckyNoticeGeneration by luckyAnimation::noticeGeneration
+    var showLuckyComboButton by luckyAnimation::showComboButton
+    var pendingLuckyGiftTransferId by remember(roomId) { mutableStateOf("") }
+    var luckyComboTimeLeft by luckyAnimation::comboTimeLeft
+    var luckyComboGeneration by luckyAnimation::comboGeneration
+    var luckyComboPending by luckyAnimation::comboPending
+    var luckyComboClicksPending by remember(roomId) { mutableIntStateOf(0) }
+    var lastLuckyComboPayload by luckyAnimation::lastComboPayload
+    val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
+    val seenRoomGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
+    var showFloatingLuckyBag by remember { mutableStateOf(false) }
+    var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
+    var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
+    var luckyBagSenderName by remember { mutableStateOf("") }
+    var luckyBagSenderImage by remember { mutableStateOf("") }
+    var luckyBagId by remember { mutableStateOf("") }
+    var luckyBagExpiresAt by remember { mutableLongStateOf(0L) }
+    var luckyBagSecondsLeft by remember { mutableIntStateOf(0) }
+    var luckyBagClaiming by remember { mutableStateOf(false) }
+    var luckyBagClaimError by remember { mutableStateOf<String?>(null) }
+    var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
+    // Hold Lucky Gift chat rows until the combo window closes; ordinary gifts remain immediate.
+    val messages=remember{mutableStateListOf<NativeRoomMessage>()}
+    var pendingLuckyChatMessages by remember(roomId) { mutableStateOf<List<NativeRoomMessage>>(emptyList()) }
+    var luckyComboWindowWasVisible by remember(roomId) { mutableStateOf(false) }
+    LaunchedEffect(showLuckyComboButton, pendingLuckyChatMessages) {
+        if (showLuckyComboButton) {
+            luckyComboWindowWasVisible = true
+        } else if (luckyComboWindowWasVisible) {
+            if (pendingLuckyChatMessages.isNotEmpty()) {
+                pendingLuckyChatMessages.forEach { pending ->
+                    val existingIndex = messages.indexOfLast { it.id == pending.id }
+                    if (existingIndex >= 0) messages[existingIndex] = pending
+                    else messages.add(pending)
+                }
+                pendingLuckyChatMessages = emptyList()
+            }
+            luckyComboWindowWasVisible = false
+        }
+    }
+
+    LaunchedEffect(luckyBagExpiresAt) {
+        while (luckyBagExpiresAt > 0L) {
+            val remaining = ((luckyBagExpiresAt - System.currentTimeMillis() + 999L) / 1000L).coerceAtLeast(0L)
+            luckyBagSecondsLeft = remaining.toInt()
+            if (remaining <= 0L) {
+                showFloatingLuckyBag = false
+                break
+            }
+            kotlinx.coroutines.delay(1000L)
+        }
+    }
+
+    LaunchedEffect(roomId, accountId) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/room/$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                try {
+                    if (connection.responseCode in 200..299) {
+                        val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        val bag = root.optJSONObject("bag")
+                        if (bag != null) {
+                            withContext(Dispatchers.Main) {
+                                luckyBagId = bag.optString("bagId")
+                                luckyBagExpiresAt = bag.optLong("expiresAt", 0L)
+                                luckyBagSenderName = bag.optString("senderName", "User")
+                                luckyBagSenderImage = bag.optString("senderImage", "")
+                                showFloatingLuckyBag = true
+                            }
+                        }
+                    }
+                } finally { connection.disconnect() }
+            }
+        }
+    }
+
+    LaunchedEffect(roomAdminIds, showInfo) {
+        if (!showInfo) return@LaunchedEffect
+        if (roomAdminIds.isEmpty()) {
+            roomAdminUsers = emptyList()
+        } else {
+            val found = withContext(Dispatchers.IO) {
+                roomAdminIds.mapNotNull { adminId ->
+                    runCatching {
+                        val encoded = java.net.URLEncoder.encode(adminId, "UTF-8")
+                        val conn = (java.net.URL("https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 2500
+                            readTimeout = 2500
+                        }
+                        try {
+                            if (conn.responseCode !in 200..299) return@runCatching null
+                            val rootText = conn.inputStream.bufferedReader().use { it.readText() }
+                            val root = rootText.trim()
+                            val arr = if (root.startsWith("[")) JSONArray(root) else {
+                                val obj = JSONObject(root)
+                                obj.optJSONArray("users") ?: obj.optJSONArray("results")
+                                    ?: JSONArray().apply { obj.optJSONObject("user")?.let { put(it) } }
+                            }
+                            val user = (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.firstOrNull { u ->
+                                u.optString("accountId", u.optString("accountNumber", u.optString("displayUserNumber", ""))) == adminId ||
+                                    u.optString("uid") == adminId || u.optString("id") == adminId
+                            }
+                            user?.let { u ->
+                                RoomInfoFollower(
+                                    adminId,
+                                    u.optString("name").takeUnless { it == "null" }.orEmpty()
+                                        .ifBlank { u.optString("displayName").ifBlank { u.optString("userName", "User") } },
+                                    u.optString("image").takeUnless { it == "null" }.orEmpty()
+                                        .ifBlank { u.optString("avatar").ifBlank { u.optString("profileImageUrl", "") } }
+                                )
+                            }
+                        } finally { conn.disconnect() }
+                    }.getOrNull()
+                }
+            }
+            roomAdminUsers = found
+        }
+    }
+
+    LaunchedEffect(roomId, accountId) {
+        val cachedLock = withContext(Dispatchers.IO) { runCatching { NativeIndexDatabase(appContext).loadRoomLock(roomId) }.getOrNull() }
+        if (cachedLock != null) { locked = cachedLock.first; if (accountId == roomOwnerAccountId) roomPassword = cachedLock.second }
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                try {
+                    if (conn.responseCode in 200..299) {
+                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val saved = root.optJSONObject("room") ?: root
+                        val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
+                        val rawRoomImage = sequenceOf("dp", "image", "roomDp", "Room dp", "roomImage", "imageUrl", "avatar", "photo").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && it != "/default-avatar.png" }.orEmpty()
+                        val image = when {
+                            rawRoomImage.startsWith("data:image/", true) ->
+                                "https://zyora-server.onrender.com/api/rooms/image?roomId=$encoded"
+                            rawRoomImage.isBlank() -> ""
+                            rawRoomImage.startsWith("/") -> "https://zyora-server.onrender.com$rawRoomImage"
+                            else -> rawRoomImage
+                        }
+                        val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
+                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
+                        val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: roomTheme
+                        val savedCustomTheme = sequenceOf("customTheme", "themeImage").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                        val savedLocked = saved.optBoolean("isLocked", locked)
+                        val savedPublicMsgOff = saved.optBoolean("publicMsgOff", false)
+                        val savedRoomPassword = saved.optString("roomPassword", roomPassword).takeUnless { it == "null" }.orEmpty()
+                        val savedAdminsJson = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
+                        val savedAdmins = savedAdminsJson?.let { adminsJson ->
+                            (0 until adminsJson.length()).flatMap { i ->
+                                val entry = adminsJson.opt(i)
+                                when (entry) {
+                                    is JSONObject -> listOf("accountId", "userId", "id", "uid")
+                                        .mapNotNull { key -> entry.optString(key).trim().takeIf { it.isNotBlank() && it != "null" } }
+                                    is String -> listOf(entry.trim()).filter { it.isNotBlank() && it != "null" }
+                                    else -> emptyList()
+                                }
+                            }.distinct()
+                        }
+                        launch(Dispatchers.Main) {
+                            if (name.isNotBlank()) roomName = name
+                            if (!isLogoRoom && image.isNotBlank()) roomImage = image
+                            announcement = message
+                            showRoomSettingsAnnouncementInChat = message.isNotBlank() && saved.optBoolean("announcementChatVisible", true)
+                            publicMsgOff = savedPublicMsgOff
+                            roomMicMode = savedMicMode
+                            roomTheme = savedTheme
+                            if (savedAdmins != null) roomAdminIds = savedAdmins
+                            locked = savedLocked
+                            roomPassword = if (accountId == roomOwnerAccountId) savedRoomPassword else ""
+                            locked = savedLocked
+                            roomCustomThemeUrl = savedCustomTheme
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("room_locked_$roomId", savedLocked).putString("room_password_$roomId", if (accountId == roomOwnerAccountId) savedRoomPassword else "").apply()
+                            NativeIndexDatabase(appContext).saveRoomLock(roomId, savedLocked, if (accountId == roomOwnerAccountId) savedRoomPassword else "")
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).putString("customTheme_$roomId", savedCustomTheme).apply()
+                        }
+                    }
+                } finally { conn.disconnect() }
+            }
+        }
+    }
+    var followed by remember{mutableStateOf(false)}
+    var followedRoomUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    LaunchedEffect(roomId, showInfo) {
+        if (!showInfo) return@LaunchedEffect
+        followedRoomUsers = withContext(Dispatchers.IO) {
+            runCatching {
+                val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/room-follows?roomId=$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Accept", "application/json")
+                }
+                try {
+                    if (connection.responseCode !in 200..299) error("Room members unavailable")
+                    val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val array = root.optJSONArray("followers") ?: JSONArray()
+                    (0 until array.length()).mapNotNull { index ->
+                        val item = array.optJSONObject(index) ?: return@mapNotNull null
+                        val id = item.optString("userId").trim()
+                        if (id.isBlank()) return@mapNotNull null
+                        RoomInfoFollower(id, item.optString("followerName").ifBlank { "User" }, item.optString("followerImage"), item.optString("followerCountry"))
+                    }.distinctBy { it.accountId }
+                } finally { connection.disconnect() }
+            }.getOrDefault(emptyList())
+        }
+    }
+    LaunchedEffect(roomId, accountId) {
+        if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
+        followed = withContext(Dispatchers.IO) {
+            runCatching {
+                val url = java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=" + java.net.URLEncoder.encode(accountId, "UTF-8"))
+                val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 8000 }
+                try {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val follows = JSONObject(body).optJSONArray("follows") ?: JSONArray()
+                    (0 until follows.length()).any { follows.optJSONObject(it)?.optString("roomId") == roomId }
+                } finally { conn.disconnect() }
+            }.getOrDefault(false)
+        }
+    }
+    val roomEffectsPrefs = remember { appContext.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
+    val entryEffectPrefKey = "entry_effect_$accountId"
+    val giftEffectPrefKey = "gift_effect_$accountId"
+    val speakerPrefKey = "speaker_enabled_$accountId"
+    // These are device-local preferences keyed by the signed-in account.
+    // Never inherit another room member's/room owner's previous room-level toggle.
+    var entryEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(entryEffectPrefKey, true)) }
+    var giftEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(giftEffectPrefKey, true)) }
+    var speaker by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(speakerPrefKey, true)) }
+    var localVoiceSpeaking by remember { mutableStateOf(false) }
+    // Public room messages stay ON unless the owner explicitly disables them.
+    var showPublicMessageClosedToast by remember { mutableStateOf(false) }
+    var roomToastText by remember { mutableStateOf("") }
+    LaunchedEffect(roomToastText) {
+        if (roomToastText.isNotBlank()) {
+            kotlinx.coroutines.delay(1600)
+            roomToastText = ""
+        }
+    }
+    var showRoomOwnerBlockedToast by remember { mutableStateOf(false) }
+    val isRoomOwner = accountId == roomOwnerAccountId || roomAdminIds.any { it.trim() in currentUserSeatIds }
+    val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
+    LaunchedEffect(showPublicMessageClosedToast) {
+        if (showPublicMessageClosedToast) {
+            kotlinx.coroutines.delay(1800)
+            showPublicMessageClosedToast = false
+        }
+    }
+    var showChat by remember{mutableStateOf(false)}
+    val latestShowChat by rememberUpdatedState(showChat)
+    var showMessageSheet by remember{mutableStateOf(false)}
+    val roomUnreadPrefs = remember { appContext.getSharedPreferences("zyora_unread_messages", android.content.Context.MODE_PRIVATE) }
+    var roomHasUnreadMessages by remember(accountId) {
+        mutableStateOf(roomUnreadPrefs.getInt("unread_$accountId", 0) > 0)
+    }
+    DisposableEffect(accountId, roomUnreadPrefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key?.startsWith("unread_${accountId}_") == true) {
+                val prefix = "unread_${accountId}_"
+                val total = prefs.all.entries.asSequence()
+                    .filter { it.key.startsWith(prefix) }
+                    .sumOf { (it.value as? Int ?: 0).coerceAtLeast(0) }
+                prefs.edit().putInt("unread_$accountId", total).apply()
+                roomHasUnreadMessages = total > 0
+            }
+        }
+        roomUnreadPrefs.registerOnSharedPreferenceChangeListener(listener)
+        val prefix = "unread_${accountId}_"
+        val total = roomUnreadPrefs.all.entries.asSequence()
+            .filter { it.key.startsWith(prefix) }
+            .sumOf { (it.value as? Int ?: 0).coerceAtLeast(0) }
+        roomUnreadPrefs.edit().putInt("unread_$accountId", total).apply()
+        roomHasUnreadMessages = total > 0
+        onDispose { roomUnreadPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    var selectedOfficialChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+    var pendingRoomInvitationJson by remember { mutableStateOf<String?>(null) }
+    var showMenu by remember{mutableStateOf(false)}
+    var showPkPage by remember { mutableStateOf(false) }
+    var pkBattleMinimized by remember { mutableStateOf(false) }
+    var showStore by remember { mutableStateOf(false) }
+    var storeInitialView by remember { mutableStateOf("store") }
+    var showExitMenu by remember{mutableStateOf(false)}
+    // The room remains composed while minimized; no socket-only keep/dispose handoff is used.
+    var showRoomCup by remember { mutableStateOf(false) }
+    var showRoomCupOnline by remember { mutableStateOf(false) }
+    var showSettings by remember{mutableStateOf(false)}
+    var showGift by remember{mutableStateOf(false)}
+    var selectedGiftRecipient by remember { mutableStateOf<GiftPickerRoomUser?>(null) }
+    var showEmoji by remember{mutableStateOf(false)}
+    var showGames by remember{mutableStateOf(false)}
+    var showRoomTask by remember{mutableStateOf(false)}
+    var showWildParty by remember{mutableStateOf(false)}
+    var wildPartyMinimized by remember { mutableStateOf(false) }
+    var showDragonBattle by remember{mutableStateOf(false)}
+    var dragonBattleMinimized by remember { mutableStateOf(false) }
+    var showLucky777 by remember { mutableStateOf(false) }
+    var lucky777Minimized by remember { mutableStateOf(false) }
+    var showSeatSheet by remember{mutableStateOf(false)}
+    var selectedChatProfile by remember { mutableStateOf<NativeRoomMessage?>(null) }
+
+    var miniMusicTrack by remember(accountId) { mutableStateOf(savedRoomTrack) }
+    // Restore the previous selection into shared controller state without auto-playing it.
+    LaunchedEffect(accountId, savedRoomTrack) {
+        // Room music selection is account-scoped. Never let a previous room/account's
+        // process-global track override this user's saved selection on re-entry.
+        MusicPlaybackState.currentTrack = savedRoomTrack
+        MusicPlaybackState.currentPlayingUri = null
+        MusicPlaybackState.isPlaying = false
+    }
+    // Controller UI is opt-in for each room visit. Restoring a saved track must not show it.
+    var musicControllerVisible by remember { mutableStateOf(false) }
+    var musicControllerMinimized by remember { mutableStateOf(false) }
+    val musicCardDragOffset = remember { Animatable(0f) }
+    val musicDragScope = rememberCoroutineScope()
+    var isMusicPlaying by remember { mutableStateOf(false) }
+    var musicVolume by remember { mutableFloatStateOf(1f) }
+    var repeatOneEnabled by remember { mutableStateOf(false) }
+    var showMusicVolumeView by remember { mutableStateOf(false) }
+    var openMusicPageFromController by remember { mutableStateOf(false) }
+    var musicPlaylist by remember { mutableStateOf<List<NativeMusicTrack>>(emptyList()) }
+    var currentTrackIndex by remember { mutableIntStateOf(0) }
+    var musicCurrentTime by remember { mutableFloatStateOf(0f) }
+    var musicDuration by remember { mutableFloatStateOf(0f) }
+
+    var inputValue by remember { mutableStateOf(TextFieldValue("")) }
+    val input = inputValue.text
+    var pendingMentions by remember { mutableStateOf<List<NativeMention>>(emptyList()) }
+    val chatFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    var keyboardShownForChat by remember { mutableStateOf(false) }
+
+    // Resolve the real duration for tracks whose playlist metadata is missing.
+    // Never substitute a hard-coded 3:00 value in the room mini-player.
+    LaunchedEffect(miniMusicTrack?.url, miniMusicTrack?.duration) {
+        val track = miniMusicTrack ?: return@LaunchedEffect
+        if (track.duration > 0L) {
+            musicDuration = track.duration / 1000f
+        } else {
+            musicDuration = 0f
+            musicCurrentTime = 0f
+            val resolvedDuration = withContext(Dispatchers.IO) {
+                runCatching {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        val uri = Uri.parse(track.url)
+                        if (uri.scheme == "http" || uri.scheme == "https") {
+                            retriever.setDataSource(track.url, emptyMap<String, String>())
+                        } else {
+                            retriever.setDataSource(appContext, uri)
+                        }
+                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            ?.toLongOrNull() ?: 0L
+                    } finally {
+                        runCatching { retriever.release() }
+                    }
+                }.getOrDefault(0L)
+            }
+            if (miniMusicTrack?.url == track.url && resolvedDuration > 0L) {
+                musicDuration = resolvedDuration / 1000f
+            }
+        }
+    }
+
+    LaunchedEffect(isMusicPlaying, miniMusicTrack) {
+        while (isMusicPlaying && miniMusicTrack != null) {
+            kotlinx.coroutines.delay(1000)
+            if (musicDuration > 0f) {
+                if (musicCurrentTime < musicDuration) {
+                    musicCurrentTime = (musicCurrentTime + 1f).coerceAtMost(musicDuration)
+                } else if (repeatOneEnabled) {
+                    // MediaPlayer is already looping the same track; keep the UI timer on that track.
+                    musicCurrentTime = 0f
+                } else if (musicPlaylist.isNotEmpty()) {
+                    currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
+                    val nextTrack = musicPlaylist[currentTrackIndex]
+                    miniMusicTrack = nextTrack
+                    persistLastRoomTrack(nextTrack)
+                    musicCurrentTime = 0f
+                    MusicPlaybackState.currentPlayingUri = nextTrack.url
+                    MusicPlaybackState.currentTrack = nextTrack
+                    runCatching {
+                        val intent = Intent(appContext, RoomMusicService::class.java)
+                            .setAction(RoomMusicService.ACTION_PLAY)
+                            .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
+                            .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
+                        ContextCompat.startForegroundService(appContext, intent)
+                    }
+                } else {
+                    isMusicPlaying = false
+                    MusicPlaybackState.isPlaying = false
+                }
+            }
+        }
+    }
+
+    fun musicPlayPause() {
+        val track = miniMusicTrack ?: return
+        runCatching {
+            if (isMusicPlaying) {
+                appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
+                isMusicPlaying = false
+                MusicPlaybackState.isPlaying = false
+            } else {
+                val intent = Intent(appContext, RoomMusicService::class.java)
+                    .setAction(RoomMusicService.ACTION_PLAY)
+                    .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                    .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                ContextCompat.startForegroundService(appContext, intent)
+                isMusicPlaying = true
+                MusicPlaybackState.currentPlayingUri = track.url
+                MusicPlaybackState.currentTrack = track
+                MusicPlaybackState.isPlaying = true
+            }
+        }
+    }
+
+    fun musicNext() {
+        val tracks = musicPlaylist.ifEmpty { MusicPlaybackState.playlist }
+        if (tracks.isEmpty()) return
+        val activeUri = miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri
+        val activeIndex = tracks.indexOfFirst { it.url == activeUri }.let { if (it >= 0) it else currentTrackIndex }
+        currentTrackIndex = (activeIndex + 1).mod(tracks.size)
+        val nextTrack = tracks[currentTrackIndex]
+        miniMusicTrack = nextTrack
+        musicCurrentTime = 0f
+        musicDuration = if (nextTrack.duration > 0L) nextTrack.duration / 1000f else 0f
+        MusicPlaybackState.currentPlayingUri = nextTrack.url
+        MusicPlaybackState.currentTrack = nextTrack
+        MusicPlaybackState.isPlaying = true
+        runCatching {
+            ContextCompat.startForegroundService(appContext, Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_PLAY)
+                .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
+                .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name))
+        }
+        isMusicPlaying = true
+    }
+
+    fun musicPrev() {
+        val tracks = musicPlaylist.ifEmpty { MusicPlaybackState.playlist }
+        if (tracks.isEmpty()) return
+        val activeUri = miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri
+        val activeIndex = tracks.indexOfFirst { it.url == activeUri }.let { if (it >= 0) it else currentTrackIndex }
+        currentTrackIndex = (activeIndex - 1 + tracks.size).mod(tracks.size)
+        val prevTrack = tracks[currentTrackIndex]
+        miniMusicTrack = prevTrack
+        musicCurrentTime = 0f
+        musicDuration = if (prevTrack.duration > 0L) prevTrack.duration / 1000f else 180f
+        MusicPlaybackState.currentPlayingUri = prevTrack.url
+        MusicPlaybackState.currentTrack = prevTrack
+        MusicPlaybackState.isPlaying = true
+        runCatching {
+            ContextCompat.startForegroundService(appContext, Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_PLAY)
+                .putExtra(RoomMusicService.EXTRA_URI, prevTrack.url)
+                .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name))
+        }
+        isMusicPlaying = true
+    }
+
+    fun musicReplayOne() {
+        val track = miniMusicTrack ?: return
+        repeatOneEnabled = !repeatOneEnabled
+        runCatching {
+            appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_REPEAT_ONE)
+                .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, repeatOneEnabled))
+            appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_SEEK)
+                .putExtra(RoomMusicService.EXTRA_POSITION_MS, 0))
+            musicCurrentTime = 0f
+            if (!isMusicPlaying) {
+                ContextCompat.startForegroundService(appContext, Intent(appContext, RoomMusicService::class.java)
+                    .setAction(RoomMusicService.ACTION_PLAY)
+                    .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                    .putExtra(RoomMusicService.EXTRA_TITLE, track.name))
+                isMusicPlaying = true
+                MusicPlaybackState.currentPlayingUri = track.url
+                MusicPlaybackState.currentTrack = track
+                MusicPlaybackState.isPlaying = true
+            }
+        }
+    }
+
+    fun musicClose() {
+        runCatching {
+            appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
+        }
+        miniMusicTrack = null
+        musicControllerVisible = false
+        musicControllerMinimized = false
+        persistLastRoomTrack(null)
+        isMusicPlaying = false
+        MusicPlaybackState.currentPlayingUri = null
+        MusicPlaybackState.currentTrack = null
+        MusicPlaybackState.isPlaying = false
+        musicPlaylist = emptyList()
+        musicCurrentTime = 0f
+        musicDuration = 0f
+    }
+
+    // Leaving a room must stop the audio immediately, but keep the last song
+    // selected so the next room can restore its controller without reopening the picker.
+    fun stopMusicForRoomExit() {
+        runCatching {
+            appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
+        }
+        isMusicPlaying = false
+        musicControllerVisible = false
+        musicControllerMinimized = false
+        MusicPlaybackState.isPlaying = false
+        MusicPlaybackState.currentPlayingUri = null
+        miniMusicTrack?.let {
+            MusicPlaybackState.currentTrack = it
+            persistLastRoomTrack(it)
+        }
+    }
+
+    BackHandler(enabled = !isCovered) {
+        when {
+            showLuckyBagClaimedCard -> showLuckyBagClaimedCard = false
+            showLuckyBagCenterReveal -> showLuckyBagCenterReveal = false
+            showExitMenu -> showExitMenu = false
+            showChat -> { showChat = false; keyboardController?.hide() }
+            selectedOfficialChat != null -> selectedOfficialChat = null
+            showMessageSheet -> showMessageSheet = false
+            showMenu -> showMenu = false
+            showStore -> showStore = false
+            showInfo -> showInfo = false
+            showSettings -> showSettings = false
+            showGift -> showGift = false
+            showEmoji -> showEmoji = false
+            showGames -> showGames = false
+            showRoomTask -> showRoomTask = false
+            showWildParty -> showWildParty = false
+            showSeatSheet -> showSeatSheet = false
+            else -> showExitMenu = true
+        }
+    }
+    
+    var showOfficialAnnouncement by remember { mutableStateOf(true) }
+    var clearedBy by remember { mutableStateOf("") }
+    // A live kick owns the acknowledgement card; do not replace it with the
+    // compact restriction popup if a delayed join-block event arrives.
+    val liveKickReceived = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
+    val kickNotices = remember { mutableStateListOf<NativeRoomKickNotice>() }
+    
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = remember(configuration, density) { with(density) { configuration.screenWidthDp.dp.roundToPx() } }
+    
+    // Keep room chat open while the keyboard switches between letters and emoji.
+    // The IME can briefly report hidden during that transition; only the close
+    // button should dismiss the chat composer.
+    val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
+
+    // Once the five-second combo window closes, discard taps that have not
+    // reached the server. An already-emitted transfer cannot be recalled.
+    LaunchedEffect(roomId, showLuckyComboButton) {
+        if (!showLuckyComboButton) {
+            luckyComboClicksPending = 0
+            luckyAnimation.clearPendingComboTaps()
+        }
+    }
+
+    LaunchedEffect(showChat, roomSocketRef.value) {
+        roomSocketRef.value?.takeIf { it.connected() }?.emit(
+            "room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", showChat)
+        )
+        if (showChat) {
+            kotlinx.coroutines.delay(120)
+            runCatching { chatFocusRequester.requestFocus() }
+            keyboardController?.show()
+        } else keyboardController?.hide()
+    }
+    
+    var selectedSeat by remember{mutableIntStateOf(0)}
+    var showInviteSheet by remember(roomId) { mutableStateOf(false) }
+    var showSeatInviteUsers by remember(roomId) { mutableStateOf(false) }
+    var incomingSeatInvite by remember(roomId) { mutableStateOf<JSONObject?>(null) }
+     LaunchedEffect(incomingSeatInvite?.optString("inviteId")) {
+        val activeInviteId = incomingSeatInvite?.optString("inviteId").orEmpty()
+        if (activeInviteId.isNotBlank()) {
+            kotlinx.coroutines.delay(60_000)
+            if (incomingSeatInvite?.optString("inviteId") == activeInviteId) {
+                incomingSeatInvite = null
+            }
+        }
+    }
+
+            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            LaunchedEffect(messages.size, kickNotices.size, imeVisible) { kotlinx.coroutines.delay(50); val lastVisibleIndex = chatListState.layoutInfo.totalItemsCount - 1; if (lastVisibleIndex >= 0) chatListState.animateScrollToItem(lastVisibleIndex, scrollOffset = 0) }
+    val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val messageId = accountId + "-" + System.currentTimeMillis()
+            CoroutineScope(Dispatchers.Main).launch {
+                val imageUrl = runCatching { uploadChatImage(appContext, uri, messageId, "room-chat-image") }.getOrNull()
+                val activeRoomSocket = roomSocketRef.value
+                if (!imageUrl.isNullOrBlank() && activeRoomSocket?.connected() == true) {
+                    val createdAt = System.currentTimeMillis()
+                    val imageMessage = NativeRoomMessage(
+                        id = messageId, text = "📷 Image", sender = roomDisplayName,
+                        senderImage = roomDisplayImage, senderAccountId = accountId,
+                        timestamp = createdAt, type = "image", imageUrl = imageUrl
+                    )
+                    activeRoomSocket.emit(
+                        "room_message",
+                        JSONObject().put("id", messageId).put("roomId", roomId)
+                            .put("senderId", accountId).put("senderAccountId", accountId)
+                            .put("senderName", roomDisplayName).put("senderAvatar", roomDisplayImage)
+                            .put("senderImage", roomDisplayImage).put("text", "📷 Image")
+                            .put("type", "image").put("imageUrl", imageUrl).put("createdAt", createdAt)
+                    )
+                    messages.add(imageMessage)
+                } else {
+                    android.widget.Toast.makeText(appContext, "Image upload failed. Try an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+    val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
+    // Keep the vehicle video as an independent room-screen preview, not inside the entry banner.
+    var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
+    var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
+    // Deduplicate by the server's entry ID, not by room: every member entry
+    // must play on every viewer's device.
+    val seenRoomVehicleEntryIds = remember(roomId) { mutableStateListOf<String>() }
+    val pendingRoomVehicleEntries = remember(roomId) { mutableStateListOf<Pair<String, String>>() }
+    var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
+    var roomGiftVideoStyle by remember(roomId) { mutableStateOf("fade") }
+    var roomGiftVideoGreenRemove by remember(roomId) { mutableStateOf(false) }
+    // Turning an effect OFF also dismisses an already-running local preview.
+    // This is local-only and does not broadcast a setting to other room members.
+    LaunchedEffect(entryEffectEnabled) {
+        if (!entryEffectEnabled) {
+            roomVehiclePreview = ""
+            roomVehiclePreviewItemId = ""
+            pendingRoomVehicleEntries.clear()
+        }
+    }
+    LaunchedEffect(giftEffectEnabled) {
+        if (!giftEffectEnabled) { roomGiftVideoPreview = ""; roomGiftVideoStyle = "fade"; roomGiftVideoGreenRemove = false }
+    }
+    val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
+    // Preserve live speaker state across room_seats snapshots.
+    val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
+    val activeMusicSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
+    val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
+    val activeRoomUsers = backendRoomUsers.toList()
+    // Keep the room socket stable while asynchronously loaded profile/settings state updates.
+    // Reading a cached profile must not tear down and reconnect the live room connection.
+    val latestRoomDisplayName by rememberUpdatedState(roomDisplayName)
+    val latestRoomDisplayImage by rememberUpdatedState(roomDisplayImage)
+    val latestRoomName by rememberUpdatedState(roomName)
+    val latestRoomImage by rememberUpdatedState(roomImage)
+    val latestEntryEffectEnabled by rememberUpdatedState(entryEffectEnabled)
+    val latestGiftEffectEnabled by rememberUpdatedState(giftEffectEnabled)
+
+    DisposableEffect(roomId,accountId,roomOwner.id,roomOwner.accountId) {
+        val roomSocketOptions = IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+            reconnectionDelay = 1000
+            reconnectionDelayMax = 30000
+            timeout = 20000
+        }
+        // RoomPage stays composed while minimized, so its original socket is never
+        // torn down or re-created merely because another page is shown.
+        val roomSocket = IO.socket("https://zyora-server.onrender.com", roomSocketOptions)
+        roomSocketRef.value=roomSocket
+        val mainHandler = Handler(Looper.getMainLooper())
+        // Own room-scoped background work so requests cannot outlive this room instance.
+        val roomIoScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        val presenceListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val usersJson = payload.optJSONArray("users") ?: JSONArray()
+                val parsed = ArrayList<ActiveUserNative>()
+                for (index in 0 until usersJson.length()) {
+                    val user = usersJson.optJSONObject(index) ?: continue
+                    val userId = user.optString("accountId", user.optString("userId"))
+                    if (userId.isNotBlank()) {
+                        val roomCountry = sequenceOf("flag", "countryName", "country", "countryCode", "country_code")
+                            .map { user.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                        parsed.add(ActiveUserNative(
+                            accountId=userId,
+                            name=user.optString("name","User").ifBlank{"User"},
+                            image=sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { user.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty(),
+                            country=roomCountry
+                        ))
+                    }
+                }
+                mainHandler.post { backendRoomUsers.clear(); backendRoomUsers.addAll(parsed) }
+            }
+        }
+        val messageListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val id=payload.optString("id", "${payload.optString("senderId","user")}-${payload.optLong("createdAt",System.currentTimeMillis())}")
+                val type=payload.optString("type","message")
+                val senderId = payload.optString("senderAccountId",payload.optString("senderId",""))
+                // Never perform synchronous IndexDB/profile disk I/O on the Socket.IO
+                // callback thread. Parse and publish the message immediately; persist
+                // profile metadata in the room's owned IO scope in the background.
+                val remoteSender = payload.optString("senderName","").takeUnless { it == "null" }.orEmpty()
+                val remoteImage = payload.optString("senderAvatar",payload.optString("senderImage","")).takeUnless { it == "null" }.orEmpty()
+                val sender = remoteSender.ifBlank { senderId.ifBlank { "Unknown" } }
+                val image = remoteImage
+                if (senderId.isNotBlank() && (remoteSender.isNotBlank() || remoteImage.isNotBlank())) {
+                    roomIoScope.launch {
+                        runCatching {
+                            val profileDb = NativeIndexDatabase(appContext)
+                            val updatedProfile = profileDb.loadProfile(senderId) ?: JSONObject()
+                            if (remoteSender.isNotBlank()) updatedProfile.put("name", remoteSender)
+                            if (remoteImage.isNotBlank()) updatedProfile.put("image", remoteImage)
+                            profileDb.saveProfile(senderId, updatedProfile)
+                        }
+                    }
+                }
+                val mentionJson = payload.optJSONArray("mentions") ?: JSONArray()
+                val parsedMentions = (0 until mentionJson.length()).mapNotNull { index -> mentionJson.optJSONObject(index)?.let { mention -> val targetId = mention.optString("accountId").trim(); val targetName = mention.optString("name").trim(); if (targetId.isNotBlank() && targetName.isNotBlank()) NativeMention(targetId, targetName) else null } }
+                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,senderId,payload.optLong("createdAt",System.currentTimeMillis()),type,parsedMentions,payload.optString("imageUrl"))
+                mainHandler.post {
+                    if(messages.none{it.id==message.id}) messages.add(message)
+                    if(type=="join" && entryToasts.none{it.id==id}) {
+                        entryToasts.add(NativeEntryToast(id,sender,image,accountId=senderId))
+                        mainHandler.postDelayed({entryToasts.removeAll{it.id==id}},4000)
+                    }
+                }
+            }
+        }
+        val giftVideoListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId || !latestGiftEffectEnabled) return@Listener
+            val video = payload.optString("video").trim()
+            if (video.isBlank()) return@Listener
+            val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
+                else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + video.trimStart('/')
+            mainHandler.post {
+                // Keep the sender-selected effect metadata with the remote video.
+                roomGiftVideoPreview = videoUrl
+                roomGiftVideoStyle = payload.optString("videoStyle", "fade").lowercase().takeIf { it in setOf("fade", "pure", "plain") } ?: "fade"
+                roomGiftVideoGreenRemove = payload.optBoolean("greenRemove", false)
+            }
+        }
+        val vehicleEntryListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId || !latestEntryEffectEnabled) return@Listener
+            val user = payload.optString("userId").trim()
+            val vehicle = payload.optJSONObject("vehicle") ?: return@Listener
+            val video = vehicle.optString("video").trim()
+            if (user.isBlank() || video.isBlank() || vehicle.optLong("expiresAt") <= System.currentTimeMillis()) return@Listener
+            val entryId = payload.optString("entryId").trim()
+            if (entryId.isBlank()) return@Listener
+            val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
+            val itemId = vehicle.optString("itemId").trim()
+            mainHandler.post {
+                if (!seenRoomVehicleEntryIds.contains(entryId)) {
+                    seenRoomVehicleEntryIds.add(entryId)
+                    if (seenRoomVehicleEntryIds.size > 100) seenRoomVehicleEntryIds.removeAt(0)
+                    if (roomVehiclePreview.isBlank()) {
+                        roomVehiclePreview = videoUrl
+                        roomVehiclePreviewItemId = itemId
+                    } else if (pendingRoomVehicleEntries.size < 20) {
+                        pendingRoomVehicleEntries.add(videoUrl to itemId)
+                    }
+                }
+            }
+        }
+        val avatarFrameUpdatedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val updatedUserId = payload.optString("userId").trim()
+            if (updatedUserId.isNotBlank()) mainHandler.post {
+                nativeAvatarFrameRefreshVersions[updatedUserId] = (nativeAvatarFrameRefreshVersions[updatedUserId] ?: 0L) + 1L
+            }
+        }
+        val clearedListener = Emitter.Listener { args ->
+            val payload=args.firstOrNull() as? JSONObject
+            if(payload!=null && payload.optString("roomId")==roomId) {
+                mainHandler.post {
+                    messages.clear()
+                    kickNotices.clear()
+                    showRoomSettingsAnnouncementInChat = false
+                    appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", false).apply()
+                    showOfficialAnnouncement = false
+                    // Clearing public chat must never clear the persistent Room Settings announcement.
+                    clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
+                }
+            }
+        }
+        val pkStartedRoomListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId) {
+                mainHandler.post { showPkPage = true }
+            }
+        }
+        val pkSystemMessageListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val messageId = payload.optString("id").ifBlank { "pk-system-" + payload.optLong("timestamp", System.currentTimeMillis()) }
+            mainHandler.post {
+                if (messages.none { it.id == messageId }) {
+                    messages.add(NativeRoomMessage(
+                        id = messageId,
+                        text = payload.optString("text"),
+                        sender = payload.optString("actorName").ifBlank { "System" },
+                        senderImage = payload.optString("actorImage"),
+                        senderAccountId = payload.optString("actorId"),
+                        timestamp = payload.optLong("timestamp", System.currentTimeMillis()),
+                        type = "pk_system"
+                    ))
+                }
+            }
+        }
+        val kickAnnouncementListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val targetId = payload.optString("targetId")
+            val notice = NativeRoomKickNotice(
+                id = "kick-$targetId-${payload.optLong("timestamp", System.currentTimeMillis())}",
+                targetName = payload.optString("targetName").ifBlank { "User" },
+                targetImage = payload.optString("targetImage"),
+                actorName = payload.optString("actorName").ifBlank { "Admin" },
+                actorImage = payload.optString("actorImage"),
+                actorRole = if (payload.optString("actorRole") == "admin") "Room Admin" else "Room Owner",
+                timestamp = payload.optLong("timestamp", System.currentTimeMillis())
+            )
+            // Add the system notice to the same visible chat timeline.
+            mainHandler.post {
+                if (kickNotices.none { it.id == notice.id }) kickNotices.add(notice)
+            }
+        }
+        val seatInviteResultListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId &&
+                payload.optString("inviterId") == accountId &&
+                payload.optString("status") == "accepted") {
+                roomSocket.emit("room_seat_invite_apply", JSONObject()
+                    .put("roomId", roomId).put("inviterId", accountId)
+                    .put("targetId", payload.optString("targetId"))
+                    .put("inviteId", payload.optString("inviteId"))
+                    .put("seatNumber", payload.optInt("seatNumber"))
+                    .put("userName", payload.optString("userName", "User"))
+                    .put("userImage", payload.optString("userImage", "")))
+            }
+        }
+        val seatInviteListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
+                mainHandler.post { incomingSeatInvite = payload }
+            }
+        }
+        val roomKickedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
+                // Set before posting to main: a subsequent blocked event must not win this race.
+                liveKickReceived.set(true)
+                mainHandler.post {
+                    incomingSeatInvite = null
+                    onKickNotice(payload)
+                    onClose()
+                }
+            }
+        }
+        val roomKickBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId &&
+                payload.optString("userId") == accountId && liveKickReceived.compareAndSet(false, true)) {
+                // This event is sent to the user being removed from the live room.
+                // Show the same acknowledgement card as room_kicked; only later
+                // re-entry checks use the compact "can't join until" popup.
+                mainHandler.post {
+                    incomingSeatInvite = null
+                    onKickNotice(JSONObject()
+                        .put("roomId", roomId)
+                        .put("targetId", accountId)
+                        .put("expiresAt", payload.optLong("expiresAt", 0L))
+                        .put("ownerId", payload.optString("ownerId", roomId))
+                        .put("ownerName", payload.optString("ownerName", "Room Owner"))
+                        .put("ownerImage", payload.optString("ownerImage", ""))
+                        .put("blocked", false))
+                    onClose()
+                }
+            }
+        }
+        val walletBalanceListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val eventUserId = payload.optString("userId")
+            val ownWalletIds = setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id)
+                .filter { it.isNotBlank() }.toSet()
+            // Gift transfers may identify the sender by permanent account ID,
+            // while the initial wallet read uses Firebase UID. Accept both aliases.
+            if (eventUserId in ownWalletIds) {
+                val updated = payload.optLong("balance", -1L)
+                val eventAt = payload.optLong("updatedAt", System.currentTimeMillis())
+                val transactionId = payload.optString("transactionId")
+                if (transactionId.isNotBlank()) NativeWalletPending.acknowledge(appContext, canonicalWalletUserId, transactionId)
+                val visibleBalance = (updated + NativeWalletPending.delta(appContext, canonicalWalletUserId)).coerceAtLeast(0L)
+                if (updated >= 0L && eventAt >= roomWalletEventAt) mainHandler.post {
+                    if (eventAt >= roomWalletEventAt) {
+                        roomWalletEventAt = eventAt
+                        roomWalletBalance = visibleBalance
+                        appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE).edit()
+                            .putLong("balance_$canonicalWalletUserId", visibleBalance).apply()
+                    }
+                }
+            }
+        }
+        val luckyBagTransactionListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val transactionUserId = payload.optString("userId")
+            if (transactionUserId.isNotBlank() &&
+                transactionUserId in setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id)) {
+                val transactionId = payload.optString("id").ifBlank {
+                    "${payload.optString("type")}:${payload.optString("bagId")}:$transactionUserId"
+                }
+                val type = payload.optString("type")
+                val amount = payload.optLong("amount", 0L)
+                val bagId = payload.optString("bagId")
+                val createdAt = payload.optLong("createdAt", System.currentTimeMillis())
+                mainHandler.post {
+                    runCatching {
+                        NativeIndexDatabase(appContext).saveLuckyBagTransaction(
+                            transactionId, transactionUserId, type, amount, bagId, createdAt
+                        )
+                    }
+                }
+            }
+        }
+        val luckyBagBannerListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            // Sender must receive the same room banner as every other member.
+            // Excluding senderId here hid the Lucky Bag from the person who sent it.
+            if (payload.optString("roomId") == roomId) {
+                mainHandler.post {
+                    luckyBagId = payload.optString("bagId")
+                    luckyBagSenderName = payload.optString("senderName", "User")
+                    luckyBagSenderImage = payload.optString("senderImage", "")
+                    luckyBagClaimError = null
+                    showFloatingLuckyBag = true
+                }
+            }
+        }
+        val luckyBagClaimReservedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val ownIds = setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
+            if (payload.optString("roomId") == roomId && payload.optString("senderId") in ownIds) {
+                mainHandler.post {
+                    runCatching {
+                        NativeIndexDatabase(appContext).saveLuckyBagClaim(
+                            payload.optString("bagId"), payload.optString("roomId"),
+                            payload.optString("userId"), JSONObject(payload.toString())
+                        )
+                    }
+                }
+            }
+        }
+        val coinTransferFailedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val reason = payload.optString("reason")
+            mainHandler.post {
+                val failedTransferId = payload.optString("transferId").ifBlank { payload.optString("eventId") }
+                if (failedTransferId == pendingLuckyGiftTransferId) {
+                    luckyComboPending = false
+                    pendingLuckyGiftTransferId = ""
+                    if (failedTransferId.startsWith("combo-")) {
+                        luckyComboClicksPending = 0
+                        luckyAnimation.clearPendingComboTaps()
+                    } else {
+                        showLuckyComboButton = false
+                        lastLuckyComboPayload = null
+                        luckyComboTimeLeft = 0
+                        luckyAnimation.clearNotice()
+                        pendingLuckyChatMessages = emptyList()
+                    }
+                }
+                val balance = payload.optLong("balance", -1L)
+                if (balance >= 0L) roomWalletBalance = balance
+                roomToastText = when (reason) {
+                    "insufficient_coins" -> "Insufficient coins"
+                    else -> "Lucky Gift failed. Please try again."
+                }
+            }
+        }
+        val luckyGiftReceivedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val senderId = payload.optString("senderId").trim()
+            val transferId = payload.optString("transferId").trim()
+            val eventTimestamp = payload.optLong("timestamp", 0L)
+            val giftImageRaw = payload.optString("giftImage").ifBlank { payload.optString("luckyImage") }.trim()
+            val isLuckyEvent = payload.optBoolean("luckyGift", false)
+            if (isLuckyEvent) {
+                val recipientCheck = payload.optJSONArray("recipientIds") ?: JSONArray()
+                val eventAge = System.currentTimeMillis() - eventTimestamp
+                if (senderId.isBlank() || transferId.isBlank() || giftImageRaw.isBlank() ||
+                    recipientCheck.length() == 0 || eventTimestamp <= 0L ||
+                    eventAge !in -10_000L..30_000L) return@Listener
+                // A sender-side combo response must match the exact in-flight tap.
+                // This blocks late/duplicate success events from reopening a stale combo banner.
+                if (payload.optBoolean("comboReplay", false) && senderId == accountId &&
+                    (pendingLuckyGiftTransferId.isBlank() ||
+                     transferId != pendingLuckyGiftTransferId)) return@Listener
+            }
+            val senderName = payload.optString("senderName", "User")
+            val senderImageRaw = payload.optString("senderImage")
+            val giftImage = when {
+                giftImageRaw.isBlank() -> ""
+                giftImageRaw.startsWith("http", true) -> giftImageRaw
+                else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + giftImageRaw.trimStart('/')
+            }
+            val chatTransferId = transferId.ifBlank { "gift-" + (eventTimestamp.takeIf { it > 0L } ?: System.currentTimeMillis()) }
+            if (seenRoomGiftTransferIds.add(chatTransferId)) {
+                if (seenRoomGiftTransferIds.size > 250) {
+                    synchronized(seenRoomGiftTransferIds) {
+                        while (seenRoomGiftTransferIds.size > 200) seenRoomGiftTransferIds.remove(seenRoomGiftTransferIds.first())
+                    }
+                }
+                val chatRecipientMode = payload.optString("recipientMode").lowercase()
+                val chatRecipientName = payload.optString("recipientName", "User").ifBlank { "User" }
+                val chatLabel = when (chatRecipientMode) {
+                    "mic" -> "Sent All mic"
+                    "room" -> "Sent All in Room"
+                    else -> "Sent to " + chatRecipientName
+                }
+                val chatGiftName = payload.optString("giftName", "Gift").ifBlank { "Gift" }
+                val chatTimestamp = payload.optLong("timestamp", System.currentTimeMillis())
+                val chatMultiplier = payload.optInt("multiplier", 1).coerceAtLeast(1)
+                val isLuckyGiftChat = payload.optBoolean("luckyGift", false)
+                val isLuckyComboChat = isLuckyGiftChat && payload.optBoolean("comboReplay", false)
+                mainHandler.post {
+                    if (isLuckyGiftChat) {
+                        val pendingIndex = pendingLuckyChatMessages.indexOfLast {
+                            it.senderAccountId == senderId && it.imageUrl == giftImage
+                        }
+                        if (isLuckyComboChat && pendingIndex >= 0) {
+                            val previous = pendingLuckyChatMessages[pendingIndex]
+                            pendingLuckyChatMessages = pendingLuckyChatMessages.toMutableList().also { rows ->
+                                rows[pendingIndex] = previous.copy(
+                                    giftMultiplier = maxOf(previous.giftMultiplier + 1, chatMultiplier),
+                                    timestamp = chatTimestamp
+                                )
+                            }
+                        } else if (!isLuckyComboChat) {
+                            val newMessage = NativeRoomMessage(
+                                id = "gift-" + chatTransferId,
+                                text = chatLabel,
+                                sender = senderName,
+                                senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                                senderAccountId = senderId,
+                                timestamp = chatTimestamp,
+                                type = "gift",
+                                imageUrl = giftImage,
+                                giftName = chatGiftName,
+                                giftMultiplier = chatMultiplier
+                            )
+                            pendingLuckyChatMessages = pendingLuckyChatMessages + newMessage
+                        }
+                    } else if (messages.none { it.id == "gift-" + chatTransferId }) {
+                        messages.add(
+                            NativeRoomMessage(
+                                id = "gift-" + chatTransferId,
+                                text = chatLabel,
+                                sender = senderName,
+                                senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                                senderAccountId = senderId,
+                                timestamp = chatTimestamp,
+                                type = "gift",
+                                imageUrl = giftImage,
+                                giftName = chatGiftName,
+                                giftMultiplier = chatMultiplier
+                            )
+                        )
+                    }
+                }
+            }
+            if (!payload.optBoolean("luckyGift", false)) return@Listener
+            val recipientIdsJson = payload.optJSONArray("recipientIds") ?: JSONArray()
+            val recipientIds = (0 until recipientIdsJson.length()).map { recipientIdsJson.optString(it) }.toSet()
+            val multiplier = payload.optInt("multiplier", 1).coerceAtLeast(1)
+            val isComboReplay = payload.optBoolean("comboReplay", false)
+            val recipientName = payload.optString("recipientName", "User")
+            val recipientMode = when (payload.optString("recipientMode").lowercase()) {
+                "mic" -> RecipientMode.MIC
+                "room" -> RecipientMode.ROOM
+                else -> RecipientMode.SINGLE
+            }
+            val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
+            val noticeId = payload.optString("transferId").ifBlank { "lucky-$timestamp" }
+            if (!seenLuckyGiftTransferIds.add(noticeId)) return@Listener
+            if (seenLuckyGiftTransferIds.size > 200) {
+                synchronized(seenLuckyGiftTransferIds) {
+                    while (seenLuckyGiftTransferIds.size > 150) seenLuckyGiftTransferIds.remove(seenLuckyGiftTransferIds.first())
+                }
+            }
+            mainHandler.post {
+                // Treat a different gift image/recipient mode as a new Lucky Gift,
+                // not as a replay of the previous sender combo. Otherwise the old
+                // notification image can survive even though a new gift was selected.
+                val isSameSenderCombo = (isComboReplay || (senderId == accountId && luckyComboPending)) &&
+                        luckyGiftNotice?.senderId == senderId &&
+                        luckyGiftNotice?.giftImage == giftImage &&
+                        luckyGiftNotice?.recipientMode == recipientMode
+                val activeNoticeId = if (isSameSenderCombo) luckyGiftNotice?.id ?: noticeId else noticeId
+                if (isSameSenderCombo) {
+                    // A combo changes only the multiplier text; keep the same banner,
+                    // sender, recipient, image, and position without replaying its entrance.
+                    luckyGiftNotice = luckyGiftNotice?.copy(
+                        multiplier = if (isComboReplay) {
+                            maxOf(luckyGiftNotice?.multiplier ?: multiplier, multiplier)
+                        } else if (senderId == accountId && luckyComboPending) {
+                            (luckyGiftNotice?.multiplier ?: multiplier)
+                        } else {
+                            (luckyGiftNotice?.multiplier ?: multiplier) + 1
+                        },
+                        // Every server-confirmed combo result must refresh win data;
+                        // otherwise a genuine win during combo is silently missed.
+                        totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
+                        maxWinTimes = payload.optInt("luckyReturnPercent", 0),
+                        isExiting = false
+                    )
+                } else {
+                    luckyGiftNotice = LuckyNotice(
+                        id = activeNoticeId,
+                        senderId = senderId,
+                        senderName = senderName,
+                        recipientName = recipientName,
+                        senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                        giftImage = giftImage,
+                        multiplier = multiplier,
+                        totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
+                        maxWinTimes = payload.optInt("luckyReturnPercent", 0),
+                        recipientMode = recipientMode
+                    )
+                }
+                if (senderId == accountId) {
+                    if (isComboReplay) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
+                    // Only the acknowledgement for the currently in-flight transfer
+                    // may release the queue; stale responses must not unlock newer sends.
+                    if (transferId == pendingLuckyGiftTransferId) {
+                        pendingLuckyGiftTransferId = ""
+                        luckyComboPending = false
+                    }
+                    // A late acknowledgement for a combo tap that was already
+                    // allowed to expire must not reopen the button or restart a
+                    // fresh five-second sending window.
+                    if (showLuckyComboButton) {
+                        lastLuckyComboPayload = JSONObject(payload.toString())
+                        luckyComboTimeLeft = 5
+                        luckyAnimation.comboExpiresAtMs = System.currentTimeMillis() + 5_000L
+                        luckyComboGeneration++
+                    }
+                }
+                if (giftImage.isNotBlank()) {
+                    // LuckyGiftFlightOverlay is the sole Lucky image renderer.
+                    // Do not also attach the same image to the seat avatar's gifSrc,
+                    // which draws a second enlarged copy over the landing avatar.
+                    luckyAnimation.launchToRecipients(noticeId, giftImage, recipientIds)
+                }
+                // Each new send or combo replay renews the same visible notice.
+                // The notice only exits after five seconds with no further combo.
+                luckyAnimation.renewNotice()
+            }
+        }
+        val seatListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val seatsJson = payload.optJSONArray("seats") ?: JSONArray()
+                val parsed = ArrayList<NativeRoomSeat>()
+                for (index in 0 until seatsJson.length()) {
+                    val seat = seatsJson.optJSONObject(index) ?: continue
+                    val user = seat.optJSONObject("user")
+                    val gif = seat.optJSONObject("gif")
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { user.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty(),accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L,gifScale=((gif?.optDouble("scale",0.8) ?: 0.8).toFloat())))
+                }
+                mainHandler.post {
+                    // A fast seat transfer can briefly produce a snapshot containing
+                    // the same account in both its old and new seats. Keep only the
+                    // newest occurrence in the payload so Compose never draws two avatars.
+                    val seenOccupiedAccounts = mutableSetOf<String>()
+                    val normalizedParsed = parsed.asReversed().filter { seat ->
+                        !seat.occupied || seat.accountId.isBlank() || seenOccupiedAccounts.add(seat.accountId)
+                    }.asReversed()
+                    val byNumber = normalizedParsed.associateBy { it.number }
+                    for (index in seats.indices) {
+                        val number = seats[index].number
+                        val incoming = byNumber[number]
+                        seats[index] = incoming?.copy(
+                            speaking = !incoming.muted && !incoming.selfMuted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
+                        ) ?: NativeRoomSeat(number=number)
+                    }
+                    normalizedParsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { incoming ->
+                        seats.add(incoming.copy(
+                            speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
+                        ))
+                    }
+                }
+            }
+        }
+        val voiceSpeakerListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val speakingUserId = payload.optString("userId").trim()
+                if (speakingUserId.isNotBlank()) {
+                    val isSpeakingNow = payload.optBoolean("speaking", false)
+                    mainHandler.post {
+                        if (isSpeakingNow) activeVoiceSpeakerIds.add(speakingUserId)
+                        else activeVoiceSpeakerIds.remove(speakingUserId)
+                        for (index in seats.indices) {
+                            val seat = seats[index]
+                            if (seat.accountId == speakingUserId) {
+                                seats[index] = seat.copy(speaking = isSpeakingNow && !seat.muted && !seat.selfMuted)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val roomFollowListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload?.optString("roomId") == roomId) {
+                roomIoScope.launch {
+                    val updated = runCatching {
+                        val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/room-follows?roomId=$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 10000
+                            readTimeout = 10000
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) error("Room members unavailable")
+                            val array = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("followers") ?: JSONArray()
+                            (0 until array.length()).mapNotNull { index ->
+                                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                                val id = item.optString("userId").trim()
+                                if (id.isBlank()) return@mapNotNull null
+                                RoomInfoFollower(id, item.optString("followerName").ifBlank { "User" }, item.optString("followerImage"), item.optString("followerCountry"))
+                            }.distinctBy { it.accountId }
+                        } finally { connection.disconnect() }
+                    }.getOrDefault(emptyList())
+                    mainHandler.post { followedRoomUsers = updated }
+                }
+            }
+        }
+        val roomJoinBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                mainHandler.post { showRoomOwnerBlockedToast = true }
+                mainHandler.postDelayed({ showRoomOwnerBlockedToast = false; onClose() }, 2200)
+            }
+        }
+        val settingsListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val updatedMicMode = payload.optInt("micMode", roomMicMode)
+                val hasAnnouncement = payload.has("announcement") || payload.has("message")
+                val updatedAnnouncement = if (payload.has("announcement")) payload.optString("announcement", "")
+                    else payload.optString("message", "")
+                mainHandler.post {
+                    if (updatedMicMode in listOf(5, 10, 15)) {
+                        roomMicMode = updatedMicMode
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putInt("micMode_$roomId", updatedMicMode).apply()
+                    }
+                    if (payload.has("theme")) {
+                        val updatedTheme = payload.optString("theme").trim()
+                        if (updatedTheme.isNotBlank() && updatedTheme != "null") {
+                            roomTheme = updatedTheme
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                                .edit().putString("theme_$roomId", updatedTheme).apply()
+                        }
+                    }
+                    if (payload.has("customTheme")) {
+                        val updatedCustomTheme = payload.optString("customTheme").trim()
+                        roomCustomThemeUrl = updatedCustomTheme
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("customTheme_$roomId", updatedCustomTheme).apply()
+                    }
+                    if (hasAnnouncement) {
+                        announcement = updatedAnnouncement
+                        showRoomSettingsAnnouncementInChat = if (payload.has("announcementChatVisible")) payload.optBoolean("announcementChatVisible") else updatedAnnouncement.isNotBlank()
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply()
+                    }
+                    if (payload.has("publicMsgOff")) {
+                        val updatedPublicMsgOff = payload.optBoolean("publicMsgOff", true)
+                        if (updatedPublicMsgOff != publicMsgOff) {
+                            publicMsgOff = updatedPublicMsgOff
+                            val noticeId = "public-message-setting-$roomId-${payload.optLong("publicMsgUpdatedAt", payload.optLong("updatedAt", System.currentTimeMillis()))}-$updatedPublicMsgOff"
+                            if (messages.none { it.id == noticeId }) {
+                                messages.add(
+                                    NativeRoomMessage(
+                                        id = noticeId,
+                                        text = if (updatedPublicMsgOff) "Public Message OFF" else "Public Message ON",
+                                        sender = "System",
+                                        senderImage = "",
+                                        senderAccountId = roomId,
+                                        timestamp = payload.optLong("publicMsgUpdatedAt", payload.optLong("updatedAt", System.currentTimeMillis())),
+                                        type = "pk_system"
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
+                    if (payload.has("addedAdminId")) {
+                        val addedAdminId = payload.optString("addedAdminId").trim()
+                        val addedAdminName = payload.optString("addedAdminName").trim().ifBlank { "User" }
+                        if (addedAdminId.isNotBlank()) {
+                            val noticeId = "admin-added-$roomId-$addedAdminId-${payload.optLong("updatedAt")}"
+                            if (messages.none { it.id == noticeId }) {
+                                val ownerName = payload.optString("actorName").trim().ifBlank { latestRoomDisplayName.ifBlank { "Room Owner" } }
+                                val ownerImage = payload.optString("actorImage").trim().ifBlank { latestRoomDisplayImage }
+                                val ownerId = payload.optString("actorId").trim().ifBlank { roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } } }
+                                messages.add(NativeRoomMessage(noticeId, "Set $addedAdminName as Admin", ownerName, ownerImage, ownerId, payload.optLong("updatedAt", System.currentTimeMillis()), "message"))
+                            }
+                        }
+                    }
+                    if (payload.has("admin") && payload.optJSONArray("admin") != null) {
+                        val adminsJson = payload.optJSONArray("admin")!!
+                        roomAdminIds = (0 until adminsJson.length()).flatMap { index ->
+                            val entry = adminsJson.opt(index)
+                            when (entry) {
+                                is JSONObject -> listOf("accountId", "userId", "id", "uid")
+                                    .mapNotNull { key -> entry.optString(key).trim().takeIf { it.isNotBlank() && it != "null" } }
+                                is String -> listOf(entry.trim()).filter { it.isNotBlank() && it != "null" }
+                                else -> emptyList()
+                            }
+                        }.distinct()
+                    }
+                }
+            }
+        }
+        var joinMessageSent = false
+        // Room pages can reuse an already-connected room socket. In that path the
+        // server does not emit a new room_vehicle_entry event, so resolve the current
+        // user's equipped Bag vehicle directly as a reliable playback fallback.
+        fun loadEquippedRoomVehicle() {
+            val vehicleLookupIds = listOf(
+                currentUser.uid,
+                currentUser.id,
+                currentUser.accountId,
+                accountId,
+                appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                    .getString("uid", "").orEmpty()
+            ).filter { it.isNotBlank() && it != "guest" }.distinct()
+            if (vehicleLookupIds.isEmpty()) return
+            roomIoScope.launch {
+                val equipped = vehicleLookupIds.firstNotNullOfOrNull { lookupId ->
+                    runCatching {
+                        val encoded = java.net.URLEncoder.encode(lookupId, "UTF-8")
+                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/" + encoded).openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 10000
+                            readTimeout = 12000
+                            useCaches = false
+                            setRequestProperty("Cache-Control", "no-cache, no-store")
+                            setRequestProperty("Pragma", "no-cache")
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) return@runCatching null
+                            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                            val items = root.optJSONArray("items") ?: JSONArray()
+                            (0 until items.length()).mapNotNull { items.optJSONObject(it) }
+                                .firstOrNull { item ->
+                                    item.optString("tab") == "Vehicle" &&
+                                        item.optBoolean("equipped") &&
+                                        item.optLong("expiresAt") > System.currentTimeMillis() &&
+                                        item.optString("video").isNotBlank()
+                                }
+                        } finally {
+                            connection.disconnect()
+                        }
+                    }.getOrNull()
+                }
+                if (equipped != null && latestEntryEffectEnabled) {
+                    val video = equipped.optString("video").trim()
+                    val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
+                        else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
+                    val itemId = equipped.optString("itemId").trim()
+                    mainHandler.post {
+                        // The server excludes the joining socket from room_vehicle_entry.
+                        if (roomVehiclePreview.isBlank()) {
+                            roomVehiclePreview = videoUrl
+                            roomVehiclePreviewItemId = itemId
+                        } else if (pendingRoomVehicleEntries.size < 20) {
+                            pendingRoomVehicleEntries.add(videoUrl to itemId)
+                        }
+                    }
+                }
+            }
+        }
+        val connectListener = Emitter.Listener {
+            // Join the room immediately after the WebSocket handshake. Profile cache
+            // persistence is useful metadata work, but must never sit on the critical
+            // room-entry path and delay the authoritative seat/presence snapshots.
+            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",latestRoomDisplayName).put("dp",latestRoomDisplayImage).put("roomName",latestRoomName).put("roomImage",latestRoomImage).put("suppressEntry", joinMessageSent)
+            roomSocket.emit("room_join",joinPayload)
+            roomIoScope.launch {
+                runCatching {
+                    val profileDb = NativeIndexDatabase(appContext)
+                    val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
+                    if (!currentProfile.has("name") && latestRoomDisplayName.isNotBlank()) currentProfile.put("name", latestRoomDisplayName)
+                    if (!currentProfile.has("image") && latestRoomDisplayImage.isNotBlank()) currentProfile.put("image", latestRoomDisplayImage)
+                    currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
+                }
+            }
+            // A kept-room reconnect restores the existing room session. Do not replay
+            // the entry vehicle animation when silently restoring that session.
+            if (!joinMessageSent && latestEntryEffectEnabled) loadEquippedRoomVehicle()
+            if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
+            if (!joinMessageSent && accountId != "guest") {
+                joinMessageSent = true
+                val joinCreatedAt = System.currentTimeMillis()
+                val joinId = "$accountId-$joinCreatedAt"
+                val joinName = latestRoomDisplayName.ifBlank { "User" }
+                val joinImage = latestRoomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL }
+                val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
+                mainHandler.post {
+                    if (messages.none { it.id == joinId }) messages.add(nativeJoin)
+                    if (entryToasts.none { it.id == joinId }) {
+                        entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,accountId=accountId))
+                        mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000)
+                    }
+                }
+            }
+            roomSocket.emit("room_presence_request",JSONObject().put("roomId",roomId))
+            roomSocket.emit("room_seats_request",JSONObject().put("roomId",roomId))
+        }
+        roomSocket.on("room_presence",presenceListener)
+        roomSocket.on("room_vehicle_entry", vehicleEntryListener)
+        roomSocket.on("gift_video_play", giftVideoListener)
+        roomSocket.on("avatar_frame_updated", avatarFrameUpdatedListener)
+        roomSocket.on("room_seat_invite", seatInviteListener)
+        roomSocket.on("room_kicked", roomKickedListener)
+        roomSocket.on("room_kick_blocked", roomKickBlockedListener)
+        roomSocket.on("room_seat_invite_result", seatInviteResultListener)
+        roomSocket.on("room_message",messageListener)
+        roomSocket.on("room_chat_message",messageListener)
+        roomSocket.on("room_chat_cleared",clearedListener)
+        roomSocket.on("room_kick_announcement",kickAnnouncementListener)
+        roomSocket.on("pk_system_message",pkSystemMessageListener)
+        roomSocket.on("pk_started",pkStartedRoomListener)
+        roomSocket.on("room_seats",seatListener)
+        roomSocket.on("coin_transfer_received", luckyGiftReceivedListener)
+        roomSocket.on("coin_transfer_failed", coinTransferFailedListener)
+        roomSocket.on("room_voice_speaker",voiceSpeakerListener)
+        val roomPublicMessageBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                mainHandler.post { showPublicMessageClosedToast = true }
+                mainHandler.postDelayed({ showPublicMessageClosedToast = false }, 1800)
+            }
+        }
+        roomSocket.on("room_settings_updated",settingsListener)
+        roomSocket.on("room_public_message_blocked", roomPublicMessageBlockedListener)
+        roomSocket.on("room_join_blocked", roomJoinBlockedListener)
+        roomSocket.on("room_follow_updated", roomFollowListener)
+        roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
+        roomSocket.on("lucky_bag_transaction",luckyBagTransactionListener)
+        roomSocket.on("lucky_bag_claim_reserved", luckyBagClaimReservedListener)
+        roomSocket.on("wallet_balance_updated",walletBalanceListener)
+        roomSocket.on(Socket.EVENT_CONNECT,connectListener)
+        if (roomSocket.connected()) {
+            // The retained socket is already a room member. Only refresh snapshots;
+            // do not emit room_join or generate another "Enter the Room" event.
+            roomSocket.emit("room_presence_request", JSONObject().put("roomId", roomId))
+            roomSocket.emit("room_seats_request", JSONObject().put("roomId", roomId))
+            if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
+        } else {
+            roomSocket.connect()
+        }
+        onDispose {
+            // A real room exit must stop the foreground music service even when navigation
+            // bypasses the Exit-menu button. Keep the saved track metadata for the next visit.
+            runCatching {
+                appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                    .setAction(RoomMusicService.ACTION_STOP))
+            }
+            miniMusicTrack?.let { track ->
+                persistLastRoomTrack(track)
+                MusicPlaybackState.currentTrack = track
+            }
+            isMusicPlaying = false
+            MusicPlaybackState.isPlaying = false
+            MusicPlaybackState.currentPlayingUri = null
+            // This effect is disposed only on a real room switch/exit. A minimized room
+            // stays composed, so its Socket.IO listeners and voice state remain alive.
+            roomIoScope.cancel()
+            mainHandler.removeCallbacksAndMessages(null)
+            roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", false))
+            roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
+            roomSocket.off("room_presence",presenceListener)
+            roomSocket.off("room_vehicle_entry", vehicleEntryListener)
+            roomSocket.off("gift_video_play", giftVideoListener)
+            roomSocket.off("avatar_frame_updated", avatarFrameUpdatedListener)
+            roomSocket.off("room_seat_invite", seatInviteListener)
+            roomSocket.off("room_kicked", roomKickedListener)
+            roomSocket.off("room_kick_blocked", roomKickBlockedListener)
+            roomSocket.off("room_seat_invite_result", seatInviteResultListener)
+            roomSocket.off("room_message",messageListener)
+            roomSocket.off("room_chat_message",messageListener)
+            roomSocket.off("room_chat_cleared",clearedListener)
+            roomSocket.off("room_kick_announcement",kickAnnouncementListener)
+            roomSocket.off("pk_system_message",pkSystemMessageListener)
+            roomSocket.off("pk_started",pkStartedRoomListener)
+            roomSocket.off("room_seats",seatListener)
+            roomSocket.off("coin_transfer_received", luckyGiftReceivedListener)
+            roomSocket.off("coin_transfer_failed", coinTransferFailedListener)
+            roomSocket.off("room_voice_speaker",voiceSpeakerListener)
+            mainHandler.post { activeVoiceSpeakerIds.clear() }
+            roomSocket.off("room_settings_updated",settingsListener)
+            roomSocket.off("room_public_message_blocked", roomPublicMessageBlockedListener)
+            roomSocket.off("room_join_blocked", roomJoinBlockedListener)
+            roomSocket.off("room_follow_updated", roomFollowListener)
+            roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
+            roomSocket.off("lucky_bag_transaction",luckyBagTransactionListener)
+            roomSocket.off("lucky_bag_claim_reserved", luckyBagClaimReservedListener)
+            roomSocket.off("wallet_balance_updated",walletBalanceListener)
+            roomSocket.off(Socket.EVENT_CONNECT,connectListener)
+            roomSocket.disconnect()
+            roomSocket.close()
+            roomSocketRef.value=null
+            mainHandler.post { backendRoomUsers.clear() }
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black).onGloballyPositioned { roomRootSize = it.size }){
+        if (roomToastText.isNotBlank()) {
+            Text(
+                text = roomToastText,
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center).zIndex(102f)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
+        if (showRoomOwnerBlockedToast) {
+            Text(
+                text = "You're blocked by Room owner",
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center).zIndex(101f)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
+        if (showPublicMessageClosedToast) {
+            Text(
+                text = "Public Message are close",
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .zIndex(100f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 9.dp)
+            )
+        }
+        JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,localAccountId=accountId,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },canShareMusic=seats.any { it.occupied && it.accountId == accountId },playbackVoiceEnabled=speaker,roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it},onMusicActivityChanged={publisherId,active -> if(active) activeMusicSpeakerIds.add(publisherId) else activeMusicSpeakerIds.remove(publisherId)})
+        AsyncImage(model=when(roomTheme) {
+            "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784533036732~2.jpg"
+            "lantern-tree" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000001db88211a17274a0cb143387.png"
+            "northern-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000004f388211b534832cd6b1f1a2.png"
+            "sword-ruins" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000085a48211ae91d22ca50879e2.png"
+            "cornfield-portal" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000baec8211b803a01c54381503.png"
+            "deer-moonlight" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000dec082119e076cff4bc01164.png"
+            "moon-light-new" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000050288211aecacc1c105240c7.png"
+            "dark-night-flower" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000006ec4821182b483795db2d94c.png"
+            "custom" -> roomCustomThemeUrl.takeIf { it.startsWith("https://") } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+        },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+
+        // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
+        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 90.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.height(22.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.20f)).clickable { showRoomCupOnline = false; showRoomCup = true }.padding(horizontal = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Default.EmojiEvents, contentDescription = "Top Cup", tint = Color(0xFFFFD54F), modifier = Modifier.size(15.dp))
+                RoomDailyCupTotal(roomId)
+            }
+            if (musicControllerVisible && miniMusicTrack != null) {
+                Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(20.dp),contentScale = ContentScale.Fit)
+                    Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 60.dp).basicMarquee(iterations = Int.MAX_VALUE))
+                }
+            }
+        }
+
+        // FULL ROOM CONTENT LAYOUT
+        RoomPageBlock {
+Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
+            
+            // --- TOP SECTION (FIXED, NO IME PADDING) ---
+            Box(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth()) {
+                    // Top Room DP card and Top Right Options
+                    Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
+                        Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).clickable { showInfo = true },contentScale = ContentScale.Crop)
+                            Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
+                                    CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
+                                    if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
+                                        if (!followed) {
+                                            AsyncImage(
+                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_003419.png",
+                                                contentDescription = "Follow room",
+                                                modifier = Modifier.size(26.dp).clickable {
+                                            val next = !followed
+                                            followed = next
+                                            onFollowToggle(roomId, next)
+                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                                runCatching {
+                                                    val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
+                                                    val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                                                    val url = if (next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
+                                                    val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                                                        requestMethod = if (next) "POST" else "DELETE"
+                                                        connectTimeout = 8000
+                                                        readTimeout = 8000
+                                                        if (next) {
+                                                            doOutput = true
+                                                            setRequestProperty("Content-Type", "application/json")
+                                                        }
+                                                    }
+                                                    if (next) {
+                                                        val payload = JSONObject()
+                                                            .put("userId", accountId)
+                                                            .put("roomId", roomId)
+                                                            .put("roomName", roomName)
+                                                            .put("roomImage", roomImage)
+                                                            .put("roomCountry", roomOwner.country)
+                                                            .put("followerName", roomDisplayName)
+                                                            .put("followerImage", roomDisplayImage)
+                                                            .put("followerCountry", cachedCurrentProfile?.optString("country").orEmpty().ifBlank { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getString("country", "").orEmpty() })
+                                                        conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                                    }
+                                                    conn.responseCode
+                                                    conn.disconnect()
+                                                }
+                                            }
+                                        
+                                                },
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+                                    }
+                                }
+                                val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid.ifBlank { roomId } } }
+
                                     if (ownerVipBadge && ownerVipId.isNotBlank()) {
                                         AsyncImage(
                                             model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
@@ -2166,6 +4312,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     } else {
                                         Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                                     }
+                                    Spacer(Modifier.width(4.dp))
                                     Row(
                                         Modifier.clickable { showRoomCup = true; showRoomCupOnline = true },
                                         verticalAlignment = Alignment.CenterVertically,
