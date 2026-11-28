@@ -3503,7 +3503,7 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, comboReplay, senderName, senderImage, recipientName, recipientImage, recipientMode, multiplier } = {}) => {
+  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, comboReplay, senderName, senderImage, recipientName, recipientImage, recipientMode, multiplier, quantity } = {}) => {
     const room = String(roomId || "");
     const sender = String(senderId || "");
     const value = Number(amount);
@@ -3642,6 +3642,7 @@ io.on("connection", (socket) => {
       senderImage: String(senderImage || senderUser?.image || "/default-avatar.png"),
       recipientName: String(recipientName || firstRecipient?.name || "User"),
       recipientImage: String(recipientImage || firstRecipient?.image || "/default-avatar.png"),
+      quantity: Math.max(1, Number(quantity) || 1),
       multiplier: Math.max(1, Number(multiplier) || 1),
       luckyReturnPercent,
       luckyReturnAmount,
