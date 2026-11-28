@@ -1473,7 +1473,6 @@ fun RoomPage(
                         luckyAnimation.clearNotice()
                         pendingLuckyChatMessages = emptyList()
                     }
-                }
                 val balance = payload.optLong("balance", -1L)
                 if (balance >= 0L) roomWalletBalance = balance
                 roomToastText = when (reason) {
