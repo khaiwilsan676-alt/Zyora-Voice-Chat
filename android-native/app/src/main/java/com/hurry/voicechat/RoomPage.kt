@@ -3252,13 +3252,14 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     visible = true,
                     // Only the first Lucky Gift acknowledgement gates the button.
                     // After that, rapid Combo taps are sent independently without waiting.
-                    enabled = !luckyComboPending && lastLuckyComboPayload != null,
+                    // The Combo button is available as soon as the first gift is emitted;
+                    // Socket.IO preserves event order, so taps can follow without waiting for its ack.
+                    enabled = lastLuckyComboPayload != null,
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
-                        if (luckyComboPending) return@LuckyAnimationComboButton
                         val previousGift = lastLuckyComboPayload
                         val socket = roomSocketRef.value
-                        if (previousGift != null && !luckyComboPending) {
+                        if (previousGift != null) {
                             if (socket?.connected() != true) {
                                 roomToastText = "Connection unavailable. Please try again."
                             } else {
