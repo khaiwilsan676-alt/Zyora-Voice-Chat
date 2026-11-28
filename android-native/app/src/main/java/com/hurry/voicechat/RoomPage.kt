@@ -2096,7 +2096,7 @@ fun RoomPage(
             Row(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 90.dp, end = 0.dp)
                     .height(27.dp).widthIn(max = 58.dp)
-                    .clip(RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp))
+                    .clip(RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp, topEnd = 0.dp, bottomEnd = 0.dp))
                     .background(Color.Black.copy(alpha = 0.30f))
                     .clickable { showRoomCup = true; showRoomCupOnline = true }
                     .padding(horizontal = 4.dp, vertical = 2.dp),
