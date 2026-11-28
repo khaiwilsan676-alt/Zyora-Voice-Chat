@@ -167,10 +167,11 @@ fun NotificationController() {
                             )
                         }
                     }
+                    val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
                     Row(
                         Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 10.dp),
+                            .padding(start = if (isGameNotice) 8.dp else 10.dp, end = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
@@ -182,11 +183,10 @@ fun NotificationController() {
                         Spacer(Modifier.width(6.dp))
                         Column(
                             Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.offset(y = 2.dp)
                             ) {
                                 Text(
                                     notice.name,
@@ -222,7 +222,6 @@ fun NotificationController() {
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.offset(y = (-2).dp)
                             )
                         }
                         if (notice.giftImage.isNotBlank()) {
