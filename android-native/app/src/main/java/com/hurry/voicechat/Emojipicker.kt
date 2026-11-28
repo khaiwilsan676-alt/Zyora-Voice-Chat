@@ -140,7 +140,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     var activeTab by remember { mutableStateOf("emojis") }
 
     val stickers = listOf(
-        EmojiSticker("gif_512", "Emoji", "${GITHUB_PUBLIC_BASE}512.gif", null, 1.1f),
+        EmojiSticker("gif_512", "Smile", "${GITHUB_PUBLIC_BASE}512.gif", null, 1.1f),
         EmojiSticker("gif_1", "Shocked", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f),
         EmojiSticker("sad", "Sad", "${GITHUB_PUBLIC_BASE}512%20(6).gif", null, 1.1f),
         EmojiSticker("gif_2", "Cry", "${GITHUB_PUBLIC_BASE}512%20(2).gif", null, 1.1f),
@@ -184,7 +184,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Tab("Smile", activeTab == "emojis") { activeTab = "emojis" }
+                    Tab("Emoji", activeTab == "emojis") { activeTab = "emojis" }
                     Spacer(Modifier.width(32.dp))
                     Tab("Premium", activeTab == "premium") { activeTab = "premium" }
                 }
