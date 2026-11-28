@@ -140,6 +140,8 @@ private fun normalizePkAvatar(value: String): String =
 @Composable
 fun PKBattlePage(
     onClose: () -> Unit,
+    onMinimize: () -> Unit,
+    isVisible: Boolean,
     roomId: String,
     accountId: String,
     userName: String,
@@ -248,7 +250,7 @@ fun PKBattlePage(
         }
     }
 
-    BackHandler {
+    BackHandler(enabled = isVisible) {
         if (activeSheet != PkSheetView.MAIN) activeSheet = PkSheetView.MAIN else onClose()
     }
 
@@ -261,7 +263,7 @@ fun PKBattlePage(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(rootOverlayBg)
+        modifier = (if (isVisible) Modifier.fillMaxSize() else Modifier.size(1.dp).graphicsLayer { alpha = 0f }).background(rootOverlayBg)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                 if (activeSheet != PkSheetView.MAIN) activeSheet = PkSheetView.MAIN else onClose()
             }
@@ -289,7 +291,7 @@ fun PKBattlePage(
                 },
                 onBlueSend = { blueUser?.let(onSendGift) },
                 onRedSend = { redUser?.let(onSendGift) },
-                onMinimize = onClose,
+                onMinimize = onMinimize,
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
@@ -630,7 +632,7 @@ private fun PkActiveBattleOverlay(
             PkMinimizeIcon(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(26.dp)
+                    .size(22.dp)
                     .clip(CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
