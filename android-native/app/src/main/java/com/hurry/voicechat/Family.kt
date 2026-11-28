@@ -953,6 +953,25 @@ private fun RewardCard(title: String, row1: List<RewardItemData>, row2: List<Rew
 }
 
 @Composable
+private fun FamilyFramePreviewAvatar(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val avatar = remember {
+        val prefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
+        sequenceOf("image", "avatar", "photo", "photoURL", "photoUrl", "profileImage", "profileImageUrl")
+            .map { prefs.getString(it, "").orEmpty().trim() }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+            .orEmpty()
+    }
+    Box(modifier.clip(CircleShape).background(Color(0xFF292929)), contentAlignment = Alignment.Center) {
+        if (avatar.isNotBlank()) {
+            AsyncImage(model = avatar, contentDescription = "Profile avatar", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+        } else {
+            Icon(Icons.Default.Person, contentDescription = "Profile avatar", tint = Color.White, modifier = Modifier.fillMaxSize(0.65f))
+        }
+    }
+}
+
+@Composable
 private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolean, String) -> Unit, label: String) {
     val clickUrl = item.videoUrl.ifBlank { item.thumbnail }
     val isTall = item.type == "tall"
@@ -991,11 +1010,16 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
                                 cacheVideo = false
                             )
                         } else {
-                            // Frame video: remove black background cleanly
-                            FamilyBlackKeyVideo(
-                                url = familyAsset(item.thumbnail),
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            // Family frame preview: show the profile avatar underneath
+                            // and keep the transparent video frame smaller above it.
+                            BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                val avatarSize = minOf(maxWidth, maxHeight) * 0.48f
+                                FamilyFramePreviewAvatar(Modifier.size(avatarSize))
+                                FamilyBlackKeyVideo(
+                                    url = familyAsset(item.thumbnail),
+                                    modifier = Modifier.fillMaxSize().padding(8.dp)
+                                )
+                            }
                         }
                     } else {
                         AsyncImage(
@@ -1472,10 +1496,15 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
                 Box(contentModifier) {
                     if (isVideo) {
                         if (isFrameVideo) {
-                            FamilyBlackKeyVideo(
-                                url = familyAsset(url),
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            // Smaller transparent frame layered over the profile avatar.
+                            BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                val avatarSize = minOf(maxWidth, maxHeight) * 0.46f
+                                FamilyFramePreviewAvatar(Modifier.size(avatarSize))
+                                FamilyBlackKeyVideo(
+                                    url = familyAsset(url),
+                                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                                )
+                            }
                         } else {
                             StoreVideoPreview(
                                 url = familyAsset(url),
