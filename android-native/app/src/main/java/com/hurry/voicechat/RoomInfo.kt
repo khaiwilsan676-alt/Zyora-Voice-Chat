@@ -491,10 +491,16 @@ fun RoomInfo(
                             onOpenProfile(RoomInfoFollower(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, ownerDisplayName, ownerDisplayImage, ownerCountry, ownerGender))
                         }
                     }
-                    val adminIds = roomAdmins.map { it.accountId }.toSet()
-                    val allMembers = (roomFollowers + roomAdmins)
-                        .filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }
+                    val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
+                    val adminIds = roomAdmins.map { it.accountId }.filter { it.isNotBlank() && it != ownerId }.toSet()
+                    // Keep the owner first, then admins in their assigned order, then regular members.
+                    val orderedAdmins = roomAdmins
+                        .filter { it.accountId.isNotBlank() && it.accountId != ownerId }
                         .distinctBy { it.accountId }
+                    val regularMembers = roomFollowers
+                        .filter { it.accountId.isNotBlank() && it.accountId != ownerId && it.accountId !in adminIds }
+                        .distinctBy { it.accountId }
+                    val allMembers = orderedAdmins + regularMembers
                     items(allMembers, key = { "member-${it.accountId}" }) { f ->
                         val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
                         MemberRow(profile.name, profile.image, profile.accountId, if (profile.accountId in adminIds) "Admin" else "", profile.country, profile.gender) { onOpenProfile(profile) }
