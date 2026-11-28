@@ -1438,8 +1438,8 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId) return@Listener
             val reason = payload.optString("reason")
-            luckyAnimation.clearPendingComboTaps()
             mainHandler.post {
+                luckyAnimation.clearPendingComboTaps()
                 luckyComboPending = false
                 if (payload.optString("transferId").startsWith("combo-")) luckyComboClicksPending = (luckyComboClicksPending - 1).coerceAtLeast(0)
                 val failedTransferId = payload.optString("transferId").ifBlank { payload.optString("eventId") }
@@ -1466,11 +1466,14 @@ fun RoomPage(
             val transferId = payload.optString("transferId").trim()
             val eventTimestamp = payload.optLong("timestamp", 0L)
             val giftImageRaw = payload.optString("giftImage").ifBlank { payload.optString("luckyImage") }.trim()
-            val recipientCheck = payload.optJSONArray("recipientIds") ?: JSONArray()
-            val eventAge = System.currentTimeMillis() - eventTimestamp
-            if (senderId.isBlank() || transferId.isBlank() || giftImageRaw.isBlank() ||
-                recipientCheck.length() == 0 || eventTimestamp <= 0L ||
-                eventAge !in -30_000L..120_000L) return@Listener
+            val isLuckyEvent = payload.optBoolean("luckyGift", false)
+            if (isLuckyEvent) {
+                val recipientCheck = payload.optJSONArray("recipientIds") ?: JSONArray()
+                val eventAge = System.currentTimeMillis() - eventTimestamp
+                if (senderId.isBlank() || transferId.isBlank() || giftImageRaw.isBlank() ||
+                    recipientCheck.length() == 0 || eventTimestamp <= 0L ||
+                    eventAge !in -30_000L..120_000L) return@Listener
+            }
             val senderName = payload.optString("senderName", "User")
             val senderImageRaw = payload.optString("senderImage")
             val giftImage = when {
@@ -1478,7 +1481,7 @@ fun RoomPage(
                 giftImageRaw.startsWith("http", true) -> giftImageRaw
                 else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + giftImageRaw.trimStart('/')
             }
-            val chatTransferId = transferId
+            val chatTransferId = transferId.ifBlank { "gift-" + (eventTimestamp.takeIf { it > 0L } ?: System.currentTimeMillis()) }
             if (seenRoomGiftTransferIds.add(chatTransferId)) {
                 if (seenRoomGiftTransferIds.size > 250) {
                     synchronized(seenRoomGiftTransferIds) {
