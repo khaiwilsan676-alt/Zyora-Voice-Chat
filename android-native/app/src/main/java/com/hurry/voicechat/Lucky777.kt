@@ -1,9 +1,6 @@
 package com.hurry.voicechat
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -47,11 +44,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
@@ -198,112 +194,6 @@ private fun l7FormatRecordTime(timeMillis: Long): String {
         c.get(Calendar.MINUTE),
         c.get(Calendar.SECOND)
     )
-}
-
-// Procedural Firecracker + Applause Celebration Audio (works offline without extra raw audio files)
-private suspend fun l7PlayCelebrationSound() = withContext(Dispatchers.Default) {
-    runCatching {
-        val sampleRate = 22050
-        val durationSec = 4.2
-        val totalSamples = (sampleRate * durationSec).toInt()
-        val mix = FloatArray(totalSamples)
-        val rng = Random(System.currentTimeMillis())
-
-        // 1. Firecracker pops, booms & crackles
-        val burstTimes = listOf(0.05, 0.42, 0.85, 1.38, 1.95, 2.55, 3.15)
-        burstTimes.forEach { tStart ->
-            val startIdx = (tStart * sampleRate).toInt()
-            // Deep punchy firework boom
-            val boomLen = (0.36 * sampleRate).toInt()
-            for (i in 0 until boomLen) {
-                val idx = startIdx + i
-                if (idx >= totalSamples) break
-                val t = i.toDouble() / sampleRate
-                val env = exp(-t * 11.5)
-                val freq = 135.0 * exp(-t * 5.0) + 42.0
-                val boom = sin(2.0 * PI * freq * t) * 0.48 + (rng.nextFloat() * 2f - 1f) * 0.42
-                mix[idx] += (boom * env * 0.55).toFloat()
-            }
-            // Sparkling crackle pops right after boom
-            repeat(12) {
-                val crackStart = startIdx + ((0.06 + rng.nextDouble() * 0.32) * sampleRate).toInt()
-                val crackLen = (0.022 * sampleRate).toInt()
-                for (i in 0 until crackLen) {
-                    val idx = crackStart + i
-                    if (idx >= totalSamples) break
-                    val t = i.toDouble() / sampleRate
-                    val env = exp(-t * 140.0)
-                    val pop = (rng.nextFloat() * 2f - 1f) * env * 0.35
-                    mix[idx] += pop.toFloat()
-                }
-            }
-        }
-
-        // 2. Layered Crowd Applause (staggered band-shaped claps across 4 seconds)
-        val clapCount = 260
-        for (c in 0 until clapCount) {
-            val tClap = 0.08 + rng.nextDouble() * 3.75
-            val startIdx = (tClap * sampleRate).toInt()
-            val clapLen = ((0.030 + rng.nextDouble() * 0.025) * sampleRate).toInt()
-            // Fade-in then steady crowd applause then fade-out
-            val crowdEnv = when {
-                tClap < 0.45 -> tClap / 0.45
-                tClap > 3.10 -> ((3.95 - tClap) / 0.85).coerceIn(0.0, 1.0)
-                else -> 1.0
-            }
-            val clapTone = 900.0 + rng.nextDouble() * 1400.0
-            var prev = 0.0
-            for (i in 0 until clapLen) {
-                val idx = startIdx + i
-                if (idx >= totalSamples) break
-                val t = i.toDouble() / sampleRate
-                val env = exp(-t * 85.0) * crowdEnv
-                val noise = rng.nextDouble() * 2.0 - 1.0
-                // Simple resonant band-shaping for realistic hand clap snap
-                val shaped = (noise - prev * 0.45) * (0.65 + 0.35 * sin(2.0 * PI * clapTone * t))
-                prev = noise
-                mix[idx] += (shaped * env * 0.14).toFloat()
-            }
-        }
-
-        // Convert to 16-bit PCM with soft limiter
-        val pcm = ShortArray(totalSamples) { i ->
-            val v = tanh(mix[i].toDouble() * 1.15)
-            (v * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-
-        val minBuf = AudioTrack.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_GAME)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(max(minBuf, pcm.size * 2))
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .build()
-
-        try {
-            track.write(pcm, 0, pcm.size)
-            track.play()
-            delay((durationSec * 1000).toLong())
-        } finally {
-            runCatching { track.stop() }
-            runCatching { track.release() }
-        }
-    }
 }
 
 @Composable
@@ -474,7 +364,7 @@ private fun L7ResultsBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 13.dp)
+            .padding(horizontal = 22.dp)
             .height(28.dp)
             .drawBehind {
                 val w = size.width
@@ -789,7 +679,7 @@ private fun L7FirecrackerOverlay(
             val p = (animClock + b.phaseOffset) % 1f
             val cx = size.width * b.xFrac
             val cy = size.height * b.yFrac
-            val maxR = minDim * 0.27f * b.scale
+            val maxR = minDim * 0.16f * b.scale
 
             // Subtle rising crooked spark wisp just before/during ignition
             if (p < 0.32f) {
@@ -813,7 +703,7 @@ private fun L7FirecrackerOverlay(
                         startY = wispEnd.y,
                         endY = wispStart.y
                     ),
-                    style = Stroke(width = 1.8f * px, cap = StrokeCap.Round)
+                    style = Stroke(width = 1.3f * px, cap = StrokeCap.Round)
                 )
             }
 
@@ -848,7 +738,7 @@ private fun L7FirecrackerOverlay(
                     val perpX = -sinA
                     val perpY = cosA
                     val tipDist = needleR * n.lengthFactor
-                    val halfBase = 2.0f * px * n.widthFactor * coreFade
+                    val halfBase = 1.4f * px * n.widthFactor * coreFade
                     val innerDist = coreR * 0.30f
 
                     val spike = Path().apply {
@@ -862,7 +752,7 @@ private fun L7FirecrackerOverlay(
                         color = Color(0xFFF3D1FF).copy(alpha = 0.42f * coreFade),
                         start = Offset(cx + cosA * innerDist, cy + sinA * innerDist),
                         end = Offset(cx + cosA * tipDist, cy + sinA * tipDist),
-                        strokeWidth = 3.2f * px * n.widthFactor * coreFade,
+                        strokeWidth = 2.2f * px * n.widthFactor * coreFade,
                         cap = StrokeCap.Round
                     )
                     // Sharp incandescent white needle
@@ -949,8 +839,8 @@ private fun L7FirecrackerOverlay(
                         cy + sinA * headR + gravity
                     )
 
-                    val headHalfW = (1.55f * px * s.thicknessFactor * (0.65f + 0.35f * exitFade))
-                        .coerceAtLeast(0.7f)
+                    val headHalfW = (1.1f * px * s.thicknessFactor * (0.65f + 0.35f * exitFade))
+                        .coerceAtLeast(0.55f)
 
                     // 1. Soft glowing outer bloom streak (champagne gold / pale lavender-pink)
                     drawLine(
@@ -1012,7 +902,7 @@ private fun L7FirecrackerOverlay(
                     )
                     drawCircle(
                         color = Color.White.copy(alpha = alpha),
-                        radius = (tipR * 0.55f).coerceAtLeast(0.6f),
+                        radius = (tipR * 0.55f).coerceAtLeast(0.5f),
                         center = headPt
                     )
                 }
@@ -1369,7 +1259,7 @@ private fun L7WheelSection(
         val frameSize = min(maxWidth.value * 0.92f, maxHeight.value * 1.0f).coerceAtLeast(180f).dp
         val innerWheelSize = frameSize * 0.78f
         val iconRadiusDp = innerWheelSize * 0.34f
-        val iconSizeDp = innerWheelSize * 0.205f
+        val iconSizeDp = innerWheelSize * 0.172f
         val hubSizeDp = frameSize * 0.165f
         val sliceAngle = 360f / l7WheelSlices.size
 
@@ -1496,7 +1386,7 @@ private fun L7WheelSection(
                 }
             }
 
-            // 2. Real Glossy Shining Golden Highlight COVERING FULL WINNING SLICE (Center to Outer Rim, BEHIND Fruit/777 Icons!)
+            // 2. Real Glossy Shining Golden Highlight COVERING FULL WINNING SLICE (+2dp Left, +3dp Right)
             if (phase == L7Phase.RESULT) {
                 Canvas(
                     modifier = Modifier
@@ -1506,8 +1396,11 @@ private fun L7WheelSection(
                 ) {
                     val radius = size.minDimension / 2f
                     val center = Offset(size.width / 2f, size.height / 2f)
-                    val startDeg = 270f - sliceAngle / 2f
                     val outerR = radius
+                    val leftExtraDeg = Math.toDegrees((2.dp.toPx() / outerR).toDouble()).toFloat()
+                    val rightExtraDeg = Math.toDegrees((3.dp.toPx() / outerR).toDouble()).toFloat()
+                    val startDeg = 270f - sliceAngle / 2f - leftExtraDeg
+                    val sweepDeg = sliceAngle + leftExtraDeg + rightExtraDeg
 
                     val outerRect = Rect(
                         left = center.x - outerR,
@@ -1521,7 +1414,7 @@ private fun L7WheelSection(
                         arcTo(
                             rect = outerRect,
                             startAngleDegrees = startDeg,
-                            sweepAngleDegrees = sliceAngle,
+                            sweepAngleDegrees = sweepDeg,
                             forceMoveTo = false
                         )
                         close()
@@ -1615,7 +1508,7 @@ private fun L7WheelSection(
                                 endY = center.y - outerR * 0.84f
                             ),
                             startAngle = startDeg,
-                            sweepAngle = sliceAngle,
+                            sweepAngle = sweepDeg,
                             useCenter = false,
                             topLeft = Offset(center.x - outerR * 0.95f, center.y - outerR * 0.95f),
                             size = Size(outerR * 1.90f, outerR * 1.90f),
@@ -2661,17 +2554,18 @@ fun Lucky777(
     var wheelRotation by remember { mutableFloatStateOf(l7TargetAngleForSlice(2)) }
 
     var chipIndex by remember { mutableIntStateOf(1) }
-    var bets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
-    var lastBets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var bets by remember { mutableStateOf>(emptyMap()) }
+    var lastBets by remember { mutableStateOf>(emptyMap()) }
     var history by remember { mutableStateOf<List<L7Round>>(emptyList()) }
 
     var muted by remember { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
     var rulesOpen by remember { mutableStateOf(false) }
     var winnerOpen by remember { mutableStateOf(false) }
+    var popupWinKey by remember { mutableStateOf("Peach") }
     var winAmount by remember { mutableLongStateOf(0L) }
     var betAmount by remember { mutableLongStateOf(0L) }
-    var winnerTimer by remember { mutableIntStateOf(5) }
+    var winnerTimer by remember { mutableIntStateOf(6) }
     var processedRound by remember { mutableIntStateOf(-1) }
 
     var loading by remember { mutableStateOf(true) }
@@ -2769,15 +2663,15 @@ fun Lucky777(
             .apply()
     }
 
-    // Synchronized 31s round loop: 20s BETTING + 6s SPINNING + 5s RESULT
+    // Synchronized 33s round loop: 20s BETTING + 6s SPINNING + 7s RESULT (1s hold + 6s winner popup)
     LaunchedEffect(loading) {
         if (loading) return@LaunchedEffect
         while (true) {
             val now = System.currentTimeMillis()
             val elapsedMs = (now - l7Reset(now)).coerceAtLeast(0L)
-            val cycleMs = elapsedMs % 31_000L
+            val cycleMs = elapsedMs % 33_000L
             val cycleSec = (cycleMs / 1000L).toInt()
-            val currentRound = (elapsedMs / 31_000L).toInt() + 1
+            val currentRound = (elapsedMs / 33_000L).toInt() + 1
 
             round = currentRound
             val currSlice = l7OutcomeSlice(currentRound)
@@ -2805,7 +2699,7 @@ fun Lucky777(
                 }
                 else -> {
                     phase = L7Phase.RESULT
-                    countdown = 31 - cycleSec
+                    countdown = 33 - cycleSec
                     wheelRotation = currAngle
                     delay(100)
                 }
@@ -2813,7 +2707,7 @@ fun Lucky777(
         }
     }
 
-    // Round settlement & Winner Page trigger
+    // Round settlement & Winner Page trigger (1s hold -> 6s Winner Popup locked to settled round)
     LaunchedEffect(phase, round, loading) {
         if (loading) return@LaunchedEffect
         if (phase == L7Phase.BETTING) {
@@ -2824,47 +2718,46 @@ fun Lucky777(
         }
         if (phase == L7Phase.RESULT && processedRound != round) {
             processedRound = round
-            val winnerKey = l7WheelSlices[l7OutcomeSlice(round)]
+            val settledRound = round
+            val winnerKey = l7WheelSlices[l7OutcomeSlice(settledRound)]
             val roundBetsSnapshot = bets.toMap()
-            betAmount = roundBetsSnapshot.values.sum()
-            winAmount = (roundBetsSnapshot[winnerKey] ?: 0L) * l7MultiplierFor(winnerKey)
+            val settledBetAmount = roundBetsSnapshot.values.sum()
+            val settledWinAmount = (roundBetsSnapshot[winnerKey] ?: 0L) * l7MultiplierFor(winnerKey)
             val balBefore = balance
-            val balAfter = balance + winAmount
+            val balAfter = balance + settledWinAmount
             history = (history + L7Round(
-                round = round,
+                round = settledRound,
                 winner = winnerKey,
                 time = System.currentTimeMillis(),
-                myBet = betAmount,
-                winAmount = winAmount,
+                myBet = settledBetAmount,
+                winAmount = settledWinAmount,
                 betsMap = roundBetsSnapshot,
                 balanceBefore = balBefore,
                 balanceAfter = balAfter
             )).takeLast(200)
             persistHistory()
-            delay(1000)
-            if (winAmount > 0L) {
-                walletChange(winAmount, "Won in Lucky 777")
+            scope.launch {
+                delay(1000)
+                if (settledWinAmount > 0L) {
+                    walletChange(settledWinAmount, "Won in Lucky 777")
+                }
+                popupWinKey = winnerKey
+                betAmount = settledBetAmount
+                winAmount = settledWinAmount
+                winnerTimer = 6
+                winnerOpen = true
             }
-            winnerTimer = 5
-            winnerOpen = true
         }
     }
 
-    // 5-Second Winner Card Countdown Timer
+    // 6-Second Winner Card Countdown Timer
     LaunchedEffect(winnerOpen) {
         if (winnerOpen) {
-            repeat(5) {
+            repeat(6) {
                 delay(1000)
-                winnerTimer = 4 - it
+                winnerTimer = 5 - it
             }
             winnerOpen = false
-        }
-    }
-
-    // Applause + Firecracker Sound when Winner Card appears (stops automatically if muted or closed)
-    LaunchedEffect(winnerOpen, muted) {
-        if (winnerOpen && !muted) {
-            l7PlayCelebrationSound()
         }
     }
 
@@ -3060,16 +2953,19 @@ fun Lucky777(
                         .fillMaxWidth()
                         .offset(y = 7.dp)
                 ) {
-                    // Results Strip with latest winner first + existing NEW pill
+                    // Results Strip with latest winner first + existing NEW pill (15dp down)
                     L7ResultsBar(
                         history = history,
-                        modifier = Modifier.offset(y = 2.dp)
+                        modifier = Modifier
+                            .offset(y = 17.dp)
+                            .zIndex(1f)
                     )
 
-                    // 3-Card Betting Panel (Exact existing image & card UI)
+                    // 3-Card Betting Panel (4dp down)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .offset(y = 4.dp)
                             .padding(horizontal = 8.dp)
                             .height(106.dp)
                     ) {
@@ -3104,7 +3000,7 @@ fun Lucky777(
                                 ) {
                                     Text(
                                         text = betText,
-                                        modifier = Modifier.offset(y = 14.dp),
+                                        modifier = Modifier.offset(y = 17.dp),
                                         color = if (myBetVal > 0L) l7Gold else Color(0xFFFFE599),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold,
@@ -3250,11 +3146,10 @@ fun Lucky777(
             )
         }
 
-        // Centered Winner Popup Card (5s) + Firecracker Animation + Applause & Firecracker Sound
+        // Centered Winner Popup Card (6s, locked to settled round winner) + Smaller Firecracker Animation (No Sound)
         if (winnerOpen) {
-            val winKey = l7WheelSlices[winnerSlice.coerceIn(0, l7WheelSlices.lastIndex)]
             L7WinnerPopupCard(
-                winKey = winKey,
+                winKey = popupWinKey,
                 betAmount = betAmount,
                 winAmount = winAmount,
                 sheetHeight = h,
