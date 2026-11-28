@@ -504,7 +504,7 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
               className={`flex items-center gap-3 px-6 py-2.5 pl-[52px] text-[13px] font-bold transition-colors w-full text-left
                 ${activeItem === item.id
                   ? 'text-white bg-[#8a92ff]/20 border-l-[3px] border-[#8a92ff]'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-l-[3px] border-transparent'}
+                  : 'text-gray-300 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent'}
               `}
             >
               <span className="text-[14px] drop-shadow-sm">{item.icon}</span>
