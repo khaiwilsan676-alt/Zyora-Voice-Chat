@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -325,6 +327,263 @@ private fun L7TitleText(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun L7LuckyProWordText(
+    text: String,
+    fontSize: TextUnit = 24.sp,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val outerShadowStrokePx = with(density) { 2.8.dp.toPx() }
+    val rimStrokePx = with(density) { 1.7.dp.toPx() }
+    val baseStyle = TextStyle(
+        fontSize = fontSize,
+        fontWeight = FontWeight.Black,
+        fontFamily = FontFamily.SansSerif,
+        fontStyle = FontStyle.Italic,
+        letterSpacing = (-0.8).sp
+    )
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        // 1. Deep soft drop shadow behind letters
+        Text(
+            text = text,
+            modifier = Modifier.offset(x = 0.5.dp, y = 3.2.dp),
+            color = Color(0xFF2E0F00).copy(alpha = 0.72f),
+            style = baseStyle.copy(
+                drawStyle = Stroke(width = outerShadowStrokePx, join = StrokeJoin.Round)
+            )
+        )
+        // 2. Solid 3D dark amber-brown bottom extrusion
+        Text(
+            text = text,
+            modifier = Modifier.offset(x = 0.dp, y = 2.3.dp),
+            color = Color(0xFF6B2800),
+            style = baseStyle.copy(
+                drawStyle = Stroke(width = rimStrokePx * 1.25f, join = StrokeJoin.Round)
+            )
+        )
+        Text(
+            text = text,
+            modifier = Modifier.offset(x = 0.dp, y = 2.1.dp),
+            color = Color(0xFF7D3100),
+            style = baseStyle
+        )
+        // 3. Warm bronze-orange mid 3D bevel
+        Text(
+            text = text,
+            modifier = Modifier.offset(x = 0.dp, y = 1.1.dp),
+            color = Color(0xFFBD5B00),
+            style = baseStyle
+        )
+        // 4. Crisp dark golden-bronze outer outline on main face
+        Text(
+            text = text,
+            color = Color(0xFF8C3B00),
+            style = baseStyle.copy(
+                drawStyle = Stroke(width = rimStrokePx, join = StrokeJoin.Round)
+            )
+        )
+        // 5. Main glossy metallic gold vertical gradient face
+        Text(
+            text = text,
+            style = baseStyle.copy(
+                brush = Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.00f to Color(0xFFFFFEE8),
+                        0.22f to Color(0xFFFFF178),
+                        0.50f to Color(0xFFFFCA1F),
+                        0.78f to Color(0xFFF58F00),
+                        1.00f to Color(0xFFD96700)
+                    )
+                )
+            )
+        )
+    }
+}
+
+@Composable
+private fun L7TodaysWinPill(
+    todayWin: Long,
+    modifier: Modifier = Modifier
+) {
+    val pillShape = RoundedCornerShape(50)
+    Row(
+        modifier = modifier
+            .height(23.dp)
+            .widthIn(min = 186.dp)
+            .shadow(elevation = 4.dp, shape = pillShape, clip = false)
+            .clip(pillShape)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xDC131A3E),
+                        Color(0xEA080C22),
+                        Color(0xE0101638)
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFFECAD),
+                        Color(0xFFCDA856),
+                        Color(0xFFFFE599)
+                    )
+                ),
+                shape = pillShape
+            )
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "TODAY'S WIN",
+            color = Color(0xFFE8EEFF),
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.Medium,
+            fontFamily = FontFamily.Serif,
+            letterSpacing = 0.4.sp,
+            maxLines = 1
+        )
+        Spacer(Modifier.width(26.dp))
+        Text(
+            text = if (todayWin > 0L) l7FormatComma(todayWin) else "0",
+            color = Color(0xFFFFCC3D),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            style = TextStyle(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.70f),
+                    offset = Offset(0f, 1f),
+                    blurRadius = 2.5f
+                )
+            )
+        )
+    }
+}
+
+@Composable
+private fun L7ResultsBar(
+    history: List<L7Round>,
+    modifier: Modifier = Modifier
+) {
+    val recentStrip = history.takeLast(12).reversed()
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 13.dp)
+            .height(28.dp)
+            .drawBehind {
+                val w = size.width
+                val h = size.height
+                val slant = 7.dp.toPx()
+                val r = 8.dp.toPx()
+
+                val fillPath = Path().apply {
+                    moveTo(0f, h)
+                    lineTo(slant - r * 0.22f, r)
+                    quadraticTo(slant, 0f, slant + r, 0f)
+                    lineTo(w - slant - r, 0f)
+                    quadraticTo(w - slant, 0f, w - slant + r * 0.22f, r)
+                    lineTo(w, h)
+                    close()
+                }
+                val borderPath = Path().apply {
+                    moveTo(0f, h)
+                    lineTo(slant - r * 0.22f, r)
+                    quadraticTo(slant, 0f, slant + r, 0f)
+                    lineTo(w - slant - r, 0f)
+                    quadraticTo(w - slant, 0f, w - slant + r * 0.22f, r)
+                    lineTo(w, h)
+                }
+
+                drawPath(
+                    path = fillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xEA121738),
+                            Color(0xF5080B20),
+                            Color(0xFA060818)
+                        )
+                    )
+                )
+                drawPath(
+                    path = borderPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFFFEA9F),
+                            Color(0xFFD6B05A),
+                            Color(0xFFB58A34)
+                        )
+                    ),
+                    style = Stroke(
+                        width = 1.2.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
+            .padding(start = 13.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Results:",
+                color = Color(0xFFDCE4F7),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.65f),
+                        offset = Offset(0f, 1f),
+                        blurRadius = 2f
+                    )
+                )
+            )
+            Spacer(Modifier.width(6.dp))
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                recentStrip.forEachIndexed { idx, rec ->
+                    val isNewest = idx == 0
+                    val isSeven = rec.winner == "777"
+                    Box(
+                        modifier = Modifier.size(if (isSeven) 22.dp else 20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = l7ImageFor(rec.winner),
+                            contentDescription = rec.winner,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                        if (isNewest) {
+                            L7HistoryNewPill(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .offset(y = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun L7ShiningCupBadge(
     modifier: Modifier = Modifier
 ) {
@@ -415,108 +674,346 @@ private fun L7ShiningCupBadge(
 private fun L7FirecrackerOverlay(
     modifier: Modifier = Modifier
 ) {
-    data class BurstSpec(
+    data class SparkStreak(
+        val angleRad: Float,
+        val speedFactor: Float,
+        val tailFactor: Float,
+        val thicknessFactor: Float,
+        val glowColor: Color,
+        val coreTint: Color,
+        val isInnerLayer: Boolean,
+        val twinklePhase: Float
+    )
+
+    data class CoreNeedle(
+        val angleRad: Float,
+        val lengthFactor: Float,
+        val widthFactor: Float
+    )
+
+    data class RealBurst(
         val xFrac: Float,
         val yFrac: Float,
         val phaseOffset: Float,
-        val palette: List<Color>,
-        val rays: Int
+        val scale: Float,
+        val needles: List<CoreNeedle>,
+        val streaks: List<SparkStreak>,
+        val wispDriftX: Float
     )
 
     val bursts = remember {
-        listOf(
-            BurstSpec(0.16f, 0.22f, 0.00f, listOf(Color(0xFFFFE44D), Color(0xFFFF8C00), Color(0xFFFFFFFF)), 18),
-            BurstSpec(0.84f, 0.20f, 0.24f, listOf(Color(0xFFFF4D8D), Color(0xFFFFD54F), Color(0xFFFFFFFF)), 18),
-            BurstSpec(0.12f, 0.68f, 0.48f, listOf(Color(0xFF42F5FF), Color(0xFF80B3FF), Color(0xFFFFFFFF)), 16),
-            BurstSpec(0.88f, 0.64f, 0.66f, listOf(Color(0xFFFFDF38), Color(0xFFFF4040), Color(0xFFFFFFFF)), 18),
-            BurstSpec(0.50f, 0.14f, 0.35f, listOf(Color(0xFFFFF066), Color(0xFFFF6E2E), Color(0xFFFFD700)), 20),
-            BurstSpec(0.30f, 0.84f, 0.80f, listOf(Color(0xFFB366FF), Color(0xFFFFE066), Color(0xFFFFFFFF)), 16),
-            BurstSpec(0.72f, 0.82f, 0.14f, listOf(Color(0xFF5CFF8D), Color(0xFFFFEB3B), Color(0xFFFFFFFF)), 16)
+        val specs = listOf(
+            Triple(0.15f, 0.22f, 0.00f) to 1.05f,
+            Triple(0.85f, 0.21f, 0.22f) to 1.00f,
+            Triple(0.11f, 0.62f, 0.44f) to 0.96f,
+            Triple(0.89f, 0.60f, 0.65f) to 1.02f,
+            Triple(0.50f, 0.14f, 0.33f) to 0.92f,
+            Triple(0.24f, 0.84f, 0.78f) to 0.90f,
+            Triple(0.76f, 0.83f, 0.12f) to 0.94f
         )
+
+        val haloColors = listOf(
+            Color(0xFFFFE4A8), // Warm champagne gold
+            Color(0xFFF3C6FF), // Soft lilac-pink flash
+            Color(0xFFFFF1CC), // Creamy ivory gold
+            Color(0xFFE7B8FF), // Delicate violet-white
+            Color(0xFFFFD68A)  // Golden amber glow
+        )
+
+        specs.mapIndexed { bIdx, (pos, scale) ->
+            val rng = Random(918273 + bIdx * 4099)
+            val needles = List(42) { nIdx ->
+                val baseAngle = (nIdx.toDouble() / 42.0) * 2.0 * PI
+                val jitter = (rng.nextDouble() - 0.5) * 0.11
+                CoreNeedle(
+                    angleRad = (baseAngle + jitter).toFloat(),
+                    lengthFactor = (0.48f + rng.nextFloat() * 0.62f),
+                    widthFactor = (0.70f + rng.nextFloat() * 0.85f)
+                )
+            }
+            val streaks = List(54) { sIdx ->
+                val isInner = sIdx >= 34
+                val count = if (isInner) 20 else 34
+                val idxInGroup = if (isInner) sIdx - 34 else sIdx
+                val baseAngle = (idxInGroup.toDouble() / count.toDouble()) * 2.0 * PI
+                val jitter = (rng.nextDouble() - 0.5) * (if (isInner) 0.28 else 0.16)
+                val halo = haloColors[rng.nextInt(haloColors.size)]
+                val core = if (rng.nextFloat() < 0.65f) Color(0xFFFFFFFF) else Color(0xFFFFF8DF)
+                SparkStreak(
+                    angleRad = (baseAngle + jitter).toFloat(),
+                    speedFactor = if (isInner) {
+                        0.42f + rng.nextFloat() * 0.34f
+                    } else {
+                        0.68f + rng.nextFloat() * 0.44f
+                    },
+                    tailFactor = 0.26f + rng.nextFloat() * 0.28f,
+                    thicknessFactor = if (isInner) {
+                        0.65f + rng.nextFloat() * 0.55f
+                    } else {
+                        0.85f + rng.nextFloat() * 0.90f
+                    },
+                    glowColor = halo,
+                    coreTint = core,
+                    isInnerLayer = isInner,
+                    twinklePhase = rng.nextFloat() * (2.0 * PI).toFloat()
+                )
+            }
+            RealBurst(
+                xFrac = pos.first,
+                yFrac = pos.second,
+                phaseOffset = pos.third,
+                scale = scale,
+                needles = needles,
+                streaks = streaks,
+                wispDriftX = if (bIdx % 2 == 0) 0.08f else -0.08f
+            )
+        }
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "firecrackers")
+    val infiniteTransition = rememberInfiniteTransition(label = "realFirecrackers")
     val animClock by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1550, easing = LinearEasing),
+            animation = tween(durationMillis = 1650, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "firecrackerClock"
+        label = "realFirecrackerClock"
     )
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val minDim = size.minDimension
-        bursts.forEachIndexed { bIdx, b ->
+        val px = 1.dp.toPx()
+
+        bursts.forEach { b ->
             val p = (animClock + b.phaseOffset) % 1f
             val cx = size.width * b.xFrac
             val cy = size.height * b.yFrac
-            val maxRadius = minDim * 0.23f
+            val maxR = minDim * 0.27f * b.scale
 
-            // Initial flash glow on explosion start
-            if (p < 0.24f) {
-                val flashAlpha = (1f - p / 0.24f).coerceIn(0f, 1f)
-                drawCircle(
-                    brush = Brush.radialGradient(
+            // Subtle rising crooked spark wisp just before/during ignition
+            if (p < 0.32f) {
+                val wp = (p / 0.32f).coerceIn(0f, 1f)
+                val wispAlpha = (1f - wp) * 0.85f
+                val wispStart = Offset(cx + maxR * b.wispDriftX, cy + maxR * 0.46f * (1f - wp * 0.5f))
+                val wispMid = Offset(cx + maxR * b.wispDriftX * 0.35f, cy + maxR * 0.20f * (1f - wp * 0.4f))
+                val wispEnd = Offset(cx, cy)
+                val wispPath = Path().apply {
+                    moveTo(wispStart.x, wispStart.y)
+                    quadraticTo(wispMid.x, wispMid.y, wispEnd.x, wispEnd.y)
+                }
+                drawPath(
+                    path = wispPath,
+                    brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.88f * flashAlpha),
-                            b.palette.first().copy(alpha = 0.50f * flashAlpha),
+                            Color.White.copy(alpha = wispAlpha),
+                            Color(0xFFFFE6A3).copy(alpha = wispAlpha * 0.55f),
                             Color.Transparent
                         ),
-                        center = Offset(cx, cy),
-                        radius = maxRadius * 0.55f * (0.4f + p * 2.5f)
+                        startY = wispEnd.y,
+                        endY = wispStart.y
                     ),
-                    radius = maxRadius * 0.55f * (0.4f + p * 2.5f),
+                    style = Stroke(width = 1.8f * px, cap = StrokeCap.Round)
+                )
+            }
+
+            // STAGE 1: Blinding white-hot burst core + dense razor-sharp needle spikes
+            if (p < 0.30f) {
+                val sp = (p / 0.30f).coerceIn(0f, 1f)
+                val popIn = (sp / 0.25f).coerceIn(0f, 1f)
+                val coreFade = (1f - ((sp - 0.38f) / 0.62f).coerceIn(0f, 1f))
+                val needleR = maxR * (0.28f + 0.42f * (1f - (1f - sp).pow(2.2f)))
+                val coreR = maxR * (0.16f + 0.14f * popIn) * (0.65f + 0.35f * coreFade)
+
+                // Soft pinkish-lavender & warm-white atmospheric bloom
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.00f to Color.White.copy(alpha = 0.96f * coreFade),
+                            0.36f to Color(0xFFFFF4FA).copy(alpha = 0.78f * coreFade),
+                            0.64f to Color(0xFFEAC2FF).copy(alpha = 0.36f * coreFade),
+                            1.00f to Color.Transparent
+                        ),
+                        center = Offset(cx, cy),
+                        radius = needleR * 1.05f
+                    ),
+                    radius = needleR * 1.05f,
+                    center = Offset(cx, cy)
+                )
+
+                // Dense irregular pointed white starburst needles
+                b.needles.forEach { n ->
+                    val cosA = cos(n.angleRad)
+                    val sinA = sin(n.angleRad)
+                    val perpX = -sinA
+                    val perpY = cosA
+                    val tipDist = needleR * n.lengthFactor
+                    val halfBase = 2.0f * px * n.widthFactor * coreFade
+                    val innerDist = coreR * 0.30f
+
+                    val spike = Path().apply {
+                        moveTo(cx + cosA * innerDist + perpX * halfBase, cy + sinA * innerDist + perpY * halfBase)
+                        lineTo(cx + cosA * tipDist, cy + sinA * tipDist)
+                        lineTo(cx + cosA * innerDist - perpX * halfBase, cy + sinA * innerDist - perpY * halfBase)
+                        close()
+                    }
+                    // Outer soft lilac-white glow on needle
+                    drawLine(
+                        color = Color(0xFFF3D1FF).copy(alpha = 0.42f * coreFade),
+                        start = Offset(cx + cosA * innerDist, cy + sinA * innerDist),
+                        end = Offset(cx + cosA * tipDist, cy + sinA * tipDist),
+                        strokeWidth = 3.2f * px * n.widthFactor * coreFade,
+                        cap = StrokeCap.Round
+                    )
+                    // Sharp incandescent white needle
+                    drawPath(
+                        path = spike,
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.98f * coreFade),
+                                Color(0xFFFFF7E6).copy(alpha = 0.82f * coreFade),
+                                Color.White.copy(alpha = 0.0f)
+                            ),
+                            start = Offset(cx + cosA * innerDist, cy + sinA * innerDist),
+                            end = Offset(cx + cosA * tipDist, cy + sinA * tipDist)
+                        )
+                    )
+                }
+
+                // Pure blinding incandescent white center core
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.00f to Color.White.copy(alpha = coreFade),
+                            0.62f to Color.White.copy(alpha = 0.95f * coreFade),
+                            0.88f to Color(0xFFFFF2F8).copy(alpha = 0.55f * coreFade),
+                            1.00f to Color.Transparent
+                        ),
+                        center = Offset(cx, cy),
+                        radius = coreR
+                    ),
+                    radius = coreR,
                     center = Offset(cx, cy)
                 )
             }
 
-            val eased = 1f - (1f - p).pow(2.4f)
-            val fade = (1f - (p - 0.35f).coerceAtLeast(0f) / 0.65f).coerceIn(0f, 1f)
-            val gravity = p * p * maxRadius * 0.42f
+            // STAGE 2 & 3: Realistic expanding glowing chrysanthemum comet-streaks
+            if (p > 0.14f) {
+                val ep = ((p - 0.14f) / 0.86f).coerceIn(0f, 1f)
+                val eased = 1f - (1f - ep).pow(2.9f)
+                val enterAlpha = ((ep / 0.12f).coerceIn(0f, 1f))
+                val exitFade = (1f - ((ep - 0.46f) / 0.54f).coerceIn(0f, 1f)).pow(1.35f)
+                val masterAlpha = enterAlpha * exitFade
+                val gravity = ep * ep * maxR * 0.24f
 
-            // Outer primary spark rays
-            for (i in 0 until b.rays) {
-                val angle = (i.toDouble() / b.rays) * 2.0 * PI + bIdx * 0.37
-                val speedMod = 0.78f + ((i * 7 + bIdx * 3) % 5) * 0.08f
-                val headR = eased * maxRadius * speedMod
-                val tailR = (headR - maxRadius * 0.22f).coerceAtLeast(0f)
+                // Subtle smoky-lilac / warm-champagne ambient burst haze
+                if (masterAlpha > 0.04f) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.Transparent,
+                                0.42f to Color(0xFFE6BEFF).copy(alpha = 0.16f * masterAlpha),
+                                0.72f to Color(0xFFFFE0A6).copy(alpha = 0.12f * masterAlpha),
+                                1.00f to Color.Transparent
+                            ),
+                            center = Offset(cx, cy + gravity * 0.35f),
+                            radius = maxR * (0.45f + 0.65f * eased)
+                        ),
+                        radius = maxR * (0.45f + 0.65f * eased),
+                        center = Offset(cx, cy + gravity * 0.35f)
+                    )
+                }
 
-                val cosA = cos(angle).toFloat()
-                val sinA = sin(angle).toFloat()
+                b.streaks.forEach { s ->
+                    val cosA = cos(s.angleRad)
+                    val sinA = sin(s.angleRad)
+                    val perpX = -sinA
+                    val perpY = cosA
 
-                val startPt = Offset(cx + cosA * tailR, cy + sinA * tailR + gravity * 0.65f)
-                val endPt = Offset(cx + cosA * headR, cy + sinA * headR + gravity)
-                val sparkColor = b.palette[i % b.palette.size]
+                    val twinkle = if (ep > 0.55f) {
+                        0.68f + 0.32f * sin(ep * 26f + s.twinklePhase)
+                    } else 1f
+                    val alpha = (masterAlpha * twinkle).coerceIn(0f, 1f)
+                    if (alpha <= 0.01f) return@forEach
 
-                // Spark trail
-                drawLine(
-                    color = sparkColor.copy(alpha = fade * 0.85f),
-                    start = startPt,
-                    end = endPt,
-                    strokeWidth = (2.6.dp.toPx() * fade).coerceAtLeast(0.8f),
-                    cap = StrokeCap.Round
-                )
+                    val headR = eased * maxR * s.speedFactor
+                    val trailLen = maxR * s.tailFactor * (0.45f + 0.55f * (1f - ep * 0.55f))
+                    val tailR = (headR - trailLen).coerceAtLeast(maxR * 0.04f)
 
-                // Bright spark tip
-                drawCircle(
-                    color = Color.White.copy(alpha = fade),
-                    radius = (2.2.dp.toPx() * fade).coerceAtLeast(0.7f),
-                    center = endPt
-                )
+                    val tailPt = Offset(
+                        cx + cosA * tailR,
+                        cy + sinA * tailR + gravity * 0.42f
+                    )
+                    val headPt = Offset(
+                        cx + cosA * headR,
+                        cy + sinA * headR + gravity
+                    )
 
-                // Secondary inner glitter droplets
-                if (i % 2 == 0) {
-                    val midR = headR * 0.58f
-                    val midPt = Offset(
-                        cx + cos(angle + 0.14).toFloat() * midR,
-                        cy + sin(angle + 0.14).toFloat() * midR + gravity * 0.85f
+                    val headHalfW = (1.55f * px * s.thicknessFactor * (0.65f + 0.35f * exitFade))
+                        .coerceAtLeast(0.7f)
+
+                    // 1. Soft glowing outer bloom streak (champagne gold / pale lavender-pink)
+                    drawLine(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                s.glowColor.copy(alpha = alpha * 0.30f),
+                                s.glowColor.copy(alpha = alpha * 0.52f)
+                            ),
+                            start = tailPt,
+                            end = headPt
+                        ),
+                        start = tailPt,
+                        end = headPt,
+                        strokeWidth = headHalfW * 3.1f,
+                        cap = StrokeCap.Round
+                    )
+
+                    // 2. Tapered comet spear (thin pin tail -> bright wide spark flare at tip)
+                    val flarePt = Offset(
+                        cx + cosA * (headR - (headR - tailR) * 0.14f),
+                        cy + sinA * (headR - (headR - tailR) * 0.14f) + gravity * 0.90f
+                    )
+                    val cometPath = Path().apply {
+                        moveTo(tailPt.x, tailPt.y)
+                        lineTo(flarePt.x + perpX * headHalfW, flarePt.y + perpY * headHalfW)
+                        lineTo(headPt.x, headPt.y)
+                        lineTo(flarePt.x - perpX * headHalfW, flarePt.y - perpY * headHalfW)
+                        close()
+                    }
+                    drawPath(
+                        path = cometPath,
+                        brush = Brush.linearGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.Transparent,
+                                0.45f to s.glowColor.copy(alpha = alpha * 0.65f),
+                                0.80f to s.coreTint.copy(alpha = alpha * 0.94f),
+                                1.00f to Color.White.copy(alpha = alpha)
+                            ),
+                            start = tailPt,
+                            end = headPt
+                        )
+                    )
+
+                    // 3. Hot glowing spark tip halo + white-hot core dot
+                    val tipR = headHalfW * (if (s.isInnerLayer) 1.5f else 1.85f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = alpha * 0.98f),
+                                s.glowColor.copy(alpha = alpha * 0.55f),
+                                Color.Transparent
+                            ),
+                            center = headPt,
+                            radius = tipR * 2.1f
+                        ),
+                        radius = tipR * 2.1f,
+                        center = headPt
                     )
                     drawCircle(
-                        color = b.palette[(i + 1) % b.palette.size].copy(alpha = fade * 0.90f),
-                        radius = (1.8.dp.toPx() * fade).coerceAtLeast(0.6f),
-                        center = midPt
+                        color = Color.White.copy(alpha = alpha),
+                        radius = (tipR * 0.55f).coerceAtLeast(0.6f),
+                        center = headPt
                     )
                 }
             }
@@ -576,9 +1073,6 @@ private fun L7WinnerPopupCard(
                 .height(sheetHeight),
             contentAlignment = Alignment.Center
         ) {
-            // Firecracker Burst Animation around the Winner Card
-            L7FirecrackerOverlay(modifier = Modifier.fillMaxSize())
-
             // Centered Winner Card (Exact match to Reference Image)
             Box(
                 modifier = Modifier
@@ -799,6 +1293,9 @@ private fun L7WinnerPopupCard(
                     }
                 }
             }
+
+            // Realistic Firecracker Burst Overlay popping over & around the Winner Card
+            L7FirecrackerOverlay(modifier = Modifier.fillMaxSize())
         }
     }
 }
@@ -1843,7 +2340,7 @@ private fun L7HistoryPopupCard(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 10.dp)
+                        .padding(top = 15.dp)
                         .shadow(elevation = 12.dp, shape = cardShape, clip = false)
                         .clip(cardShape)
                         .background(
@@ -1861,14 +2358,14 @@ private fun L7HistoryPopupCard(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         // Curved light-blue header tab behind "Game records"
                         Canvas(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .fillMaxWidth(0.62f)
-                                .height(36.dp)
+                                .height(40.dp)
                         ) {
                             val w = size.width
                             val h = size.height
@@ -2122,46 +2619,24 @@ private fun L7HistoryPopupCard(
                     )
                 }
 
-                // Floating Top Title: LUCKY [777 Image] PRO
+                // Floating Top Title: LUCKY [777 Image] PRO (Exact 3D Glossy Gold Match)
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .offset(y = (-2).dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Text(
-                        text = "LUCKY",
-                        color = Color(0xFFFFDE3B),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Black,
-                        style = TextStyle(
-                            shadow = Shadow(
-                                color = Color(0xFF5A1E00),
-                                offset = Offset(0f, 2f),
-                                blurRadius = 3f
-                            )
-                        )
-                    )
+                    L7LuckyProWordText(text = "LUCKY", fontSize = 23.sp)
                     AsyncImage(
                         model = LUCKY777_SEVEN,
                         contentDescription = "777",
-                        modifier = Modifier.size(26.dp),
+                        modifier = Modifier
+                            .offset(y = (-1).dp)
+                            .size(34.dp),
                         contentScale = ContentScale.Fit
                     )
-                    Text(
-                        text = "PRO",
-                        color = Color(0xFFFFDE3B),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Black,
-                        style = TextStyle(
-                            shadow = Shadow(
-                                color = Color(0xFF5A1E00),
-                                offset = Offset(0f, 2f),
-                                blurRadius = 3f
-                            )
-                        )
-                    )
+                    L7LuckyProWordText(text = "PRO", fontSize = 23.sp)
                 }
             }
         }
@@ -2186,8 +2661,8 @@ fun Lucky777(
     var wheelRotation by remember { mutableFloatStateOf(l7TargetAngleForSlice(2)) }
 
     var chipIndex by remember { mutableIntStateOf(1) }
-    var bets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
-    var lastBets by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var bets by remember { mutableStateOf>(emptyMap()) }
+    var lastBets by remember { mutableStateOf>(emptyMap()) }
     var history by remember { mutableStateOf<List<L7Round>>(emptyList()) }
 
     var muted by remember { mutableStateOf(false) }
@@ -2201,6 +2676,8 @@ fun Lucky777(
 
     var loading by remember { mutableStateOf(true) }
     var loadingProgress by remember { mutableFloatStateOf(0f) }
+
+    val todayWin = remember(history) { history.sumOf { it.winAmount } }
 
     LaunchedEffect(Unit) {
         runCatching {
@@ -2554,131 +3031,109 @@ fun Lucky777(
                     }
                 }
 
-                // Center Rotating Wheel + Frame + 20s Countdown Hub
-                L7WheelSection(
-                    wheelRotation = wheelRotation,
-                    countdown = countdown,
-                    phase = phase,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(vertical = 2.dp)
-                )
-
-                // Result / History Strip
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 17.5.dp)
-                        .height(23.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.60f))
-                        .border(0.8.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (history.isEmpty()) {
-                        Text(
-                            "History",
-                            color = Color.White.copy(alpha = 0.55f),
-                            fontSize = 10.sp,
-                            fontStyle = FontStyle.Italic
-                        )
-                    } else {
-                        val recentStrip = history.takeLast(12)
-                        recentStrip.forEachIndexed { idx, rec ->
-                            val isNewest = idx == recentStrip.lastIndex
-                            Box(
-                                modifier = Modifier.size(18.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = l7ImageFor(rec.winner),
-                                    contentDescription = rec.winner,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-                                if (isNewest) {
-                                    L7HistoryNewPill(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .offset(x = 3.dp, y = (-2).dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(1.dp))
-
-                // 3-Card Betting Panel
+                // Center Rotating Wheel + Frame + 20s Countdown Hub + TODAY'S WIN Pill
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .height(106.dp)
+                        .weight(1f)
                 ) {
-                    AsyncImage(
-                        model = LUCKY777_CARDS_BG,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.FillBounds
-                    )
-
-                    Row(
+                    L7WheelSection(
+                        wheelRotation = wheelRotation,
+                        countdown = countdown,
+                        phase = phase,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 2.dp)
+                    )
+
+                    L7TodaysWinPill(
+                        todayWin = todayWin,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = 3.dp)
+                    )
+                }
+
+                // Results Trapezoid Bar seamlessly attached to 3-Card Betting Panel
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = 7.dp)
+                ) {
+                    // Results Strip with latest winner first + existing NEW pill
+                    L7ResultsBar(
+                        history = history,
+                        modifier = Modifier.offset(y = 2.dp)
+                    )
+
+                    // 3-Card Betting Panel (Exact existing image & card UI)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                            .height(106.dp)
                     ) {
-                        l7BetItems.forEach { item ->
-                            val myBetVal = bets[item.key] ?: 0L
-                            val betText = "${l7Format(myBetVal)}/${l7Format(myBetVal)}"
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) { placeBet(item.key) }
-                                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = betText,
-                                    color = if (myBetVal > 0L) l7Gold else Color(0xFFFFE599),
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    style = TextStyle(
-                                        shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(0f, 1f), 2f)
-                                    )
-                                )
-                                Row(
+                        AsyncImage(
+                            model = LUCKY777_CARDS_BG,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.FillBounds
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            l7BetItems.forEach { item ->
+                                val myBetVal = bets[item.key] ?: 0L
+                                val betText = l7Format(myBetVal)
+                                Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) { placeBet(item.key) }
+                                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    AsyncImage(
-                                        model = item.image,
-                                        contentDescription = item.key,
-                                        modifier = Modifier.size(if (item.key == "777") 34.dp else 30.dp),
-                                        contentScale = ContentScale.Fit
+                                    Text(
+                                        text = betText,
+                                        modifier = Modifier.offset(y = 14.dp),
+                                        color = if (myBetVal > 0L) l7Gold else Color(0xFFFFE599),
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(0f, 1f), 2f)
+                                        )
                                     )
-                                    Spacer(Modifier.width(3.dp))
-                                    AsyncImage(
-                                        model = item.multImage,
-                                        contentDescription = "x${item.multiplier}",
-                                        modifier = Modifier.height(20.dp),
-                                        contentScale = ContentScale.Fit
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .weight(1f),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = item.image,
+                                            contentDescription = item.key,
+                                            modifier = Modifier.size(if (item.key == "777") 34.dp else 30.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Spacer(Modifier.width(3.dp))
+                                        AsyncImage(
+                                            model = item.multImage,
+                                            contentDescription = "x${item.multiplier}",
+                                            modifier = Modifier.height(20.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
                                 }
                             }
                         }
