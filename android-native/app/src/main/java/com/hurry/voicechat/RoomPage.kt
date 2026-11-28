@@ -1472,7 +1472,7 @@ fun RoomPage(
                 val eventAge = System.currentTimeMillis() - eventTimestamp
                 if (senderId.isBlank() || transferId.isBlank() || giftImageRaw.isBlank() ||
                     recipientCheck.length() == 0 || eventTimestamp <= 0L ||
-                    eventAge !in -30_000L..120_000L) return@Listener
+                    eventAge !in -10_000L..30_000L) return@Listener
             }
             val senderName = payload.optString("senderName", "User")
             val senderImageRaw = payload.optString("senderImage")
