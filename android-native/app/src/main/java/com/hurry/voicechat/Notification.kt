@@ -144,8 +144,15 @@ fun NotificationController() {
                     Modifier
                         .fillMaxWidth()
                         .height(124.dp)
-                        .background(Color(0xFF352319))
                 ) {
+                    AsyncImage(
+                        model = ZYORA_NOTIFICATION_PUBLIC + if (
+                            notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
+                        ) "IMG_20261127_151231.png" else "IMG_20261127_152115.png",
+                        contentDescription = null,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.fillMaxSize()
+                    )
                     val isGameNotice = notice.giftName == "Wild Party" || notice.giftName == "Dragon Battle"
                     Row(
                         Modifier
