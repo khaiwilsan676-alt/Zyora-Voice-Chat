@@ -697,7 +697,53 @@ internal fun NativeEquippedVoiceWaveOverlay(userId: String, modifier: Modifier =
         if (remaining > 0L) delay(remaining)
         equipped = false
     }
-    if (equipped) EmeraldVoiceWaveEffect(animated = true, modifier = modifier)
+    if (equipped) {
+        EmeraldVoiceWaveEffect(animated = true, modifier = modifier)
+    } else {
+        DefaultWhiteVoiceWaveEffect(modifier = modifier)
+    }
+}
+
+@Composable
+private fun DefaultWhiteVoiceWaveEffect(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "default_white_voice_wave")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2.0 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "default_white_voice_wave_phase"
+    )
+    Canvas(modifier = modifier) {
+        val maxRadius = size.minDimension / 2f
+        val stroke = (maxRadius * 0.035f).coerceAtLeast(1.5.dp.toPx())
+        val outer = buildVoiceWaveRingPath(
+            cx = size.width / 2f,
+            cy = size.height / 2f,
+            baseRadius = maxRadius * 0.76f,
+            amp1 = maxRadius * 0.045f,
+            freq1 = 5,
+            phase1 = phase,
+            amp2 = maxRadius * 0.022f,
+            freq2 = 9,
+            phase2 = -phase * 0.72f
+        )
+        val inner = buildVoiceWaveRingPath(
+            cx = size.width / 2f,
+            cy = size.height / 2f,
+            baseRadius = maxRadius * 0.65f,
+            amp1 = maxRadius * 0.028f,
+            freq1 = 4,
+            phase1 = -phase * 0.82f,
+            amp2 = maxRadius * 0.014f,
+            freq2 = 7,
+            phase2 = phase * 0.55f
+        )
+        drawPath(outer, Color.White.copy(alpha = 0.78f), style = Stroke(width = stroke))
+        drawPath(inner, Color.White.copy(alpha = 0.34f), style = Stroke(width = stroke * 0.72f))
+    }
 }
 
 @Composable
