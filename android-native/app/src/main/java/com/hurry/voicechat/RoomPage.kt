@@ -3212,11 +3212,18 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                     .put("comboReplay", true)
                                     .put("multiplier", nextMultiplier)
                                     .put("timestamp", System.currentTimeMillis())
-                                // Wait for the server confirmation before changing the
-                                // multiplier or replaying the gift flight.
+                                // Replay the combo immediately; win coins still come only from the server.
                                 luckyComboClicksPending += 1
                                 luckyComboPending = true
                                 pendingLuckyGiftTransferId = nextTransferId
+                                luckyAnimation.optimisticCombo()
+                                val comboRecipientsJson = previousGift.optJSONArray("recipientIds") ?: JSONArray()
+                                val comboRecipients = (0 until comboRecipientsJson.length())
+                                    .map { comboRecipientsJson.optString(it) }
+                                    .filter { it.isNotBlank() }
+                                val comboImage = previousGift.optString("giftImage")
+                                    .ifBlank { previousGift.optString("luckyImage") }
+                                luckyAnimation.launchToRecipients(nextTransferId, comboImage, comboRecipients)
                                 socket.emit("coin_transfer", comboTransfer)
                             }
                         }
@@ -3248,10 +3255,40 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 } else null
             },
             onSendCoinTransfer = { transfer ->
-                // Track the pending ID only for failure cleanup; do not display anything
-                // until the server confirms the wallet transaction.
                 if (transfer["luckyGift"] == true) {
-                    pendingLuckyGiftTransferId = transfer["transferId"]?.toString().orEmpty()
+                    val transferId = transfer["transferId"]?.toString().orEmpty()
+                    pendingLuckyGiftTransferId = transferId
+                    // Render immediately on tap; win coins remain server-confirmed only.
+                    if (transfer["comboReplay"] != true && transferId.isNotBlank()) {
+                        val recipients = (transfer["recipientIds"] as? List<*>)
+                            ?.mapNotNull { it?.toString()?.takeIf { id -> id.isNotBlank() } }
+                            .orEmpty()
+                        val image = transfer["giftImage"]?.toString()
+                            ?.ifBlank { transfer["luckyImage"]?.toString().orEmpty() }
+                            .orEmpty()
+                        if (image.isNotBlank()) {
+                            val mode = when (transfer["recipientMode"]?.toString()?.lowercase()) {
+                                "room" -> RecipientMode.ROOM
+                                "single" -> RecipientMode.SINGLE
+                                else -> RecipientMode.MIC
+                            }
+                            luckyAnimation.updateNotice(
+                                LuckyNotice(
+                                    id = transferId,
+                                    senderId = accountId,
+                                    senderName = roomDisplayName.ifBlank { "User" },
+                                    recipientName = transfer["recipientName"]?.toString().orEmpty().ifBlank { "User" },
+                                    senderImage = roomDisplayImage,
+                                    giftImage = image,
+                                    multiplier = (transfer["multiplier"] as? Number)?.toInt()?.coerceAtLeast(1) ?: 1,
+                                    totalWinAmount = 0L,
+                                    maxWinTimes = 0,
+                                    recipientMode = mode
+                                )
+                            )
+                            luckyAnimation.launchToRecipients(transferId, image, recipients)
+                        }
+                    }
                 }
                 roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
             },
