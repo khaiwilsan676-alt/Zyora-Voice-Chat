@@ -1473,6 +1473,11 @@ fun RoomPage(
                 if (senderId.isBlank() || transferId.isBlank() || giftImageRaw.isBlank() ||
                     recipientCheck.length() == 0 || eventTimestamp <= 0L ||
                     eventAge !in -10_000L..30_000L) return@Listener
+                // A sender-side combo response must match the exact in-flight tap.
+                // This blocks late/duplicate success events from reopening a stale combo banner.
+                if (payload.optBoolean("comboReplay", false) && senderId == accountId &&
+                    (!luckyComboPending || pendingLuckyGiftTransferId.isBlank() ||
+                     transferId != pendingLuckyGiftTransferId)) return@Listener
             }
             val senderName = payload.optString("senderName", "User")
             val senderImageRaw = payload.optString("senderImage")
@@ -3211,6 +3216,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 // multiplier or replaying the gift flight.
                                 luckyComboClicksPending += 1
                                 luckyComboPending = true
+                                pendingLuckyGiftTransferId = nextTransferId
                                 socket.emit("coin_transfer", comboTransfer)
                             }
                         }
