@@ -7,6 +7,12 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk
     from: 11.0.0
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
+  SocketIO:
+    url: https://github.com/socketio/socket.io-client-swift
+    from: 16.1.0
 targets:
   Zyora:
     type: application
@@ -18,6 +24,12 @@ targets:
     dependencies:
       - package: Firebase
         product: FirebaseCore
+      - package: Firebase
+        product: FirebaseAuth
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: SocketIO
+        product: SocketIO
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zyora.voicechat
@@ -27,5 +39,6 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Zyora
         INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: NO
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        INFOPLIST_KEY_GIDClientID: 164837688319-48d1sqv58tb0ei8sj374moieok2h97mm.apps.googleusercontent.com
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
