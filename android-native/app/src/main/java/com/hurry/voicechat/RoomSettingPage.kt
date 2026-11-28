@@ -127,6 +127,11 @@ private val yellowBorder = Color(0xFFFDE68A)
 private val yellowInkDark = Color(0xFF8A6A1F)
 private val yellowInk = Color(0xFF7A5F1C)
 private val yellowBtn = Color(0xFFF0C24B)
+private val settingPageBg = Color(0xFFF5F6F8)
+private val settingTitleInk = Color(0xFF1A1A1A)
+private val settingValueInk = Color(0xFF9CA3AF)
+private val settingChevronTint = Color(0xFFC7C9D1)
+private val settingHairline = Color(0xFFF1F2F5)
 
 private suspend fun cropImageToDataUrl(context: Context, uri: android.net.Uri): String = withContext(Dispatchers.IO) {
     val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
@@ -464,98 +469,144 @@ fun RoomSettingPage(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.White)) {
+    Box(Modifier.fillMaxSize().background(settingPageBg)) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.fillMaxWidth().background(Color.White)
+            // Top Bar (Existing Back Icon + "Settings" Heading)
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(Color.White)
                     .statusBarsPadding()
-                    .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(24.dp)) }
+                Row(
+                    Modifier.fillMaxWidth()
+                        .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Default.ArrowBack, "Back", tint = settingTitleInk, modifier = Modifier.size(24.dp)) }
 
-                Text(
-                    "Room Setting",
-                    Modifier.weight(1f),
-                    fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
-                )
+                    Text(
+                        "Settings",
+                        Modifier.weight(1f),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = settingTitleInk,
+                        textAlign = TextAlign.Center
+                    )
 
-                Spacer(Modifier.size(40.dp))
+                    Spacer(Modifier.size(40.dp))
+                }
+                Box(Modifier.fillMaxWidth().height(0.8.dp).background(settingHairline))
             }
 
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 24.dp)
+                Modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
             ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        Modifier.size(96.dp).clip(RoundedCornerShape(16.dp))
-                            .border(2.dp, gray200, RoundedCornerShape(16.dp))
-                            .background(gray100),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (state.roomDp.isNotBlank()) AsyncImage(
-                            model = state.roomDp, contentDescription = "Room photo",
-                            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
-                        ) else Text("Room", color = gray400, fontSize = 12.sp)
-                    }
-                    Spacer(Modifier.height(12.dp))
+                // Group 1: Room Photo, Room Name, Room Announcement
+                Column(Modifier.fillMaxWidth().background(Color.White)) {
                     Row(
-                        Modifier.clip(CircleShape)
-                            .border(1.dp, gray300, CircleShape)
-                            .background(Color.White)
+                        Modifier.fillMaxWidth()
                             .clickable { pendingPicker = "photo"; picker.launch("image/*") }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Edit, null, tint = gray700, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Edit Room photo", color = gray700, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-
-                SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
-                SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
-                SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
-                SettingRow("Admin", "${admins.size}/5") { adminSearch = ""; sheet = "admin" }
-                SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
-                    password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
-                }
-
-                Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Mic Mode", Modifier.weight(1f),
-                            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = gray600
+                            "Room Photo",
+                            Modifier.weight(1f),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = settingTitleInk
                         )
-                        Row(
-                            Modifier.clip(RoundedCornerShape(8.dp))
-                                .clickable { tempMicMode = state.micMode; sheet = "mic" }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Box(
+                            Modifier.size(56.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(0.5.dp, gray200, RoundedCornerShape(10.dp))
+                                .background(gray100),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                "Mic ${state.micMode}",
-                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = gray800
-                            )
-                            Icon(Icons.Default.ChevronRight, null, tint = gray400, modifier = Modifier.size(16.dp))
+                            if (state.roomDp.isNotBlank()) AsyncImage(
+                                model = state.roomDp,
+                                contentDescription = "Room photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            ) else Text("Room", color = gray400, fontSize = 11.sp)
                         }
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            null,
+                            tint = settingChevronTint,
+                            modifier = Modifier.padding(start = 8.dp).size(20.dp)
+                        )
                     }
+                    Box(
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(0.6.dp)
+                            .background(settingHairline)
+                    )
+
+                    SettingRow(
+                        title = "Room Name",
+                        value = state.roomName,
+                        showDivider = true
+                    ) { draft = state.roomName; sheet = "name" }
+
+                    SettingRow(
+                        title = "Room Announcement",
+                        value = state.announcement,
+                        showDivider = false
+                    ) { draft = state.announcement; sheet = "announcement" }
+                }
+
+                // Light Gray Section Gap
+                Spacer(Modifier.fillMaxWidth().height(10.dp))
+
+                // Group 2: Mic Mode, Lock Room, Theme, Admin
+                Column(Modifier.fillMaxWidth().background(Color.White)) {
+                    SettingRow(
+                        title = "Mic Mode",
+                        value = "Mic ${state.micMode}",
+                        showDivider = true
+                    ) { tempMicMode = state.micMode; sheet = "mic" }
+
+                    SettingRow(
+                        title = "Lock Room",
+                        value = if (state.isLocked) "Locked" else "",
+                        red = state.isLocked,
+                        showDivider = true
+                    ) {
+                        password = if (state.isLocked) state.roomPassword else ""
+                        sheet = "lock"
+                    }
+
+                    SettingRow(
+                        title = "Theme",
+                        value = themeItems.firstOrNull { it.id == state.theme }?.name ?: "",
+                        showDivider = true
+                    ) { sheet = "theme" }
+
+                    SettingRow(
+                        title = "Admin",
+                        value = "${admins.size}/5",
+                        showDivider = false
+                    ) { adminSearch = ""; sheet = "admin" }
                 }
 
                 if (saveError.isNotBlank()) {
-                    Text(saveError, color = red500, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
+                    Text(
+                        saveError,
+                        color = red500,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        textAlign = TextAlign.Center
+                    )
                 }
+
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
@@ -1332,28 +1383,48 @@ private fun SettingRow(
     title: String,
     value: String,
     red: Boolean = false,
+    showDivider: Boolean = true,
     onClick: () -> Unit
 ) {
-    Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+    Column(Modifier.fillMaxWidth().background(Color.White)) {
         Row(
             Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
                 .clickable(onClick = onClick)
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(title, Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = gray600)
+            Text(
+                title,
+                Modifier.weight(1f),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal,
+                color = settingTitleInk
+            )
             if (value.isNotBlank()) {
                 Text(
-                    value, fontSize = 12.sp,
-                    color = if (red) red500 else gray400,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 140.dp)
+                    value,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = if (red) red500 else settingValueInk,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.widthIn(max = 180.dp)
                 )
             }
             Icon(
-                Icons.Default.ChevronRight, null, tint = gray400,
-                modifier = Modifier.padding(start = 8.dp).size(16.dp)
+                Icons.Default.ChevronRight,
+                null,
+                tint = settingChevronTint,
+                modifier = Modifier.padding(start = 6.dp).size(20.dp)
+            )
+        }
+        if (showDivider) {
+            Box(
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(0.6.dp)
+                    .background(settingHairline)
             )
         }
     }
