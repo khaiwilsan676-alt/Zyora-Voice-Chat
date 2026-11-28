@@ -2321,3 +2321,9 @@ Current documentation does not certify that all historical features are build-, 
 - Corrected the native Android update checker to query releases from `khaiwilsan676-alt/Zyora-Voice-Chat` and select the `app-debug.apk` asset produced by `.github/workflows/native-2-apk.yml`.
 - This repairs the repository/asset mismatch that prevented the installed app from finding its own published native APK update. No UI, app navigation, authentication, room, voice, wallet, gift, or game logic was changed.
 - Verification pending: native GitHub Actions APK/AAB build and runtime update-check validation.
+
+
+## 2026-11-28 — Dragon Battle sound-effect main-thread stall fix
+- `android-native/app/src/main/java/com/hurry/voicechat/DragonBattle.kt`: moved static PCM `AudioTrack` construction, writes, playback, and the 165–270 ms hold interval onto one dedicated single-thread sound-effects executor. The previous synchronous `Thread.sleep` ran on whichever thread invoked the sound method; when invoked from a Compose/UI callback it could freeze taps and animation frames for the duration.
+- AudioTrack cleanup now runs in `finally`, including interrupted playback, and the executor is shut down when the sound manager is released. Existing PCM samples, sound timing, volume/mute checks, game events, and visible UI are unchanged.
+- Verification pending: Android Gradle build, Dragon Battle card-flip/DHAM playback, rapid repeated sound triggers, and screen-exit cleanup on Android 6+ devices. This is a targeted fix, not a claim that every app-wide performance issue has been resolved.
