@@ -2023,13 +2023,13 @@ export default function StaffPanel() {
 
         {activeTab === 'manage_users' && !selectedManageUser && (
           <div className="flex flex-col h-full bg-[#f5f6f8]">
-            <div className="px-6 py-5 border-b border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-slate-800">Users</h2>
-                <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">Total Users: {users.length.toLocaleString()}</span>
+            <div className="px-6 py-5 border-b border-slate-200 bg-white">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#168184]">USER CENTER</p><h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Manage Users</h2><p className="mt-1 text-xs text-slate-500">Search, review and manage registered Zyora accounts.</p></div>
+                <span className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600"><span className="h-2 w-2 rounded-full bg-[#168184]" />{users.length.toLocaleString()} users</span>
               </div>
-              <div className="mt-5 flex flex-nowrap items-center gap-3 overflow-x-auto">
-                <div className="relative w-[140px] md:w-[220px] shrink-0">
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <div className="relative w-full max-w-[360px] min-w-[220px] flex-1">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
@@ -2135,7 +2135,8 @@ export default function StaffPanel() {
                               <span className="block max-w-[220px] truncate" title={u.email || ''}>{u.email && u.email !== '—' ? u.email : '—'}</span>
                             </td>
                             <td className="py-3 px-2">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${/active/i.test(userState) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                              <span className={`inline-flex min-w-[82px] items-center justify-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[10px] font-bold ${/active/i.test(userState) ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : /ban|block|suspend/i.test(userState) ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${/active/i.test(userState) ? 'bg-emerald-500' : /ban|block|suspend/i.test(userState) ? 'bg-rose-500' : 'bg-slate-400'}`} />
                                 {userState}
                               </span>
                             </td>
@@ -2258,8 +2259,25 @@ export default function StaffPanel() {
                     <thead><tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide"><th className="py-3 pl-4 pr-2 w-14">S.No</th><th className="py-3 px-2">Staff</th><th className="py-3 px-2">App ID</th><th className="py-3 px-2">Tags</th></tr></thead>
                     <tbody className="divide-y divide-slate-100">
                       {paginatedAppStaff.map((u: any, idx: number) => {
-                        const tagLabels = [{key:'officialHeadTag',label:'Official Head'},{key:'officialTag',label:'Official'},{key:'adminTag',label:'Admin'},{key:'serviceTag',label:'Service'},{key:'csTag',label:'CS'},{key:'hostTag',label:'Host'},{key:'isHost',label:'Host'},{key:'coinSellerTag',label:'Seller'},{key:'coinSeller',label:'Seller'},{key:'sellerTag',label:'Seller'},{key:'vipTag',label:'VIP'},{key:'premiumTag',label:'Premium'},{key:'ownerImageTag',label:'Owner'},{key:'familyRewardTag',label:'Family'},{key:'familyRewardTagImage',label:'Family'}].filter(tag => Boolean(u[tag.key]));
-                        return <tr key={u.id} className="hover:bg-slate-50/70 transition-colors"><td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{(usersPage - 1) * 20 + idx + 1}</td><td className="py-3 px-2"><div className="flex items-center gap-2.5 min-w-0">{u.image ? <img src={u.image} alt={u.name} className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0" /> : <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-sm shrink-0">{String(u.name || '?').charAt(0).toUpperCase()}</div>}<span className="text-xs font-medium text-slate-800 truncate">{u.name}</span></div></td><td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{u.hurryId || u.appShortId || u.id || '—'}</td><td className="py-3 px-2"><div className="flex flex-wrap gap-1">{tagLabels.map(tag => <span key={tag.key} className="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">{tag.label}</span>)}</div></td></tr>;
+                        const tagLabels = [
+                          {key:'officialHeadTag',label:'Official Head',image:'/file_000000005c388246a5d95dba880d7eb9.png'},
+                          {key:'officialTag',label:'Official',image:'/IMG_20261027_102250.png'},
+                          {key:'adminTag',label:'Admin',image:'/IMG_20261027_114117.png'},
+                          {key:'serviceTag',label:'Service',image:'/IMG_20261027_102207.png'},
+                          {key:'csTag',label:'CS',image:'/IMG_20261027_102207.png'},
+                          {key:'hostTag',label:'Host',image:'/IMG_20261028_154914.png'},
+                          {key:'isHost',label:'Host',image:'/IMG_20261028_154914.png'},
+                          {key:'coinSellerTag',label:'Seller',image:'/IMG_20261027_105359.png'},
+                          {key:'coinSeller',label:'Seller',image:'/IMG_20261027_105359.png'},
+                          {key:'sellerTag',label:'Seller',image:'/IMG_20261027_105359.png'},
+                          {key:'vipTag',label:'VIP',image:'/IMG_20261027_102250.png'},
+                          {key:'premiumTag',label:'Premium',image:'/IMG_20261027_102250.png'},
+                          {key:'ownerImageTag',label:'Owner',image:'/IMG_20261101_125212.png'},
+                          {key:'familyRewardTag',label:'Family',image:'/IMG_20261117_193617.png'},
+                          {key:'familyRewardTagImage',label:'Family',image:typeof u.familyRewardTagImage === 'string' ? u.familyRewardTagImage : '/IMG_20261117_193617.png'}
+                        ].filter(tag => Boolean(u[tag.key]));
+                        const uniqueTags = tagLabels.filter((tag, index, list) => list.findIndex(item => item.label === tag.label) === index);
+                        return <tr key={u.id} className="hover:bg-slate-50/70 transition-colors"><td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{(usersPage - 1) * 20 + idx + 1}</td><td className="py-3 px-2"><div className="flex items-center gap-2.5 min-w-0">{u.image ? <img src={u.image} alt={u.name} className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0" /> : <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-sm shrink-0">{String(u.name || '?').charAt(0).toUpperCase()}</div>}<span className="text-xs font-medium text-slate-800 truncate">{u.name}</span></div></td><td className="py-3 px-2 text-xs text-slate-600 tabular-nums">{u.hurryId || u.appShortId || u.id || '—'}</td><td className="py-3 px-2"><div className="flex min-h-8 flex-wrap items-center gap-2">{uniqueTags.map(tag => <span key={tag.key} title={tag.label} aria-label={tag.label} className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-200 bg-white p-1 shadow-sm"><img src={tag.image} alt={tag.label} className="max-h-6 max-w-[58px] object-contain" /></span>)}</div></td></tr>;
                       })}
                       {filteredAppStaff.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-400 font-medium text-sm">No tagged App Staff found</td></tr>}
                     </tbody>
